@@ -13,7 +13,7 @@ defineProps({
             <h1 class="text-3xl font-semibold mb-6">Mes voyages</h1>
 
             <div class="mb-4">
-                <Link href="/trips/create" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">
+                <Link href="/trips/start" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">
                     + Nouveau voyage
                 </Link>
             </div>
