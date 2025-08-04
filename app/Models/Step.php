@@ -31,4 +31,10 @@ class Step extends Model
     {
         return $this->belongsTo(Trip::class);
     }
+
+    public function accommodations()
+    {
+        return $this->hasMany(Accommodation::class);
+    }
+
 }

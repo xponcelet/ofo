@@ -53,6 +53,8 @@ class TripController extends Controller
         $this->authorize('view', $trip); // facultatif si politique de sécurité
 
         $trip->load('steps'); // on charge les étapes liées
+        $trip->load('steps.accommodations'); // on charge les logements liés aux logements
+
 
         return Inertia::render('Trips/Show', [
             'trip' => $trip,
