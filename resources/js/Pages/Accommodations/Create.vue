@@ -1,82 +1,147 @@
+<template>
+    <div class="max-w-3xl mx-auto py-10 px-4">
+        <h1 class="text-2xl font-bold mb-6">Ajouter un logement pour l'étape : {{ step.title }}</h1>
+
+        <!-- Alerte globale si une erreur de validation métier est présente -->
+        <div v-if="form.errors.start_date || form.errors.end_date" class="mb-6">
+            <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
+                <p v-if="form.errors.start_date">{{ form.errors.start_date }}</p>
+                <p v-if="form.errors.end_date">{{ form.errors.end_date }}</p>
+            </div>
+        </div>
+
+
+        <form @submit.prevent="submit" class="space-y-6">
+            <!-- Titre -->
+            <div>
+                <label class="block text-sm font-medium text-gray-700">Titre du logement *</label>
+                <input
+                    v-model="form.title"
+                    type="text"
+                    class="mt-1 block w-full rounded border-gray-300 shadow-sm"
+                />
+                <InputError :message="form.errors.title" />
+            </div>
+
+            <!-- Description -->
+            <div>
+                <label class="block text-sm font-medium text-gray-700">Description</label>
+                <textarea
+                    v-model="form.description"
+                    rows="4"
+                    class="mt-1 block w-full rounded border-gray-300 shadow-sm"
+                />
+                <InputError :message="form.errors.description" />
+            </div>
+
+            <!-- Lieu -->
+            <div>
+                <label class="block text-sm font-medium text-gray-700">Lieu *</label>
+                <MapboxAutocomplete
+                    v-model="form.location"
+                    @update:coords="updateCoords"
+                />
+                <InputError :message="form.errors.location" />
+            </div>
+
+            <!-- Carte -->
+            <StepMapPreview
+                class="mt-4"
+                :latitude="form.latitude"
+                :longitude="form.longitude"
+            />
+
+            <!-- Lien externe -->
+            <div>
+                <label class="block text-sm font-medium text-gray-700">Lien externe (Airbnb, site hôtel...)</label>
+                <input
+                    v-model="form.external_link"
+                    type="url"
+                    class="mt-1 block w-full rounded border-gray-300 shadow-sm"
+                />
+                <InputError :message="form.errors.external_link" />
+            </div>
+
+            <!-- Dates -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Date d’arrivée</label>
+                    <input
+                        v-model="form.start_date"
+                        type="date"
+                        class="mt-1 block w-full rounded border-gray-300 shadow-sm"
+                    />
+                    <InputError :message="form.errors.start_date" />
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Date de départ</label>
+                    <input
+                        v-model="form.end_date"
+                        type="date"
+                        class="mt-1 block w-full rounded border-gray-300 shadow-sm"
+                    />
+                    <InputError :message="form.errors.end_date" />
+                </div>
+            </div>
+
+            <!-- Bouton -->
+            <div class="flex justify-end">
+                <button
+                    type="submit"
+                    class="inline-flex items-center px-4 py-2 bg-blue-600 text-white font-semibold rounded hover:bg-blue-700"
+                    :disabled="form.processing"
+                >
+                    Ajouter
+                </button>
+            </div>
+        </form>
+    </div>
+</template>
+
 <script setup>
-import AppLayout from '@/Layouts/AppLayout.vue'
-import { useForm, Head } from '@inertiajs/vue3'
+import { useForm } from '@inertiajs/vue3'
+import InputError from '@/Components/InputError.vue'
+import MapboxAutocomplete from '@/Components/MapboxAutocomplete.vue'
+import StepMapPreview from '@/Components/StepMapPreview.vue'
 
 const props = defineProps({
-    trip: Object,
-    steps: Array, // pour la sélection d'une étape (optionnelle)
+    step: Object,
 })
 
 const form = useForm({
+    step_id: props.step.id,
     title: '',
     description: '',
-    location: '',
+    location: props.step.location || '',
+    latitude: props.step.latitude || null,
+    longitude: props.step.longitude || null,
     external_link: '',
-    start_date: '',
-    end_date: '',
-    step_id: null,
+    start_date: props.step.start_date || '',
+    end_date: props.step.end_date || '',
 })
 
-function submit() {
-    form.post(route('accommodations.store', { trip: props.trip.id }))
+
+function updateCoords({ latitude, longitude }) {
+    form.latitude = latitude
+    form.longitude = longitude
 }
+
+function submit() {
+    form.clearErrors()
+
+    // Vérification client-side des dates (si définies)
+    if (props.step.start_date && form.start_date && form.start_date < props.step.start_date) {
+        form.setError('start_date', `La date d’arrivée ne peut pas être avant celle de l’étape (${props.step.start_date}).`)
+        return
+    }
+
+    if (props.step.end_date && form.end_date && form.end_date > props.step.end_date) {
+        form.setError('end_date', `La date de départ ne peut pas dépasser celle de l’étape (${props.step.end_date}).`)
+        return
+    }
+
+    form.post(route('steps.accommodations.store', props.step.id))
+}
+
 </script>
-
-<template>
-    <AppLayout title="Ajouter un logement">
-        <Head title="Ajouter un logement" />
-
-        <div class="max-w-3xl mx-auto py-10 px-4">
-            <h1 class="text-2xl font-bold mb-6">Ajouter un logement</h1>
-
-            <form @submit.prevent="submit" class="space-y-6">
-                <div>
-                    <label class="block text-sm font-medium text-gray-700">Titre *</label>
-                    <input v-model="form.title" type="text" class="w-full rounded border-gray-300" required />
-                </div>
-
-                <div>
-                    <label class="block text-sm font-medium text-gray-700">Description</label>
-                    <textarea v-model="form.description" class="w-full rounded border-gray-300" />
-                </div>
-
-                <div>
-                    <label class="block text-sm font-medium text-gray-700">Lieu</label>
-                    <input v-model="form.location" type="text" class="w-full rounded border-gray-300" />
-                </div>
-
-                <div>
-                    <label class="block text-sm font-medium text-gray-700">Lien externe (Airbnb, Booking...)</label>
-                    <input v-model="form.external_link" type="url" class="w-full rounded border-gray-300" />
-                </div>
-
-                <div class="grid grid-cols-2 gap-4">
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700">Date de début</label>
-                        <input v-model="form.start_date" type="date" class="w-full rounded border-gray-300" />
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700">Date de fin</label>
-                        <input v-model="form.end_date" type="date" class="w-full rounded border-gray-300" />
-                    </div>
-                </div>
-
-                <div v-if="steps.length">
-                    <label class="block text-sm font-medium text-gray-700">Associer à une étape</label>
-                    <select v-model="form.step_id" class="w-full rounded border-gray-300">
-                        <option value="">Aucune étape</option>
-                        <option v-for="step in steps" :key="step.id" :value="step.id">
-                            Étape {{ step.order }} — {{ step.title }}
-                        </option>
-                    </select>
-                </div>
-
-                <div>
-                    <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">
-                        Ajouter le logement
-                    </button>
-                </div>
-            </form>
-        </div>
-    </AppLayout>
-</template>

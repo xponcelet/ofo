@@ -1,12 +1,19 @@
 <template>
-    <div class="max-w-4xl mx-auto py-10 px-4 space-y-12">
-        <h1 class="text-2xl font-bold">Modifier l’étape</h1>
+    <div class="max-w-3xl mx-auto py-10 px-4">
+        <h1 class="text-2xl font-bold mb-6">Modifier le logement lié à : {{ step.title }}</h1>
 
-        <!-- Formulaire d’édition de l’étape -->
+        <!-- Alerte si erreur de dates -->
+        <div v-if="form.errors.start_date || form.errors.end_date" class="mb-6">
+            <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
+                <p v-if="form.errors.start_date">{{ form.errors.start_date }}</p>
+                <p v-if="form.errors.end_date">{{ form.errors.end_date }}</p>
+            </div>
+        </div>
+
         <form @submit.prevent="submit" class="space-y-6">
             <!-- Titre -->
             <div>
-                <label class="block text-sm font-medium text-gray-700">Titre</label>
+                <label class="block text-sm font-medium text-gray-700">Titre du logement *</label>
                 <input
                     v-model="form.title"
                     type="text"
@@ -43,10 +50,21 @@
                 :longitude="form.longitude"
             />
 
+            <!-- Lien externe -->
+            <div>
+                <label class="block text-sm font-medium text-gray-700">Lien externe (Airbnb, site hôtel...)</label>
+                <input
+                    v-model="form.external_link"
+                    type="url"
+                    class="mt-1 block w-full rounded border-gray-300 shadow-sm"
+                />
+                <InputError :message="form.errors.external_link" />
+            </div>
+
             <!-- Dates -->
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
-                    <label class="block text-sm font-medium text-gray-700">Date de début</label>
+                    <label class="block text-sm font-medium text-gray-700">Date d’arrivée</label>
                     <input
                         v-model="form.start_date"
                         type="date"
@@ -56,7 +74,7 @@
                 </div>
 
                 <div>
-                    <label class="block text-sm font-medium text-gray-700">Date de fin</label>
+                    <label class="block text-sm font-medium text-gray-700">Date de départ</label>
                     <input
                         v-model="form.end_date"
                         type="date"
@@ -83,69 +101,30 @@
                 </button>
             </div>
         </form>
-
-        <!-- 🔽 Liste des logements liés -->
-        <div>
-            <div class="flex justify-between items-center mb-4">
-                <h2 class="text-lg font-semibold">🏨 Logements liés à cette étape</h2>
-                <Link
-                    :href="route('steps.accommodations.create', step.id)"
-                    class="text-sm bg-green-600 text-white px-3 py-1 rounded hover:bg-green-700"
-                >
-                    + Ajouter un logement
-                </Link>
-            </div>
-
-            <div v-if="step.accommodations.length" class="space-y-4">
-                <div
-                    v-for="accommodation in step.accommodations"
-                    :key="accommodation.id"
-                    class="border rounded p-4 bg-white shadow-sm"
-                >
-                    <h3 class="text-base font-semibold">{{ accommodation.title || 'Sans titre' }}</h3>
-                    <p class="text-sm text-gray-600">{{ accommodation.location || 'Lieu inconnu' }}</p>
-                    <p v-if="accommodation.start_date && accommodation.end_date" class="text-sm text-gray-500">
-                        📅 {{ accommodation.start_date }} → {{ accommodation.end_date }}
-                    </p>
-                    <div class="mt-2 flex gap-2">
-                        <Link
-                            :href="route('accommodations.edit', accommodation.id)"
-                            class="text-xs px-3 py-1 bg-blue-100 hover:bg-blue-200 rounded"
-                        >
-                            ✏️ Modifier
-                        </Link>
-                        <button
-                            @click="deleteAccommodation(accommodation.id)"
-                            class="text-xs px-3 py-1 bg-red-100 hover:bg-red-200 text-red-700 rounded"
-                        >
-                            🗑 Supprimer
-                        </button>
-                    </div>
-                </div>
-            </div>
-            <p v-else class="text-sm text-gray-500">Aucun logement enregistré pour cette étape.</p>
-        </div>
     </div>
 </template>
 
 <script setup>
-import { useForm, router, Link } from '@inertiajs/vue3'
+import { useForm } from '@inertiajs/vue3'
+import { Link } from '@inertiajs/vue3'
 import InputError from '@/Components/InputError.vue'
 import MapboxAutocomplete from '@/Components/MapboxAutocomplete.vue'
 import StepMapPreview from '@/Components/StepMapPreview.vue'
 
 const props = defineProps({
+    accommodation: Object,
     step: Object,
 })
 
 const form = useForm({
-    title: props.step.title || '',
-    description: props.step.description || '',
-    location: props.step.location || '',
-    latitude: props.step.latitude || null,
-    longitude: props.step.longitude || null,
-    start_date: props.step.start_date || '',
-    end_date: props.step.end_date || '',
+    title: props.accommodation.title || '',
+    description: props.accommodation.description || '',
+    location: props.accommodation.location || props.step.location || '',
+    latitude: props.accommodation.latitude || props.step.latitude || null,
+    longitude: props.accommodation.longitude || props.step.longitude || null,
+    external_link: props.accommodation.external_link || '',
+    start_date: props.accommodation.start_date || props.step.start_date || '',
+    end_date: props.accommodation.end_date || props.step.end_date || '',
 })
 
 function updateCoords({ latitude, longitude }) {
@@ -154,12 +133,18 @@ function updateCoords({ latitude, longitude }) {
 }
 
 function submit() {
-    form.post(route('steps.update', props.step.id))
-}
+    form.clearErrors()
 
-function deleteAccommodation(id) {
-    if (confirm('Supprimer ce logement ?')) {
-        router.delete(route('accommodations.destroy', id))
+    if (props.step.start_date && form.start_date && form.start_date < props.step.start_date) {
+        form.setError('start_date', `La date d’arrivée ne peut pas être avant celle de l’étape (${props.step.start_date}).`)
+        return
     }
+
+    if (props.step.end_date && form.end_date && form.end_date > props.step.end_date) {
+        form.setError('end_date', `La date de départ ne peut pas dépasser celle de l’étape (${props.step.end_date}).`)
+        return
+    }
+
+    form.put(route('accommodations.update', props.accommodation.id))
 }
 </script>

@@ -13,7 +13,7 @@ return new class extends Migration
     {
         Schema::create('accommodations', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('step_id')->constrained()->onDelete('cascade'); // l'étape est obligatoire
+            $table->foreignId('step_id')->nullable()->constrained()->onDelete('cascade');
             $table->string('title');
             $table->text('description')->nullable();
             $table->string('location')->nullable();

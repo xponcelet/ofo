@@ -6,23 +6,38 @@ use App\Models\Trip;
 use App\Models\Step;
 use Illuminate\Http\Request;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
-
+use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 
 class StepController extends Controller
 {
     use AuthorizesRequests;
 
-    public function create(Trip $trip)
+    public function create(Request $request, Trip $trip)
     {
         $this->authorize('update', $trip);
 
-        $stepCount = $trip->steps()->count();
+        $afterId = $request->query('after');                 // ex: /trips/{trip}/steps/create?after=12
+        $atStart = $request->boolean('at_start');            // ex: /trips/{trip}/steps/create?at_start=1
+
+        // Purement indicatif pour l'UI
+        $defaultOrder = $trip->steps()->count() + 1;
+
+        if ($afterId) {
+            $afterStep = Step::where('trip_id', $trip->id)->find($afterId);
+            if ($afterStep) {
+                $defaultOrder = $afterStep->order + 1;
+            }
+        } elseif ($atStart) {
+            $defaultOrder = 1;
+        }
 
         return Inertia::render('Steps/Create', [
-            'trip' => $trip,
-            'storeUrl' => route('trips.steps.store', $trip),
-            'defaultOrder' => $stepCount + 1,
+            'trip'            => $trip,
+            'storeUrl'        => route('trips.steps.store', $trip),
+            'defaultOrder'    => $defaultOrder,
+            'insert_after_id' => $afterId,   // sera renvoyé par le formulaire
+            'at_start'        => $atStart,   // idem
         ]);
     }
 
@@ -31,45 +46,55 @@ class StepController extends Controller
         $this->authorize('update', $trip);
 
         $validated = $request->validate([
-            'title' => 'nullable|string|max:100',
+            'title'       => 'nullable|string|max:100',
             'description' => 'nullable|string',
-            'location' => 'required|string',
-            'latitude' => ['nullable', 'numeric', 'between:-90,90'],
-            'longitude' => ['nullable', 'numeric', 'between:-180,180'],
-            'start_date' => 'nullable|date',
-            'end_date' => 'nullable|date|after_or_equal:start_date',
+            'location'    => 'required|string',
+            'latitude'    => ['nullable', 'numeric', 'between:-90,90'],
+            'longitude'   => ['nullable', 'numeric', 'between:-180,180'],
+            'start_date'  => 'nullable|date',
+            'end_date'    => 'nullable|date|after_or_equal:start_date',
+
+            // pilotage de l'insertion
+            'insert_after_id' => 'nullable|integer|exists:steps,id',
+            'at_start'        => 'nullable|boolean',
         ]);
 
-        $destinationStep = $trip->steps()->where('is_destination', true)->first();
+        $insertAfterId = $request->input('insert_after_id');
+        $atStart       = $request->boolean('at_start');
 
-        if ($destinationStep) {
-            // Décaler toutes les étapes sauf la destination
-            Step::where('trip_id', $trip->id)
-                ->where('id', '!=', $destinationStep->id)
-                ->orderBy('order', 'desc')
-                ->get()
-                ->each(function ($step) {
-                    $step->order++;
-                    $step->save();
-                });
+        DB::transaction(function () use ($trip, $insertAfterId, $atStart, &$validated) {
+            if ($insertAfterId) {
+                // sécurise l'appartenance au trip
+                $after = Step::where('trip_id', $trip->id)->findOrFail($insertAfterId);
 
-            // Mettre la destination à la fin
-            $destinationStep->order = $trip->steps()->count() + 1;
-            $destinationStep->save();
-        }
+                Step::where('trip_id', $trip->id)
+                    ->where('order', '>', $after->order)
+                    ->increment('order');
 
-        $validated['order'] = 1;
-        $validated['is_destination'] = false;
+                $validated['order'] = $after->order + 1;
 
-        $trip->steps()->create($validated);
+            } elseif ($atStart) {
+                Step::where('trip_id', $trip->id)->increment('order');
+                $validated['order'] = 1;
+
+            } else {
+                $maxOrder = Step::where('trip_id', $trip->id)->max('order') ?? 0;
+                $validated['order'] = $maxOrder + 1;
+            }
+
+            $trip->steps()->create($validated);
+        });
 
         return redirect()->route('trips.show', $trip)->with('success', 'Étape ajoutée.');
     }
 
 
+
     public function edit(Step $step)
     {
         $this->authorize('update', $step->trip);
+
+        $step->load('accommodations');
 
         return Inertia::render('Steps/Edit', [
             'step' => $step,
