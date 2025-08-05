@@ -5,96 +5,94 @@ import mapboxgl from 'mapbox-gl'
 defineOptions({ name: 'StepMapPreview' })
 
 const props = defineProps({
-    latitude: { type: Number, default: null },
-    longitude: { type: Number, default: null },
-    initialZoom: { type: Number, default: 5 },
-    markerColor: { type: String, default: '#2563eb' }, // bleu Tailwind
-    hideControls: { type: Boolean, default: true },     // pour garder ton UI minimaliste
+    steps: {
+        type: Array,
+        required: true,
+    },
+    markerColor: {
+        type: String,
+        default: '#2563eb',
+    },
 })
 
 const mapContainer = ref(null)
 const map = ref(null)
-const marker = ref(null)
-let resizeObserver = null
+let markers = []
 
 mapboxgl.accessToken = import.meta.env.VITE_MAPBOX_KEY
 
-const hasCoords = computed(() =>
-    Number.isFinite(props.latitude) && Number.isFinite(props.longitude)
-)
-
-const defaultCenter = [10, 50] // Europe
-const currentCenter = computed(() =>
-    hasCoords.value ? [props.longitude, props.latitude] : defaultCenter
+const stepsWithCoords = computed(() =>
+    props.steps.filter(step =>
+        Number.isFinite(step.latitude) && Number.isFinite(step.longitude)
+    )
 )
 
 function initMap() {
-    if (!mapContainer.value) return
-    if (!mapboxgl.accessToken) {
-        console.warn('[StepMapPreview] VITE_MAPBOX_KEY est manquant.')
-    }
+    if (!mapContainer.value || !stepsWithCoords.value.length) return
 
     map.value = new mapboxgl.Map({
         container: mapContainer.value,
         style: 'mapbox://styles/mapbox/streets-v12',
-        center: currentCenter.value,
-        zoom: props.initialZoom,
+        center: [stepsWithCoords.value[0].longitude, stepsWithCoords.value[0].latitude],
+        zoom: 5,
     })
 
     map.value.on('load', () => {
-        if (hasCoords.value) {
-            marker.value = new mapboxgl.Marker({ color: props.markerColor })
-                .setLngLat([props.longitude, props.latitude])
-                .addTo(map.value)
-        }
+        addMarkers()
+        fitMapToMarkers()
     })
-
-    // Resize auto (onglets, conteneur qui change de taille, etc.)
-    resizeObserver = new ResizeObserver(() => {
-        map.value?.resize()
-    })
-    resizeObserver.observe(mapContainer.value)
 }
 
-function updateMap() {
-    if (!map.value || !hasCoords.value) return
-    const coords = [props.longitude, props.latitude]
+function addMarkers() {
+    clearMarkers()
 
-    // Déplace la caméra
-    map.value.flyTo({ center: coords, zoom: Math.max(props.initialZoom, 6) })
+    stepsWithCoords.value.forEach((step, index) => {
+        // 1. Créer un élément HTML personnalisé pour le marqueur
+        const el = document.createElement('div')
+        el.className = 'custom-marker'
 
-    // Met à jour ou crée le marqueur
-    if (marker.value) {
-        marker.value.setLngLat(coords)
-    } else {
-        marker.value = new mapboxgl.Marker({ color: props.markerColor })
-            .setLngLat(coords)
+        // 2. Mettre le numéro d'étape : soit `step.order`, soit l'index
+        el.textContent = step.order ?? index + 1
+
+        // 3. Créer le marqueur Mapbox avec l'élément HTML
+        const marker = new mapboxgl.Marker({ element: el })
+            .setLngLat([step.longitude, step.latitude])
+            .setPopup(
+                new mapboxgl.Popup({ offset: 25 })
+                    .setText(step.location ?? step.title ?? `Étape #${index + 1}`)
+            )
             .addTo(map.value)
-    }
+
+        markers.push(marker)
+    })
 }
 
-onMounted(initMap)
 
-watch(
-    () => [props.latitude, props.longitude],
-    () => {
-        if (hasCoords.value) updateMap()
+function clearMarkers() {
+    markers.forEach(marker => marker.remove())
+    markers = []
+}
+
+function fitMapToMarkers() {
+    if (stepsWithCoords.value.length < 2) return
+    const bounds = new mapboxgl.LngLatBounds()
+    stepsWithCoords.value.forEach(step =>
+        bounds.extend([step.longitude, step.latitude])
+    )
+    map.value.fitBounds(bounds, { padding: 50 })
+}
+
+onMounted(() => {
+    if (stepsWithCoords.value.length) {
+        initMap()
     }
-)
+})
 
 onBeforeUnmount(() => {
-    try {
-        if (resizeObserver && mapContainer.value) {
-            resizeObserver.unobserve(mapContainer.value)
-            resizeObserver = null
-        }
-        marker.value = null
-        if (map.value) {
-            map.value.remove()
-            map.value = null
-        }
-    } catch (e) {
-        console.warn('[StepMapPreview] cleanup error', e)
+    clearMarkers()
+    if (map.value) {
+        map.value.remove()
+        map.value = null
     }
 })
 </script>
@@ -106,16 +104,32 @@ onBeforeUnmount(() => {
             ref="mapContainer"
             class="w-full h-64 rounded-lg border border-gray-200 shadow-sm"
         ></div>
-        <p v-if="!hasCoords" class="text-xs text-gray-500">
-            Aucune coordonnée valide — affichage centré sur l’Europe.
+        <p v-if="!stepsWithCoords.length" class="text-xs text-gray-500">
+            Aucune étape avec coordonnées valides.
         </p>
     </div>
 </template>
 
 <style scoped>
-/* Option pour masquer les contrôles Mapbox si hideControls = true
-   (si tu veux conditionner finement, tu peux ajouter une classe dynamiquement) */
 .mapboxgl-control-container {
-    display: v-bind('hideControls ? "none" : "block"');
+    display: none;
+}
+
+</style>
+
+<style>
+.custom-marker {
+    background-color: #2563eb;
+    color: white;
+    width: 28px;
+    height: 28px;
+    border-radius: 9999px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 13px;
+    font-weight: 600;
+    box-shadow: 0 0 0 2px white, 0 2px 4px rgba(0, 0, 0, 0.2);
+    cursor: pointer;
 }
 </style>

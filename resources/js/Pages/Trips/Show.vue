@@ -73,10 +73,8 @@ const currentTab = ref('infos')
             </div>
 
             <div v-if="currentTab === 'map'">
-                <StepMapPreview
-                    :latitude="steps?.[0]?.latitude"
-                    :longitude="steps?.[0]?.longitude"
-                />
+                <StepMapPreview :steps="steps" />
+
                 <div class="mt-3">
                     <GoogleMapsNavigationLink
                         :latitude="steps?.[0]?.latitude"
