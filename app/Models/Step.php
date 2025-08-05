@@ -25,6 +25,8 @@ class Step extends Model
 
     protected $casts = [
         'is_destination' => 'boolean',
+        'latitude' => 'float',   // pour avoir le bon format avec Google maps et MapBox
+        'longitude' => 'float',  // pour avoir le bon format avec Google maps et MapBox
     ];
 
     public function trip()

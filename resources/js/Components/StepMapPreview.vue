@@ -1,53 +1,100 @@
 <script setup>
-import { onMounted, watch, ref } from 'vue'
+import { onMounted, onBeforeUnmount, watch, ref, computed } from 'vue'
 import mapboxgl from 'mapbox-gl'
 
+defineOptions({ name: 'StepMapPreview' })
+
 const props = defineProps({
-    latitude: Number,
-    longitude: Number,
+    steps: {
+        type: Array,
+        required: true,
+    },
+    markerColor: {
+        type: String,
+        default: '#2563eb',
+    },
 })
 
 const mapContainer = ref(null)
 const map = ref(null)
-const marker = ref(null)
+let markers = []
 
 mapboxgl.accessToken = import.meta.env.VITE_MAPBOX_KEY
 
+const stepsWithCoords = computed(() =>
+    props.steps.filter(step =>
+        Number.isFinite(step.latitude) && Number.isFinite(step.longitude)
+    )
+)
+
 function initMap() {
-    const defaultCenter = [10, 50] // Europe
-    const center = props.latitude && props.longitude ? [props.longitude, props.latitude] : defaultCenter
+    if (!mapContainer.value || !stepsWithCoords.value.length) return
 
     map.value = new mapboxgl.Map({
         container: mapContainer.value,
         style: 'mapbox://styles/mapbox/streets-v12',
-        center,
+        center: [stepsWithCoords.value[0].longitude, stepsWithCoords.value[0].latitude],
         zoom: 5,
     })
 
-    if (props.latitude && props.longitude) {
-        marker.value = new mapboxgl.Marker({ color: '#2563eb' }) // bleu Tailwind
-            .setLngLat([props.longitude, props.latitude])
-            .addTo(map.value)
-    }
+    map.value.on('load', () => {
+        addMarkers()
+        fitMapToMarkers()
+    })
 }
 
-function updateMap() {
-    if (!map.value || !props.latitude || !props.longitude) return
+function addMarkers() {
+    clearMarkers()
 
-    const coords = [props.longitude, props.latitude]
-    map.value.flyTo({ center: coords, zoom: 6 })
+    stepsWithCoords.value.forEach((step, index) => {
+        // 1. Créer un élément HTML personnalisé pour le marqueur
+        const el = document.createElement('div')
+        el.className = 'custom-marker'
 
-    if (marker.value) {
-        marker.value.setLngLat(coords)
-    } else {
-        marker.value = new mapboxgl.Marker({ color: '#2563eb' })
-            .setLngLat(coords)
+        // 2. Mettre le numéro d'étape : soit `step.order`, soit l'index
+        el.textContent = step.order ?? index + 1
+
+        // 3. Créer le marqueur Mapbox avec l'élément HTML
+        const marker = new mapboxgl.Marker({ element: el })
+            .setLngLat([step.longitude, step.latitude])
+            .setPopup(
+                new mapboxgl.Popup({ offset: 25 })
+                    .setText(step.location ?? step.title ?? `Étape #${index + 1}`)
+            )
             .addTo(map.value)
-    }
+
+        markers.push(marker)
+    })
 }
 
-onMounted(initMap)
-watch(() => [props.latitude, props.longitude], updateMap)
+
+function clearMarkers() {
+    markers.forEach(marker => marker.remove())
+    markers = []
+}
+
+function fitMapToMarkers() {
+    if (stepsWithCoords.value.length < 2) return
+    const bounds = new mapboxgl.LngLatBounds()
+    stepsWithCoords.value.forEach(step =>
+        bounds.extend([step.longitude, step.latitude])
+    )
+    map.value.fitBounds(bounds, { padding: 50 })
+}
+
+onMounted(() => {
+    if (stepsWithCoords.value.length) {
+        initMap()
+    }
+})
+
+onBeforeUnmount(() => {
+    clearMarkers()
+    if (map.value) {
+        map.value.remove()
+        map.value = null
+    }
+})
 </script>
 
 <template>
@@ -57,11 +104,32 @@ watch(() => [props.latitude, props.longitude], updateMap)
             ref="mapContainer"
             class="w-full h-64 rounded-lg border border-gray-200 shadow-sm"
         ></div>
+        <p v-if="!stepsWithCoords.length" class="text-xs text-gray-500">
+            Aucune étape avec coordonnées valides.
+        </p>
     </div>
 </template>
 
 <style scoped>
 .mapboxgl-control-container {
     display: none;
+}
+
+</style>
+
+<style>
+.custom-marker {
+    background-color: #2563eb;
+    color: white;
+    width: 28px;
+    height: 28px;
+    border-radius: 9999px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 13px;
+    font-weight: 600;
+    box-shadow: 0 0 0 2px white, 0 2px 4px rgba(0, 0, 0, 0.2);
+    cursor: pointer;
 }
 </style>
