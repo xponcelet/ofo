@@ -1,135 +1,140 @@
+<!-- resources/js/Components/StepMapPreview.vue -->
+<template>
+    <div ref="mapEl" class="w-full h-64 rounded overflow-hidden border border-gray-200" />
+</template>
+
 <script setup>
-import { onMounted, onBeforeUnmount, watch, ref, computed } from 'vue'
+import { ref, onMounted, onBeforeUnmount, watch, computed, nextTick } from 'vue'
 import mapboxgl from 'mapbox-gl'
 
-defineOptions({ name: 'StepMapPreview' })
-
 const props = defineProps({
+    // Cas 1 : un seul point
+    latitude:  { type: Number, default: null },
+    longitude: { type: Number, default: null },
+
+    // Cas 2 : plusieurs étapes [{ title, latitude, longitude }, ...]
     steps: {
         type: Array,
-        required: true,
+        default: () => [], // <— évite props.steps === undefined
     },
-    markerColor: {
-        type: String,
-        default: '#2563eb',
-    },
+
+    // Options
+    zoom: { type: Number, default: 5 },
+    style: { type: String, default: 'mapbox://styles/mapbox/streets-v12' },
 })
 
-const mapContainer = ref(null)
-const map = ref(null)
+// Centre par défaut : Europe
+const DEFAULT_CENTER = [10, 50] // [lng, lat]
+
+const mapEl = ref(null)
+let map = null
 let markers = []
 
-mapboxgl.accessToken = import.meta.env.VITE_MAPBOX_KEY
+const hasSinglePoint = computed(() => props.latitude !== null && props.longitude !== null)
 
-const stepsWithCoords = computed(() =>
-    props.steps.filter(step =>
-        Number.isFinite(step.latitude) && Number.isFinite(step.longitude)
-    )
-)
+const points = computed(() => {
+    // Si on a des coords directes, on les utilise
+    if (hasSinglePoint.value) {
+        return [{
+            lng: props.longitude,
+            lat: props.latitude,
+            title: 'Étape',
+        }]
+    }
 
-function initMap() {
-    if (!mapContainer.value || !stepsWithCoords.value.length) return
+    // Sinon, on utilise steps (filtrées)
+    // props.steps est TOUJOURS un array grâce au default: () => []
+    return props.steps
+        .filter(s => s && s.latitude !== null && s.longitude !== null)
+        .map(s => ({
+            lng: s.longitude,
+            lat: s.latitude,
+            title: s.title ?? '',
+            id: s.id ?? undefined,
+        }))
+})
 
-    map.value = new mapboxgl.Map({
-        container: mapContainer.value,
-        style: 'mapbox://styles/mapbox/streets-v12',
-        center: [stepsWithCoords.value[0].longitude, stepsWithCoords.value[0].latitude],
-        zoom: 5,
-    })
-
-    map.value.on('load', () => {
-        addMarkers()
-        fitMapToMarkers()
-    })
-}
-
-function addMarkers() {
-    clearMarkers()
-
-    stepsWithCoords.value.forEach((step, index) => {
-        // 1. Créer un élément HTML personnalisé pour le marqueur
-        const el = document.createElement('div')
-        el.className = 'custom-marker'
-
-        // 2. Mettre le numéro d'étape : soit `step.order`, soit l'index
-        el.textContent = step.order ?? index + 1
-
-        // 3. Créer le marqueur Mapbox avec l'élément HTML
-        const marker = new mapboxgl.Marker({ element: el })
-            .setLngLat([step.longitude, step.latitude])
-            .setPopup(
-                new mapboxgl.Popup({ offset: 25 })
-                    .setText(step.location ?? step.title ?? `Étape #${index + 1}`)
-            )
-            .addTo(map.value)
-
-        markers.push(marker)
-    })
-}
-
-
-function clearMarkers() {
-    markers.forEach(marker => marker.remove())
+function clearMarkers () {
+    markers.forEach(m => m.remove())
     markers = []
 }
 
-function fitMapToMarkers() {
-    if (stepsWithCoords.value.length < 2) return
+function renderMarkers () {
+    if (!map) return
+    clearMarkers()
+
+    if (points.value.length === 0) {
+        map.setCenter(DEFAULT_CENTER)
+        map.setZoom(3.5)
+        return
+    }
+
     const bounds = new mapboxgl.LngLatBounds()
-    stepsWithCoords.value.forEach(step =>
-        bounds.extend([step.longitude, step.latitude])
-    )
-    map.value.fitBounds(bounds, { padding: 50 })
+    points.value.forEach(p => {
+        const el = document.createElement('div')
+        el.className = 'rounded-full shadow ring-2 ring-white'
+        el.style.width = '14px'
+        el.style.height = '14px'
+        el.style.background = '#1d4ed8' // bleu (tu peux styliser mieux si tu veux)
+
+        const marker = new mapboxgl.Marker({ element: el })
+            .setLngLat([p.lng, p.lat])
+            .addTo(map)
+
+        if (p.title) {
+            const popup = new mapboxgl.Popup({ closeButton: false, offset: 24 }).setText(p.title)
+            marker.setPopup(popup)
+        }
+
+        markers.push(marker)
+        bounds.extend([p.lng, p.lat])
+    })
+
+    if (points.value.length === 1) {
+        map.easeTo({ center: [points.value[0].lng, points.value[0].lat], zoom: props.zoom })
+    } else {
+        map.fitBounds(bounds, { padding: 40, maxZoom: 9 })
+    }
 }
 
-onMounted(() => {
-    if (stepsWithCoords.value.length) {
-        initMap()
-    }
+onMounted(async () => {
+    await nextTick()
+
+    map = new mapboxgl.Map({
+        container: mapEl.value,
+        style: props.style,
+        center: DEFAULT_CENTER,
+        zoom: 3.5,
+        accessToken: import.meta.env.VITE_MAPBOX_KEY,
+    })
+
+    map.addControl(new mapboxgl.NavigationControl(), 'top-right')
+
+    map.on('load', () => {
+        renderMarkers()
+    })
 })
+
+// Re-rendre si les points changent (coords ou steps)
+watch(points, () => {
+    if (!map) return
+    // Si la map n’est pas encore prête, attendre le load
+    if (!map.isStyleLoaded()) {
+        map.once('load', renderMarkers)
+    } else {
+        renderMarkers()
+    }
+}, { immediate: false, deep: true })
 
 onBeforeUnmount(() => {
     clearMarkers()
-    if (map.value) {
-        map.value.remove()
-        map.value = null
+    if (map) {
+        map.remove()
+        map = null
     }
 })
 </script>
 
-<template>
-    <div class="mt-6 space-y-1">
-        <h2 class="text-sm font-medium text-gray-700">Aperçu de la carte</h2>
-        <div
-            ref="mapContainer"
-            class="w-full h-64 rounded-lg border border-gray-200 shadow-sm"
-        ></div>
-        <p v-if="!stepsWithCoords.length" class="text-xs text-gray-500">
-            Aucune étape avec coordonnées valides.
-        </p>
-    </div>
-</template>
-
 <style scoped>
-.mapboxgl-control-container {
-    display: none;
-}
-
-</style>
-
-<style>
-.custom-marker {
-    background-color: #2563eb;
-    color: white;
-    width: 28px;
-    height: 28px;
-    border-radius: 9999px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 13px;
-    font-weight: 600;
-    box-shadow: 0 0 0 2px white, 0 2px 4px rgba(0, 0, 0, 0.2);
-    cursor: pointer;
-}
+/* rien de spécial ici */
 </style>
