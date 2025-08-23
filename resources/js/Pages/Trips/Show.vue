@@ -4,6 +4,8 @@ import AppLayout from '@/Layouts/AppLayout.vue'
 import TripSteps from '@/Components/TripSteps.vue'
 import StepMapPreview from '@/Components/StepMapPreview.vue'
 import GoogleMapsNavigationLink from "@/Components/GoogleMapsNavigationLink.vue";
+import GoogleMapsFullTripLink from '@/Components/GoogleMapsFullTripLink.vue'
+
 
 const props = defineProps({
     trip: Object,
@@ -76,10 +78,7 @@ const currentTab = ref('infos')
                 <StepMapPreview :steps="steps" />
 
                 <div class="mt-3">
-                    <GoogleMapsNavigationLink
-                        :latitude="steps?.[0]?.latitude"
-                        :longitude="steps?.[0]?.longitude"
-                    />
+                    <GoogleMapsFullTripLink :steps="steps" class="mt-3" />
                 </div>
             </div>
 

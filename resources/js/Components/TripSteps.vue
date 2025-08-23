@@ -37,6 +37,16 @@ function deleteStep(step) {
                         <p v-if="step.description" class="text-sm text-gray-600 mt-1">{{ step.description }}</p>
                         <p class="text-sm text-gray-500 mt-1">📍 {{ step.location || 'Lieu non précisé' }}</p>
                         <p class="text-sm text-gray-500">📅 {{ step.start_date }} → {{ step.end_date }}</p>
+                        <a
+                            v-if="step.latitude && step.longitude"
+                            :href="`https://www.google.com/maps/dir/?api=1&destination=${step.latitude},${step.longitude}`"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            class="text-sm text-blue-600 hover:underline inline-flex items-center gap-1 mt-2"
+                        >
+                            🗺️ Itinéraire Google Maps
+                        </a>
+
 
                         <!-- 🏨 Logements -->
                         <div v-if="step.accommodations.length" class="mt-4 space-y-3">
