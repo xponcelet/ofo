@@ -5,6 +5,7 @@ import TripSteps from '@/Components/TripSteps.vue'
 import StepMapPreview from '@/Components/StepMapPreview.vue'
 import GoogleMapsNavigationLink from "@/Components/GoogleMapsNavigationLink.vue";
 import GoogleMapsFullTripLink from '@/Components/GoogleMapsFullTripLink.vue'
+import StepsMap from "@/Components/StepsMap.vue";
 
 
 const props = defineProps({
@@ -75,7 +76,7 @@ const currentTab = ref('infos')
             </div>
 
             <div v-if="currentTab === 'map'">
-                <StepMapPreview :steps="steps" />
+                <StepsMap :steps="steps" />
 
                 <div class="mt-3">
                     <GoogleMapsFullTripLink :steps="steps" class="mt-3" />

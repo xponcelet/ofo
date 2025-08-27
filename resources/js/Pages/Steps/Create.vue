@@ -2,7 +2,7 @@
 import { useForm, Link } from '@inertiajs/vue3'
 import InputError from '@/Components/InputError.vue'
 import MapboxAutocomplete from '@/Components/MapboxAutocomplete.vue'
-import StepMapPreview from '@/Components/StepMapPreview.vue'
+import StepPickMap from '@/Components/StepPickMap.vue'
 
 const props = defineProps({
     trip: Object,
@@ -24,9 +24,21 @@ const form = useForm({
     at_start: props.at_start,
 })
 
-function updateCoords({ latitude, longitude }) {
-    form.latitude = latitude
-    form.longitude = longitude
+/** Recherche → coords */
+function updateCoordsFromSearch({ latitude, longitude }) {
+    form.latitude = latitude != null ? Number(latitude) : null
+    form.longitude = longitude != null ? Number(longitude) : null
+}
+
+/** Carte (clic sur label ville) → coords */
+function updateCoordsFromMap({ latitude, longitude }) {
+    form.latitude = latitude != null ? Number(latitude) : null
+    form.longitude = longitude != null ? Number(longitude) : null
+}
+
+/** Carte (label choisi) → nom du lieu */
+function applyLabelName({ place }) {
+    if (place) form.location = place
 }
 
 function submit() {
@@ -35,7 +47,6 @@ function submit() {
         form.setError('location', 'Le lieu est requis.')
         return
     }
-    // ✅ Utiliser useForm pour poster
     form.post(props.storeUrl)
 }
 </script>
@@ -70,12 +81,27 @@ function submit() {
             <!-- Lieu -->
             <div>
                 <label class="block text-sm font-medium text-gray-700">Lieu *</label>
-                <MapboxAutocomplete v-model="form.location" @update:coords="updateCoords" />
+                <MapboxAutocomplete
+                    v-model="form.location"
+                    @update:coords="updateCoordsFromSearch"
+                />
                 <InputError :message="form.errors.location" />
+                <p class="mt-2 text-xs text-gray-500">
+                    Astuce : cliquez sur un <strong>nom de ville</strong> sur la carte pour le sélectionner.
+                </p>
             </div>
 
-            <!-- Carte -->
-            <StepMapPreview class="mt-4" :latitude="form.latitude" :longitude="form.longitude" />
+            <!-- Carte (sélection par clic sur un label de ville) -->
+            <StepPickMap
+                class="mt-4"
+                :latitude="form.latitude"
+                :longitude="form.longitude"
+                :recenter-on-update="true"
+                :label-layers="['settlement-major-label','settlement-minor-label','place-label']"
+                :click-padding-px="12"
+                @pick="updateCoordsFromMap"
+                @reverse-geocoded="applyLabelName"
+            />
 
             <!-- Dates -->
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -93,11 +119,17 @@ function submit() {
 
             <!-- Boutons -->
             <div class="flex justify-end space-x-4">
-                <!-- ✅ Utiliser Link d’Inertia -->
-                <Link :href="route('trips.show', trip.id)" class="inline-flex items-center px-4 py-2 bg-gray-100 text-gray-700 font-semibold rounded hover:bg-gray-200">
+                <Link
+                    :href="route('trips.show', props.trip.id)"
+                    class="inline-flex items-center px-4 py-2 bg-gray-100 text-gray-700 font-semibold rounded hover:bg-gray-200"
+                >
                     Annuler
                 </Link>
-                <button type="submit" class="inline-flex items-center px-4 py-2 bg-blue-600 text-white font-semibold rounded hover:bg-blue-700" :disabled="form.processing">
+                <button
+                    type="submit"
+                    class="inline-flex items-center px-4 py-2 bg-blue-600 text-white font-semibold rounded hover:bg-blue-700"
+                    :disabled="form.processing"
+                >
                     Ajouter l’étape
                 </button>
             </div>

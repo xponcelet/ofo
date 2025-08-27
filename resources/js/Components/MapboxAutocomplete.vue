@@ -16,17 +16,19 @@ let observer = null
 
 mapboxgl.accessToken = import.meta.env.VITE_MAPBOX_KEY
 
-function attachGeocoder() {
+async function attachGeocoder() {
     if (!geocoder || attached) return
     if (inputElement.value && document.body.contains(inputElement.value)) {
         geocoder.addTo(inputElement.value)
         attached = true
 
-        // Pré-remplir si une valeur est déjà fournie par le parent
-        if (props.modelValue && geocoder.inputEl) {
-            geocoder.inputEl.value = props.modelValue
+        // Laisser le contrôle se poser puis pré-remplir via l'API officielle
+        await nextTick()
+        if (props.modelValue) {
+            geocoder.setInput(props.modelValue)
         }
-        // On n’a plus besoin d’observer
+
+        // On n’observe plus le DOM
         observer?.disconnect()
         observer = null
     }
@@ -52,13 +54,13 @@ onMounted(async () => {
         emit('update:coords', { latitude: null, longitude: null })
     })
 
-    // Attendre que le template soit réellement inséré
+    // Attendre que le template soit inséré
     await nextTick()
 
     // 1) Tentative directe
-    attachGeocoder()
+    await attachGeocoder()
 
-    // 2) Si pas encore dans le DOM (Inertia swap, tab hidden, etc.), on observe le DOM jusqu’à dispo
+    // 2) Si pas encore dans le DOM (swap Inertia / tab...), observer jusqu’à dispo
     if (!attached) {
         observer = new MutationObserver(attachGeocoder)
         observer.observe(document.body, { childList: true, subtree: true })
@@ -69,28 +71,25 @@ onBeforeUnmount(() => {
     observer?.disconnect()
     observer = null
     if (geocoder) {
-        try {
-            // Évite que Mapbox garde des handlers sur un conteneur disparu
-            geocoder.onRemove()
-        } catch (_) {}
+        try { geocoder.onRemove() } catch (_) {}
         geocoder = null
     }
     attached = false
 })
 
-// Si la valeur externe change, on reflète dans le champ (sans déclencher d’events)
+// Refléter les changements externes (pré-remplissage/synchro)
 watch(
     () => props.modelValue,
     (val) => {
-        if (geocoder?.inputEl && geocoder.inputEl.value !== (val || '')) {
-            geocoder.inputEl.value = val || ''
+        if (geocoder) {
+            geocoder.setInput(val || '')
         }
     }
 )
 </script>
 
 <template>
-    <!-- IMPORTANT : laisser ce div exister et rester dans le DOM (éviter v-if sur le parent) -->
+    <!-- IMPORTANT : éviter v-if sur ce conteneur ; préférer v-show si besoin -->
     <div ref="inputElement" class="mapbox-autocomplete w-full" />
 </template>
 

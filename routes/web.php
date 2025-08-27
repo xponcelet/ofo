@@ -8,6 +8,7 @@ use App\Http\Controllers\TripCreationController;
 use App\Http\Controllers\TripController;
 use App\Http\Controllers\StepController;
 use App\Http\Controllers\AccommodationController;
+use App\Http\Controllers\PublicTripController;
 
 Route::get('/', function () {
     return Inertia::render('Welcome', [
@@ -17,6 +18,7 @@ Route::get('/', function () {
         'phpVersion' => PHP_VERSION,
     ]);
 });
+
 
 // Routes où l'utilisateur doit être vérifié
 
@@ -51,6 +53,8 @@ Route::controller(GoogleAuthController::class)->group(function () {
 // Routes pour réoargniser l'ordre des étapes
 Route::patch('/steps/{step}/move-up', [StepController::class, 'moveUp'])->name('steps.move-up');
 Route::patch('/steps/{step}/move-down', [StepController::class, 'moveDown'])->name('steps.move-down');
+
+
 
 
 /*

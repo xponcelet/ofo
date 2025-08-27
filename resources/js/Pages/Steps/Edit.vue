@@ -30,18 +30,31 @@
             <div>
                 <label class="block text-sm font-medium text-gray-700">Lieu *</label>
                 <MapboxAutocomplete
+                    :key="`step-${step.id}`"
                     v-model="form.location"
-                    @update:coords="updateCoords"
+                    @update:coords="updateCoordsFromSearch"
                 />
                 <InputError :message="form.errors.location" />
+                <p class="mt-2 text-xs text-gray-500">
+                    Astuce : cliquez sur un <strong>nom de ville</strong> sur la carte pour le sélectionner.
+                </p>
             </div>
 
-            <!-- Carte -->
-            <StepMapPreview
+            <!-- Carte (clic sur nom de ville uniquement) -->
+            <StepPickMap
                 class="mt-4"
                 :latitude="form.latitude"
                 :longitude="form.longitude"
+                :recenter-on-update="true"
+                :label-layers="['settlement-major-label','settlement-minor-label','place-label']"
+                :click-padding-px="12"
+                @pick="updateCoordsFromMap"
+                @reverse-geocoded="applyLabelName"
             />
+
+
+
+
 
             <!-- Dates -->
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -76,7 +89,7 @@
                 </Link>
                 <button
                     type="submit"
-                    class="inline-flex items-center px-4 py-2 bg-blue-600 text-white font-semibold rounded hover:bg-blue-700"
+                    class="inline-flex items-center px-4 py-2 bg-blue-600 text-white font-semibold rounded hover:bg-blue-700 disabled:opacity-60"
                     :disabled="form.processing"
                 >
                     Enregistrer
@@ -84,7 +97,7 @@
             </div>
         </form>
 
-        <!-- 🔽 Liste des logements liés -->
+        <!-- Logements liés -->
         <div>
             <div class="flex justify-between items-center mb-4">
                 <h2 class="text-lg font-semibold">🏨 Logements liés à cette étape</h2>
@@ -132,29 +145,40 @@
 import { useForm, router, Link } from '@inertiajs/vue3'
 import InputError from '@/Components/InputError.vue'
 import MapboxAutocomplete from '@/Components/MapboxAutocomplete.vue'
-import StepMapPreview from '@/Components/StepMapPreview.vue'
+import StepPickMap from '@/Components/StepPickMap.vue'
 
-const props = defineProps({
-    step: Object,
-})
+const props = defineProps({ step: Object })
 
+// Coercition en number pour éviter les strings depuis la DB
 const form = useForm({
-    title: props.step.title || '',
-    description: props.step.description || '',
-    location: props.step.location || '',
-    latitude: props.step.latitude || null,
-    longitude: props.step.longitude || null,
-    start_date: props.step.start_date || '',
-    end_date: props.step.end_date || '',
+    title: props.step.title ?? '',
+    description: props.step.description ?? '',
+    location: props.step.location ?? '',
+    latitude: props.step.latitude != null ? Number(props.step.latitude) : null,
+    longitude: props.step.longitude != null ? Number(props.step.longitude) : null,
+    start_date: props.step.start_date ?? '',
+    end_date: props.step.end_date ?? '',
 })
 
-function updateCoords({ latitude, longitude }) {
-    form.latitude = latitude
-    form.longitude = longitude
+// Recherche → coords
+function updateCoordsFromSearch({ latitude, longitude }) {
+    form.latitude = latitude != null ? Number(latitude) : null
+    form.longitude = longitude != null ? Number(longitude) : null
+}
+
+// Carte (clic sur label ville) → coords
+function updateCoordsFromMap({ latitude, longitude }) {
+    form.latitude = latitude != null ? Number(latitude) : null
+    form.longitude = longitude != null ? Number(longitude) : null
+}
+
+// Carte (label choisi) → nom
+function applyLabelName({ place }) {
+    if (place) form.location = place
 }
 
 function submit() {
-    form.post(route('steps.update', props.step.id))
+    form.put(route('steps.update', props.step.id))
 }
 
 function deleteAccommodation(id) {
