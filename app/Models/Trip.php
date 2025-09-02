@@ -22,7 +22,10 @@ class Trip extends Model
         'average_rating',
         'is_public',
     ];
-
+    public function scopeIsPublic($query)
+    {
+        return $query->where('is_public', true);
+    }
 
     public function user()
     {

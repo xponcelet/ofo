@@ -51,6 +51,14 @@ const logout = () => {
                                 <NavLink :href="route('dashboard')" :active="route().current('dashboard')">
                                     Dashboard
                                 </NavLink>
+                                <NavLink
+                                    :href="route('public.trips.index')"
+                                    :active="route().current('public.trips.*')"
+                                >
+                                    Voyages publics
+                                </NavLink>
+
+
                             </div>
                         </div>
 
@@ -199,7 +207,14 @@ const logout = () => {
                         <ResponsiveNavLink :href="route('dashboard')" :active="route().current('dashboard')">
                             Dashboard
                         </ResponsiveNavLink>
+                        <ResponsiveNavLink
+                            :href="route('public.trips.index')"
+                            :active="route().current('public.trips.*')"
+                        >
+                            Voyages publics
+                        </ResponsiveNavLink>
                     </div>
+
 
                     <!-- Responsive Settings Options -->
                     <div class="pt-4 pb-1 border-t border-gray-200">

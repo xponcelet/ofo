@@ -19,6 +19,12 @@ Route::get('/', function () {
     ]);
 });
 
+// Routes publiques
+
+Route::prefix('voyages')->name('public.trips.')->group(function () {
+    Route::get('/', [PublicTripController::class, 'index'])->name('index');
+    Route::get('/{trip}', [PublicTripController::class, 'show'])->name('show');
+});
 
 // Routes où l'utilisateur doit être vérifié
 

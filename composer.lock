@@ -2994,7 +2994,7 @@
                 "nette",
                 "paginator",
                 "password",
-                "slugify",
+                "ify",
                 "string",
                 "unicode",
                 "utf-8",
