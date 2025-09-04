@@ -47,8 +47,15 @@ class PublicTripController extends Controller
             'steps:id,trip_id,title,location,latitude,longitude,order',
         ]);
 
+        $isFavorite = false;
+
+        if (auth()->check()) {
+            $isFavorite = $trip->isFavoredBy(auth()->user());
+        }
+
         return Inertia::render('Public/Trips/Show', [
             'trip' => $trip,
+            'isFavorite' => $isFavorite,
         ]);
     }
 }

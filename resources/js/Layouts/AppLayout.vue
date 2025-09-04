@@ -57,8 +57,13 @@ const logout = () => {
                                 >
                                     Voyages publics
                                 </NavLink>
-
-
+                                <NavLink
+                                    v-if="$page.props.auth?.user"
+                                    :href="route('favorites.index')"
+                                    :active="route().current('favorites.index')"
+                                >
+                                    Mes favoris
+                                </NavLink>
                             </div>
                         </div>
 
@@ -213,6 +218,14 @@ const logout = () => {
                         >
                             Voyages publics
                         </ResponsiveNavLink>
+                        <ResponsiveNavLink
+                            v-if="$page.props.auth?.user"
+                            :href="route('favorites.index')"
+                            :active="route().current('favorites.index')"
+                        >
+                            Mes favoris
+                        </ResponsiveNavLink>
+
                     </div>
 
 

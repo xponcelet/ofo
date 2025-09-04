@@ -1,6 +1,19 @@
 <script setup>
-import { Head } from '@inertiajs/vue3'
-const props = defineProps({ trip: Object })
+import { Head, router } from '@inertiajs/vue3'
+
+const props = defineProps({
+    trip: Object,
+    isFavorite: Boolean,
+})
+
+function toggleFavorite() {
+    const method = props.isFavorite ? 'delete' : 'post'
+    router[method](route(props.isFavorite ? 'favorites.destroy' : 'favorites.store', props.trip.id), {}, {
+        preserveScroll: true,
+        onSuccess: () => router.reload({ only: ['isFavorite'] }), // recharge juste la prop
+    })
+}
+
 </script>
 
 <template>
@@ -17,6 +30,14 @@ const props = defineProps({ trip: Object })
                 </p>
             </div>
         </div>
+
+        <button
+            @click="toggleFavorite"
+            class="px-3 py-1 rounded text-white"
+            :class="isFavorite ? 'bg-red-500' : 'bg-gray-500'"
+        >
+            {{ isFavorite ? 'Retirer des favoris' : 'Ajouter aux favoris' }}
+        </button>
 
         <div class="mt-8">
             <h2 class="text-lg font-medium mb-3">Étapes</h2>

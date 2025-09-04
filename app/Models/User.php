@@ -65,4 +65,12 @@ class User extends Authenticatable implements MustVerifyEmail
             'password' => 'hashed',
         ];
     }
+
+    public function favoriteTrips()
+    {
+        return $this->belongsToMany(Trip::class, 'favorites')->withTimestamps();
+    }
+
+
+
 }

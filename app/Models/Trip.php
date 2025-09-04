@@ -41,6 +41,20 @@ class Trip extends Model
     {
         return $this->hasMany(Accommodation::class);
     }
+
+    // Gestion des favoris
+    public function favoredBy()
+    {
+        return $this->belongsToMany(User::class, 'favorites')->withTimestamps();
+    }
+
+    public function isFavoredBy(User $user): bool
+    {
+        return $this->favoredBy()->where('user_id', $user->id)->exists();
+    }
+
+
+
     /*
             public function transports()
             {
