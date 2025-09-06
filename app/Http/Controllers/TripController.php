@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Trip;
 use Illuminate\Http\Request;
+use Inertia\Response;
 use App\Http\Requests\StoreTripRequest;
 use App\Http\Requests\UpdateTripRequest;
 use Illuminate\Support\Facades\Auth;
@@ -13,7 +14,9 @@ class TripController extends Controller
 {
     use AuthorizesRequests;
 
-    public function index()
+
+    /*
+     *  public function index()
     {
         $trips = Trip::where('user_id', auth()->id())
             ->latest()
@@ -23,6 +26,25 @@ class TripController extends Controller
             'trips' => $trips,
         ]);
     }
+     */
+    public function index(Request $request): \Inertia\Response
+    {
+        $perPage = (int) $request->integer('per_page', 12);
+
+        $trips = Trip::query()
+            ->select(['id','title','description','image','start_date','end_date']) // + description si tu veux l’afficher
+            ->where('user_id', auth()->id())
+            ->withCount(['steps','favoredBy as favs'])
+            ->latest()
+            ->paginate($perPage)
+            ->withQueryString();
+
+        return \Inertia\Inertia::render('Trips/Index', [
+            'trips' => $trips,
+        ]);
+    }
+
+
 
     public function create()
     {
@@ -50,17 +72,33 @@ class TripController extends Controller
 
     public function show(Trip $trip)
     {
-        $this->authorize('view', $trip); // facultatif si politique de sécurité
+        $this->authorize('view', $trip);
 
-        $trip->load('steps'); // on charge les étapes liées
-        $trip->load('steps.accommodations'); // on charge les logements liés aux logements
+        // ce que tu avais déjà
+        $trip->load('steps', 'steps.accommodations');
 
+        // 1) compteur de likes
+        $trip->loadCount(['favoredBy as favs']);
 
-        return Inertia::render('Trips/Show', [
-            'trip' => $trip,
-            'steps' => $trip->steps()->select('id', 'title', 'location', 'latitude', 'longitude')->get(),
+        // 2) liste des likers (seulement pour le propriétaire)
+        $likers = null;
+        if (auth()->check() && auth()->user()->can('viewLikers', $trip)) {
+            $likers = $trip->favoredBy()
+                ->select('users.id','users.name','users.email') // ajoute d'autres champs si tu veux
+                ->withPivot('created_at')                       // pour la date d'ajout en favori
+                ->orderByDesc('favorites.created_at')
+                ->paginate(12)
+                ->withQueryString();
+        }
+
+        return \Inertia\Inertia::render('Trips/Show', [
+            'trip'   => $trip,
+            'steps'  => $trip->steps()->select('id','title','location','latitude','longitude')->get(),
+            'favs'   => $trip->favs,     // nombre total de likes
+            'likers' => $likers,         // paginator ou null
         ]);
     }
+
 
     public function edit(Trip $trip)
     {
