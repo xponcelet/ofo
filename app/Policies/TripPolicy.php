@@ -64,4 +64,11 @@ class TripPolicy
     {
         return false;
     }
+
+    // Voir les personnes ayant likées
+    public function viewLikers(User $user, Trip $trip): bool
+    {
+        return $user->id === $trip->user_id; // seul le propriétaire
+    }
+
 }

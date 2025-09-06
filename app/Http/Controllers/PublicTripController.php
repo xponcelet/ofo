@@ -14,8 +14,12 @@ class PublicTripController extends Controller
         $sort = $validated['sort'] ?? 'latest';
 
         $trips = Trip::query()
+            ->select(['id','title','description','image','start_date','end_date']) // <- d'abord
             ->isPublic()
-            ->withCount('steps')
+            ->withCount([
+                'steps',
+                'favoredBy as favs', // <- alias court
+            ])
             ->when($validated['q'] ?? null, function ($q, $term) {
                 $q->where(function ($qq) use ($term) {
                     $qq->where('title', 'like', "%{$term}%")
@@ -26,7 +30,6 @@ class PublicTripController extends Controller
             ->when($sort === 'latest', fn($q) => $q->latest())
             ->when($sort === 'oldest', fn($q) => $q->oldest())
             ->when($sort === 'title',  fn($q) => $q->orderBy('title'))
-            ->select(['id','title','description','image','start_date','end_date']) // whitelisting propre
             ->paginate($request->perPage())
             ->withQueryString();
 
@@ -47,8 +50,15 @@ class PublicTripController extends Controller
             'steps:id,trip_id,title,location,latitude,longitude,order',
         ]);
 
+        $isFavorite = false;
+
+        if (auth()->check()) {
+            $isFavorite = $trip->isFavoredBy(auth()->user());
+        }
+
         return Inertia::render('Public/Trips/Show', [
             'trip' => $trip,
+            'isFavorite' => $isFavorite,
         ]);
     }
 }

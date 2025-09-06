@@ -9,6 +9,7 @@ use App\Http\Controllers\TripController;
 use App\Http\Controllers\StepController;
 use App\Http\Controllers\AccommodationController;
 use App\Http\Controllers\PublicTripController;
+use App\Http\Controllers\FavoriteController;
 
 Route::get('/', function () {
     return Inertia::render('Welcome', [
@@ -47,7 +48,11 @@ Route::middleware([
     Route::post('/steps/{step}/duplicate', [StepController::class, 'duplicate'])->name('steps.duplicate');
     // Logements liés à une étape
     Route::resource('steps.accommodations', AccommodationController::class)->shallow();
-
+    // Gestion des favoris
+    Route::post('/trips/{trip}/favorite', [FavoriteController::class, 'store'])->name('favorites.store');
+    Route::delete('/trips/{trip}/favorite', [FavoriteController::class, 'destroy'])->name('favorites.destroy');
+    // liste des favoris
+    Route::get('/favorites', [FavoriteController::class, 'index'])->name('favorites.index');
 
 });
 

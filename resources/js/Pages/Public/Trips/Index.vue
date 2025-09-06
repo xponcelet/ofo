@@ -52,15 +52,24 @@ watch([q, sort], () => {
             <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
                 <article v-for="trip in trips.data" :key="trip.id" class="rounded-2xl border shadow-sm overflow-hidden">
                     <Link :href="route('public.trips.show', trip.id)">
-                    <img v-if="trip.image" :src="trip.image" alt="" class="w-full h-40 object-cover" />
+                        <img v-if="trip.image" :src="trip.image" alt="" class="w-full h-40 object-cover" />
                         <div class="p-4">
                             <h2 class="text-lg font-medium line-clamp-1">{{ trip.title || 'Sans titre' }}</h2>
                             <p class="text-sm text-gray-600 line-clamp-2 mt-1">{{ trip.description }}</p>
-                            <p class="text-xs text-gray-500 mt-2">
-                                {{ trip.start_date ?? '—' }} → {{ trip.end_date ?? '—' }}
-                            </p>
+
+                            <div class="mt-2 flex items-center justify-between text-xs text-gray-500">
+                                <span>{{ trip.start_date ?? '—' }} → {{ trip.end_date ?? '—' }}</span>
+                                <span class="inline-flex items-center gap-1" :title="`${trip.favs ?? trip.favorites_count ?? 0} favoris`">
+                                <!-- coeur -->
+                                <svg viewBox="0 0 24 24" class="w-4 h-4 fill-red-500">
+                                  <path d="M12 21s-7.5-4.6-9.4-8.5A5.6 5.6 0 0 1 12 5.7a5.6 5.6 0 0 1 9.4 6.8C19.5 16.4 12 21 12 21Z"/>
+                                </svg>
+                                <span>{{ trip.favs ?? 0 }}</span>
+                              </span>
+                            </div>
                         </div>
                     </Link>
+
                 </article>
             </div>
 
