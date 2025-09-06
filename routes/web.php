@@ -10,6 +10,7 @@ use App\Http\Controllers\StepController;
 use App\Http\Controllers\AccommodationController;
 use App\Http\Controllers\PublicTripController;
 use App\Http\Controllers\FavoriteController;
+use App\Http\Controllers\ActivityController;
 
 Route::get('/', function () {
     return Inertia::render('Welcome', [
@@ -53,6 +54,10 @@ Route::middleware([
     Route::delete('/trips/{trip}/favorite', [FavoriteController::class, 'destroy'])->name('favorites.destroy');
     // liste des favoris
     Route::get('/favorites', [FavoriteController::class, 'index'])->name('favorites.index');
+    // CRUD minimal des activités liées à une étape
+    Route::resource('steps.activities', ActivityController::class)
+        ->only(['store','update','destroy'])
+        ->shallow();
 
 });
 

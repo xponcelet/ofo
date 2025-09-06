@@ -53,7 +53,11 @@ class Trip extends Model
         return $this->favoredBy()->where('user_id', $user->id)->exists();
     }
 
-
+    public function activities()
+    {
+        // via steps
+        return $this->hasManyThrough(Activity::class, Step::class);
+    }
 
     /*
             public function transports()

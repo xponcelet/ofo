@@ -90,16 +90,25 @@ class StepController extends Controller
 
 
 
-    public function edit(Step $step)
+    public function edit(\App\Models\Step $step)
     {
+        // ou abort_unless(...)
         $this->authorize('update', $step->trip);
 
-        $step->load('accommodations');
+        $step->load([
+            'trip:id,user_id,title',
+            'accommodations:id,step_id,title,location,start_date,end_date',
+            'activities' => fn($q) => $q
+                ->orderBy('start_at')
+                ->select('id','step_id','title','description','start_at','end_at','external_link','cost','currency','category'),
+        ]);
 
-        return Inertia::render('Steps/Edit', [
-            'step' => $step,
-            'trip' => $step->trip,
-            'updateUrl' => route('steps.update', $step),
+        $allSteps = $step->trip->steps()->orderBy('order')->get(['id','order','location']);
+
+        return \Inertia\Inertia::render('Steps/Edit', [
+            'step'     => $step,
+            'trip'     => $step->trip,
+            'allSteps' => $allSteps,
         ]);
     }
 
