@@ -181,42 +181,44 @@
                 </div>
             </div>
 
-            <!-- Liste / édition -->
+            <!-- Liste (mode lecture) -->
             <div class="bg-white rounded-2xl p-5 shadow-sm ring-1 ring-gray-100">
                 <h2 class="text-lg font-semibold mb-4">📋 Activités de cette étape</h2>
 
-                <div v-if="editableActivities.length" class="space-y-4">
-                    <div
-                        v-for="a in editableActivities"
-                        :key="a.id ?? a._key"
+                <div v-if="hasActivities" class="space-y-4">
+                    <article
+                        v-for="a in step.activities"
+                        :key="a.id"
                         class="p-4 rounded-xl border border-gray-200 hover:border-gray-300 transition"
                     >
-                        <div class="grid md:grid-cols-4 gap-3 items-start">
-                            <input v-model="a.title" class="rounded-xl border-gray-300 shadow-sm focus:ring-2 focus:ring-blue-500" />
-                            <input v-model="a.start_at" type="datetime-local" class="rounded-xl border-gray-300 shadow-sm focus:ring-2 focus:ring-blue-500" />
-                            <input v-model="a.end_at" type="datetime-local" class="rounded-xl border-gray-300 shadow-sm focus:ring-2 focus:ring-blue-500" />
-                            <select v-model="a.step_id" class="rounded-xl border-gray-300 shadow-sm focus:ring-2 focus:ring-blue-500">
-                                <option v-for="s in stepsForSelect" :key="s.id" :value="s.id">Étape #{{ s.order }} — {{ s.location }}</option>
-                            </select>
-                        </div>
+                        <header class="flex items-start justify-between gap-3">
+                            <div class="min-w-0">
+                                <h3 class="font-medium truncate">{{ a.title }}</h3>
+                                <p class="text-sm text-gray-600" v-if="a.description">{{ a.description }}</p>
 
-                        <div class="mt-3 grid md:grid-cols-2 gap-3">
-                            <input v-model="a.external_link" type="url" class="rounded-xl border-gray-300 shadow-sm focus:ring-2 focus:ring-blue-500" placeholder="Lien" />
-                            <div class="flex gap-3">
-                                <input v-model="a.cost" type="number" step="0.01" class="flex-1 rounded-xl border-gray-300 shadow-sm focus:ring-2 focus:ring-blue-500" placeholder="Coût" />
-                                <input v-model="a.currency" type="text" maxlength="3" class="w-24 rounded-xl border-gray-300 shadow-sm focus:ring-2 focus:ring-blue-500" placeholder="EUR" />
+                                <div class="mt-1 flex flex-wrap items-center gap-2 text-xs text-gray-600">
+                  <span v-if="a.start_at || a.end_at" class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-gray-100">
+                    <svg class="w-3 h-3" viewBox="0 0 24 24"><path fill="currentColor" d="M19 4h-1V2h-2v2H8V2H6v2H5a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2m0 15H5V9h14z"/></svg>
+                    <span>
+                      <template v-if="a.start_at && a.end_at">{{ fmtDateTime(a.start_at) }} → {{ fmtDateTime(a.end_at) }}</template>
+                      <template v-else-if="a.start_at">Le {{ fmtDateTime(a.start_at) }}</template>
+                    </span>
+                  </span>
+
+                                    <span v-if="a.category" class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-blue-50 text-blue-700">#{{ a.category }}</span>
+                                    <span v-if="a.cost != null" class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700">{{ fmtMoney(a.cost, a.currency) }}</span>
+                                    <a v-if="a.external_link" :href="a.external_link" target="_blank" rel="noopener" class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-purple-50 text-purple-700 hover:bg-purple-100">
+                                        🔗 Lien
+                                    </a>
+                                </div>
                             </div>
-                        </div>
 
-                        <div class="mt-3">
-                            <textarea v-model="a.description" rows="2" class="w-full rounded-xl border-gray-300 shadow-sm focus:ring-2 focus:ring-blue-500" placeholder="Notes..." />
-                        </div>
-
-                        <div class="mt-4 flex gap-2">
-                            <button @click="updateActivity(a)" class="px-3 py-1.5 rounded-2xl border border-gray-300 hover:bg-gray-50">Enregistrer</button>
-                            <button @click="deleteActivity(a)" class="px-3 py-1.5 rounded-2xl border border-red-300 text-red-700 hover:bg-red-50">Supprimer</button>
-                        </div>
-                    </div>
+                            <div class="shrink-0 flex gap-2">
+                                <Link :href="route('activities.edit', a.id)" class="px-3 py-1.5 rounded-2xl bg-blue-100 hover:bg-blue-200 text-sm">✏️ Modifier</Link>
+                                <button @click="deleteActivity(a.id)" class="px-3 py-1.5 rounded-2xl bg-red-100 hover:bg-red-200 text-red-700 text-sm">🗑 Supprimer</button>
+                            </div>
+                        </header>
+                    </article>
                 </div>
                 <p v-else class="text-sm text-gray-500">Aucune activité pour l’instant.</p>
             </div>
@@ -267,7 +269,7 @@
 </template>
 
 <script setup>
-import { ref, watch, computed } from 'vue'
+import { ref, computed } from 'vue'
 import { useForm, router, Link } from '@inertiajs/vue3'
 import InputError from '@/Components/InputError.vue'
 import MapboxAutocomplete from '@/Components/MapboxAutocomplete.vue'
@@ -275,8 +277,6 @@ import StepPickMap from '@/Components/StepPickMap.vue'
 
 const props = defineProps({
     step: Object,
-    // Recommandé: passer toutes les étapes du trip pour permettre la réassignation d'une activité
-    // via le select. Controller: $trip->steps()->orderBy('order')->get(['id','order','location'])
     allSteps: { type: Array, default: () => [] },
 })
 
@@ -307,12 +307,8 @@ function updateCoordsFromMap({ latitude, longitude }) {
     form.latitude = latitude != null ? Number(latitude) : null
     form.longitude = longitude != null ? Number(longitude) : null
 }
-function applyLabelName({ place }) {
-    if (place) form.location = place
-}
-function submit() {
-    form.put(route('steps.update', props.step.id))
-}
+function applyLabelName({ place }) { if (place) form.location = place }
+function submit() { form.put(route('steps.update', props.step.id)) }
 
 // --- Logements ---
 function deleteAccommodation(id) {
@@ -322,33 +318,7 @@ function deleteAccommodation(id) {
 }
 
 // --- Activités ---
-// Helpers datetime → input[type=datetime-local]
-function toLocalInput(dt) {
-    if (!dt) return ''
-    try {
-        const d = new Date(dt)
-        const pad = (n) => String(n).padStart(2, '0')
-        return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`
-    } catch { return '' }
-}
-
-// Liste éditable (copie locale pour éviter de muter props directement)
-const editableActivities = ref([])
-const refreshEditable = () => {
-    const src = props.step.activities ?? []
-    editableActivities.value = src.map(a => ({
-        ...a,
-        // normaliser pour les inputs
-        start_at: toLocalInput(a.start_at),
-        end_at: toLocalInput(a.end_at),
-        step_id: a.step_id ?? props.step.id,
-    }))
-}
-refreshEditable()
-watch(() => props.step.activities, refreshEditable, { deep: true })
-
-// Select étapes pour réassigner — fallback: au moins l'étape courante
-const stepsForSelect = computed(() => props.allSteps?.length ? props.allSteps : [{ id: props.step.id, order: props.step.order, location: props.step.location }])
+const hasActivities = computed(() => Array.isArray(props.step.activities) && props.step.activities.length > 0)
 
 // Création
 const newActivity = ref({
@@ -367,32 +337,33 @@ function createActivity() {
     router.post(route('steps.activities.store', props.step.id), newActivity.value, {
         preserveScroll: true,
         onSuccess: () => {
-            // reset et recharger côté serveur (Back → Step edit)
             newActivity.value = { title: '', description: '', start_at: '', end_at: '', external_link: '', cost: '', currency: 'EUR', category: '' }
         },
     })
 }
 
-function updateActivity(a) {
-    router.put(route('activities.update', a.id), {
-        step_id: a.step_id,
-        title: a.title,
-        description: a.description,
-        start_at: a.start_at,
-        end_at: a.end_at,
-        external_link: a.external_link,
-        cost: a.cost,
-        currency: a.currency,
-        category: a.category,
-    }, { preserveScroll: true })
+function deleteActivity(id) {
+    if (!confirm('Supprimer cette activité ?')) return
+    router.delete(route('activities.destroy', id), { preserveScroll: true })
 }
 
-function deleteActivity(a) {
-    if (!confirm('Supprimer cette activité ?')) return
-    router.delete(route('activities.destroy', a.id), { preserveScroll: true })
+// Format helpers
+function fmtDateTime(dt) {
+    if (!dt) return null
+    try {
+        const d = new Date(dt)
+        return new Intl.DateTimeFormat(undefined, {
+            year: 'numeric', month: 'short', day: '2-digit', hour: '2-digit', minute: '2-digit'
+        }).format(d)
+    } catch { return null }
+}
+function fmtMoney(amount, currency) {
+    if (amount == null || amount === '') return null
+    try {
+        return new Intl.NumberFormat(undefined, { style: 'currency', currency: (currency || 'EUR') }).format(Number(amount))
+    } catch { return `${amount} ${currency || ''}`.trim() }
 }
 </script>
 
 <style scoped>
-/***** petites finitions *****/
 </style>

@@ -54,10 +54,8 @@ Route::middleware([
     Route::delete('/trips/{trip}/favorite', [FavoriteController::class, 'destroy'])->name('favorites.destroy');
     // liste des favoris
     Route::get('/favorites', [FavoriteController::class, 'index'])->name('favorites.index');
-    // CRUD minimal des activités liées à une étape
-    Route::resource('steps.activities', ActivityController::class)
-        ->only(['store','update','destroy'])
-        ->shallow();
+    // CRUD des activités liées à une étape
+    Route::resource('steps.activities', ActivityController::class)->shallow();
 
 });
 
