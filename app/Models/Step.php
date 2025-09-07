@@ -39,4 +39,9 @@ class Step extends Model
         return $this->hasMany(Accommodation::class);
     }
 
+    public function activities()
+    {
+        return $this->hasMany(Activity::class);
+    }
+
 }

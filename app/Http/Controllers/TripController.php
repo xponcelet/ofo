@@ -70,34 +70,48 @@ class TripController extends Controller
         return redirect()->route('trips.show', $trip)->with('success', 'Voyage créé avec succès.');
     }
 
-    public function show(Trip $trip)
+    public function show(\App\Models\Trip $trip)
     {
         $this->authorize('view', $trip);
 
-        // ce que tu avais déjà
-        $trip->load('steps', 'steps.accommodations');
-
-        // 1) compteur de likes
+        // 1) Compteur de likes
         $trip->loadCount(['favoredBy as favs']);
 
-        // 2) liste des likers (seulement pour le propriétaire)
+        // 2) Likers (seulement pour le propriétaire)
         $likers = null;
         if (auth()->check() && auth()->user()->can('viewLikers', $trip)) {
             $likers = $trip->favoredBy()
-                ->select('users.id','users.name','users.email') // ajoute d'autres champs si tu veux
-                ->withPivot('created_at')                       // pour la date d'ajout en favori
+                ->select('users.id','users.name','users.email')
+                ->withPivot('created_at')
                 ->orderByDesc('favorites.created_at')
                 ->paginate(12)
                 ->withQueryString();
         }
 
+        // 3) Étapes + activités (+ logements si tu les affiches aussi)
+        $trip->load([
+            'steps' => function ($q) {
+                $q->orderBy('order')
+                    ->select('id','trip_id','order','title','location','start_date','end_date','latitude','longitude');
+            },
+            'steps.activities' => function ($q) {
+                $q->orderBy('start_at')
+                    ->select('id','step_id','title','description','start_at','end_at','external_link','cost','currency','category');
+            },
+            'steps.accommodations' => function ($q) { // optionnel si tu les utilises dans Show
+                $q->select('id','step_id','title','location','start_date','end_date');
+            },
+        ]);
+
+        // On passe la collection des steps (avec leurs activities) en prop distincte
         return \Inertia\Inertia::render('Trips/Show', [
             'trip'   => $trip,
-            'steps'  => $trip->steps()->select('id','title','location','latitude','longitude')->get(),
-            'favs'   => $trip->favs,     // nombre total de likes
-            'likers' => $likers,         // paginator ou null
+            'steps'  => $trip->steps,
+            'favs'   => $trip->favs,
+            'likers' => $likers,
         ]);
     }
+
 
 
     public function edit(Trip $trip)
