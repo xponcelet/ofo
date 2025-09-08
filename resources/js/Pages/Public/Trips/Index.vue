@@ -2,7 +2,7 @@
 import { Head, Link, router } from '@inertiajs/vue3'
 import { ref, watch } from 'vue'
 import TripForm from "@/Components/TripForm.vue";
-import GuestLayout from '@/Layouts/GuestLayout.vue'
+import RootLayout from "@/Layouts/RootLayout.vue";
 
 const props = defineProps({
     trips: Object,    // pagination payload Laravel
@@ -30,69 +30,67 @@ watch([q, sort], () => {
 </script>
 
 <template>
-    <GuestLayout title="Voyages publics">
-        <Head title="Voyages publics" />
-        <div class="max-w-6xl mx-auto px-4 py-8">
-            <h1 class="text-2xl font-semibold mb-4">Voyages publics</h1>
+    <Head title="Voyages publics" />
+    <div class="max-w-6xl mx-auto px-4 py-8">
+        <h1 class="text-2xl font-semibold mb-4">Voyages publics</h1>
 
-            <div class="flex flex-col sm:flex-row gap-3 mb-6">
-                <input
-                    v-model="q"
-                    type="search"
-                    placeholder="Rechercher un voyage…"
-                    class="w-full sm:flex-1 rounded-lg border px-3 py-2"
-                />
-                <select v-model="sort" class="rounded-lg border px-3 py-2">
-                    <option value="latest">Plus récents</option>
-                    <option value="oldest">Plus anciens</option>
-                    <option value="title">Titre (A→Z)</option>
-                </select>
-            </div>
-
-            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                <article v-for="trip in trips.data" :key="trip.id" class="rounded-2xl border shadow-sm overflow-hidden">
-                    <Link :href="route('public.trips.show', trip.id)">
-                        <img v-if="trip.image" :src="trip.image" alt="" class="w-full h-40 object-cover" />
-                        <div class="p-4">
-                            <h2 class="text-lg font-medium line-clamp-1">{{ trip.title || 'Sans titre' }}</h2>
-                            <p class="text-sm text-gray-600 line-clamp-2 mt-1">{{ trip.description }}</p>
-
-                            <div class="mt-2 flex items-center justify-between text-xs text-gray-500">
-                                <span>{{ trip.start_date ?? '—' }} → {{ trip.end_date ?? '—' }}</span>
-                                <span class="inline-flex items-center gap-1" :title="`${trip.favs ?? trip.favorites_count ?? 0} favoris`">
-                                <!-- coeur -->
-                                <svg viewBox="0 0 24 24" class="w-4 h-4 fill-red-500">
-                                  <path d="M12 21s-7.5-4.6-9.4-8.5A5.6 5.6 0 0 1 12 5.7a5.6 5.6 0 0 1 9.4 6.8C19.5 16.4 12 21 12 21Z"/>
-                                </svg>
-                                <span>{{ trip.favs ?? 0 }}</span>
-                              </span>
-                            </div>
-                        </div>
-                    </Link>
-
-                </article>
-            </div>
-
-            <!-- Pagination simple -->
-            <div class="flex items-center justify-center gap-2 mt-8">
-                <Link
-                    v-if="trips.prev_page_url"
-                    :href="trips.prev_page_url"
-                    preserve-scroll
-                    class="px-3 py-2 rounded border"
-                >Précédent</Link>
-
-                <span class="text-sm">Page {{ trips.current_page }} / {{ trips.last_page }}</span>
-
-                <Link
-                    v-if="trips.next_page_url"
-                    :href="trips.next_page_url"
-                    preserve-scroll
-                    class="px-3 py-2 rounded border"
-                >Suivant</Link>
-            </div>
+        <div class="flex flex-col sm:flex-row gap-3 mb-6">
+            <input
+                v-model="q"
+                type="search"
+                placeholder="Rechercher un voyage…"
+                class="w-full sm:flex-1 rounded-lg border px-3 py-2"
+            />
+            <select v-model="sort" class="rounded-lg border px-3 py-2">
+                <option value="latest">Plus récents</option>
+                <option value="oldest">Plus anciens</option>
+                <option value="title">Titre (A→Z)</option>
+            </select>
         </div>
-    </GuestLayout>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+            <article v-for="trip in trips.data" :key="trip.id" class="rounded-2xl border shadow-sm overflow-hidden">
+                <Link :href="route('public.trips.show', trip.id)">
+                    <img v-if="trip.image" :src="trip.image" alt="" class="w-full h-40 object-cover" />
+                    <div class="p-4">
+                        <h2 class="text-lg font-medium line-clamp-1">{{ trip.title || 'Sans titre' }}</h2>
+                        <p class="text-sm text-gray-600 line-clamp-2 mt-1">{{ trip.description }}</p>
+
+                        <div class="mt-2 flex items-center justify-between text-xs text-gray-500">
+                            <span>{{ trip.start_date ?? '—' }} → {{ trip.end_date ?? '—' }}</span>
+                            <span class="inline-flex items-center gap-1" :title="`${trip.favs ?? trip.favorites_count ?? 0} favoris`">
+                            <!-- coeur -->
+                            <svg viewBox="0 0 24 24" class="w-4 h-4 fill-red-500">
+                              <path d="M12 21s-7.5-4.6-9.4-8.5A5.6 5.6 0 0 1 12 5.7a5.6 5.6 0 0 1 9.4 6.8C19.5 16.4 12 21 12 21Z"/>
+                            </svg>
+                            <span>{{ trip.favs ?? 0 }}</span>
+                          </span>
+                        </div>
+                    </div>
+                </Link>
+
+            </article>
+        </div>
+
+        <!-- Pagination simple -->
+        <div class="flex items-center justify-center gap-2 mt-8">
+            <Link
+                v-if="trips.prev_page_url"
+                :href="trips.prev_page_url"
+                preserve-scroll
+                class="px-3 py-2 rounded border"
+            >Précédent</Link>
+
+            <span class="text-sm">Page {{ trips.current_page }} / {{ trips.last_page }}</span>
+
+            <Link
+                v-if="trips.next_page_url"
+                :href="trips.next_page_url"
+                preserve-scroll
+                class="px-3 py-2 rounded border"
+            >Suivant</Link>
+        </div>
+    </div>
 </template>
 
 <style scoped>

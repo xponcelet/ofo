@@ -1,5 +1,5 @@
 <script setup>
-import AppLayout from '@/Layouts/AppLayout.vue'
+import RootLayout from "@/Layouts/RootLayout.vue";
 import { Head, useForm } from '@inertiajs/vue3'
 import TripForm from '@/Components/TripForm.vue'
 
@@ -24,11 +24,9 @@ function submit() {
 </script>
 
 <template>
-    <AppLayout title="Modifier le voyage">
-        <Head title="Modifier le voyage" />
-        <div class="max-w-4xl mx-auto py-10 px-4">
-            <h1 class="text-2xl font-bold mb-6">Modifier le voyage</h1>
-            <TripForm :form="form" :on-submit="submit" submit-label="Enregistrer les modifications" />
-        </div>
-    </AppLayout>
+    <Head title="Modifier le voyage" />
+    <div class="max-w-4xl mx-auto py-10 px-4">
+        <h1 class="text-2xl font-bold mb-6">Modifier le voyage</h1>
+        <TripForm :form="form" :on-submit="submit" submit-label="Enregistrer les modifications" />
+    </div>
 </template>
