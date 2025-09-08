@@ -274,6 +274,7 @@ import { useForm, router, Link } from '@inertiajs/vue3'
 import InputError from '@/Components/InputError.vue'
 import MapboxAutocomplete from '@/Components/MapboxAutocomplete.vue'
 import StepPickMap from '@/Components/StepPickMap.vue'
+import RootLayout from "@/Layouts/RootLayout.vue";
 
 const props = defineProps({
     step: Object,

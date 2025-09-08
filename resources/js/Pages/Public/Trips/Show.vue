@@ -1,5 +1,6 @@
 <script setup>
 import { Head, router } from '@inertiajs/vue3'
+import RootLayout from "@/Layouts/RootLayout.vue";
 
 const props = defineProps({
     trip: Object,

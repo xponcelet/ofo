@@ -1,5 +1,6 @@
 <script setup>
 import { Link } from '@inertiajs/vue3'
+import RootLayout from "@/Layouts/RootLayout.vue";
 
 const props = defineProps({
     favorites: Object // paginator

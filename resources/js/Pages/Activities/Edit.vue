@@ -90,6 +90,7 @@
 import { computed } from 'vue'
 import { useForm, Link, router } from '@inertiajs/vue3'
 import InputError from '@/Components/InputError.vue'
+import RootLayout from "@/Layouts/RootLayout.vue";
 
 const props = defineProps({
     activity: Object, // id, step_id, title, description, start_at, end_at, external_link, cost, currency, category
