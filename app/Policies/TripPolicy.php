@@ -30,7 +30,7 @@ class TripPolicy
      */
     public function create(User $user): bool
     {
-        return false;
+        return $user->trips()->count() < $user->tripLimit();
     }
 
     /**

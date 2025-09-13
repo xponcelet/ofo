@@ -2,13 +2,14 @@
 
 namespace App\Http\Requests;
 
-use Illuminate\Foundation\Http\FormRequest;
 
+use Illuminate\Foundation\Http\FormRequest;
+use App\Models\Trip;
 class StoreTripRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        return true;
+        return $this->user()?->can('create', Trip::class) ?? false;
     }
 
     public function rules(): array
@@ -24,4 +25,5 @@ class StoreTripRequest extends FormRequest
             'is_public' => 'boolean',
         ];
     }
+
 }

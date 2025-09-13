@@ -1,22 +1,22 @@
 <script setup>
-import AppLayout from '@/Layouts/AppLayout.vue';
-import Welcome from '@/Components/Welcome.vue';
+import { Head } from '@inertiajs/vue3'
+
+
+const props = defineProps({
+    canCreate: { type: Boolean, default: false },
+})
 </script>
 
 <template>
-    <AppLayout title="Dashboard">
-        <template #header>
-            <h2 class="font-semibold text-xl text-gray-800 leading-tight">
-                Dashboard
-            </h2>
-        </template>
+    <Head title="Prépare un nouveau voyage" />
 
-        <div class="py-12">
-            <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
-                <div class="bg-white overflow-hidden shadow-xl sm:rounded-lg">
-                    <Welcome />
-                </div>
-            </div>
+    <div class="max-w-6xl mx-auto px-4 py-10">
+        <h1 class="text-3xl md:text-5xl font-semibold tracking-tight text-center mb-10">
+            Prépare un nouveau voyage
+        </h1>
+
+        <div class="grid md:grid-cols-2 gap-10">
+
         </div>
-    </AppLayout>
+    </div>
 </template>
