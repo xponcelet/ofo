@@ -4,73 +4,119 @@ namespace App\Http\Controllers;
 
 use App\Models\Trip;
 use Illuminate\Http\Request;
-use Inertia\Response;
+use Inertia\Inertia;
+use Inertia\Response as InertiaResponse;
 use App\Http\Requests\StoreTripRequest;
 use App\Http\Requests\UpdateTripRequest;
 use Illuminate\Support\Facades\Auth;
-use Inertia\Inertia;
-use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
+use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Auth\Access\AuthorizationException;
+
 class TripController extends Controller
 {
-    use AuthorizesRequests;
+    use \Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 
-
-    /*
-     *  public function index()
-    {
-        $trips = Trip::where('user_id', auth()->id())
-            ->latest()
-            ->get();
-
-        return Inertia::render('Trips/Index', [
-            'trips' => $trips,
-        ]);
-    }
-     */
     public function index(Request $request): \Inertia\Response
     {
+        $user = auth()->user();
+
         $perPage = (int) $request->integer('per_page', 12);
 
         $trips = Trip::query()
-            ->select(['id','title','description','image','start_date','end_date']) // + description si tu veux l’afficher
-            ->where('user_id', auth()->id())
+            ->select(['id','title','description','image','start_date','end_date'])
+            ->where('user_id', $user->id)
             ->withCount(['steps','favoredBy as favs'])
             ->latest()
             ->paginate($perPage)
             ->withQueryString();
 
+        // ✅ Compte frais depuis la DB (évite tout cache/état relationnel)
+        $count = Trip::where('user_id', $user->id)->count();
+        $max   = $user->tripLimit();
+
         return \Inertia\Inertia::render('Trips/Index', [
             'trips' => $trips,
+            'limits' => [
+                'max'   => $max,
+                'count' => $count,
+            ],
+            'can' => [
+                'create_trip' => $count < $max, // ✅ source de vérité pour l’UI
+            ],
         ]);
     }
 
 
-
-    public function create()
+    public function create(): InertiaResponse
     {
+        // Pré-check UX : on inspecte la policy sans lever d’exception
+        $response = Gate::inspect('create', Trip::class);
+
+        if (! $response->allowed()) {
+            return Inertia::render('Trips/Index', [
+                // Tu peux aussi rediriger vers index() si tu préfères
+                'trips' => Trip::where('user_id', auth()->id())
+                    ->select(['id','title','description','image','start_date','end_date'])
+                    ->withCount(['steps','favoredBy as favs'])
+                    ->latest()->paginate(12),
+                'limits' => [
+                    'max'   => auth()->user()->tripLimit(),
+                    'count' => auth()->user()->trips()->count(),
+                ],
+                'errors' => [
+                    'base' => __('Vous avez atteint la limite de :max voyages.', [
+                        'max' => auth()->user()->tripLimit(),
+                    ]),
+                ],
+            ]);
+        }
+
         return Inertia::render('Trips/Create');
     }
 
     public function store(StoreTripRequest $request)
     {
-        $validated = $request->validated();
+        $user = auth()->user();
 
-        $trip = Trip::create([
-            'user_id' => auth()->id(),
-            'title' => $validated['title'],
-            'description' => $validated['description'] ?? null,
-            'image' => null,
-            'start_date' => $validated['start_date'] ?? null,
-            'end_date' => $validated['end_date'] ?? null,
-            'budget' => $validated['budget'] ?? null,
-            'currency' => $validated['currency'] ?? 'EUR',
-            'is_public' => $validated['is_public'] ?? false,
-        ]);
+        // Verrou anti double-clic / onglets concurrents (5s)
+        $lock = Cache::lock("user:{$user->id}:create-trip", 5);
 
-        return redirect()->route('trips.show', $trip)->with('success', 'Voyage créé avec succès.');
+        return $lock->block(5, function () use ($request, $user) {
+            try {
+                // Sécurité finale : policy “create”
+                $this->authorize('create', Trip::class);
+            } catch (AuthorizationException $e) {
+                // UX friendly : transformer en message de formulaire
+                return back()->withErrors([
+                    'base' => __('Vous avez atteint la limite de :max voyages.', [
+                        'max' => $user->tripLimit(),
+                    ]),
+                ])->onlyInput();
+            }
+
+            $validated = $request->validated();
+
+            $trip = Trip::create([
+                'user_id'     => $user->id,
+                'title'       => $validated['title'] ?? null,
+                'description' => $validated['description'] ?? null,
+                'image'       => null, // gère l’upload si nécessaire
+                'start_date'  => $validated['start_date'] ?? null,
+                'end_date'    => $validated['end_date'] ?? null,
+                'budget'      => $validated['budget'] ?? null,
+                'currency'    => $validated['currency'] ?? 'EUR',
+                'is_public'   => (bool) ($validated['is_public'] ?? false),
+            ]);
+
+            // À toi de choisir : edit (pour compléter) ou show
+            return redirect()
+                ->route('trips.edit', $trip) // ou ->route('trips.show', $trip)
+                ->with('success', __('Voyage créé !'));
+        });
     }
 
-    public function show(\App\Models\Trip $trip)
+    public function show(Trip $trip): InertiaResponse
     {
         $this->authorize('view', $trip);
 
@@ -88,7 +134,7 @@ class TripController extends Controller
                 ->withQueryString();
         }
 
-        // 3) Étapes + activités (+ logements si tu les affiches aussi)
+        // 3) Étapes + activités (+ logements si utilisé)
         $trip->load([
             'steps' => function ($q) {
                 $q->orderBy('order')
@@ -98,13 +144,12 @@ class TripController extends Controller
                 $q->orderBy('start_at')
                     ->select('id','step_id','title','description','start_at','end_at','external_link','cost','currency','category');
             },
-            'steps.accommodations' => function ($q) { // optionnel si tu les utilises dans Show
+            'steps.accommodations' => function ($q) {
                 $q->select('id','step_id','title','location','start_date','end_date');
             },
         ]);
 
-        // On passe la collection des steps (avec leurs activities) en prop distincte
-        return \Inertia\Inertia::render('Trips/Show', [
+        return Inertia::render('Trips/Show', [
             'trip'   => $trip,
             'steps'  => $trip->steps,
             'favs'   => $trip->favs,
@@ -112,9 +157,7 @@ class TripController extends Controller
         ]);
     }
 
-
-
-    public function edit(Trip $trip)
+    public function edit(Trip $trip): InertiaResponse
     {
         $this->authorize('update', $trip);
 
@@ -127,20 +170,19 @@ class TripController extends Controller
     {
         $this->authorize('update', $trip);
 
-        $validated = $request->validated();
+        $trip->update($request->validated());
 
-        $trip->update($validated);
-
-        return redirect()->route('trips.show', $trip)->with('success', 'Voyage mis à jour avec succès.');
+        return redirect()
+            ->route('trips.show', $trip)
+            ->with('success', __('Voyage mis à jour avec succès.'));
     }
 
     public function destroy(Trip $trip)
     {
         $this->authorize('delete', $trip);
-
         $trip->delete();
 
         return redirect()->route('trips.index')->with('success', 'Voyage supprimé.');
     }
-}
 
+}
