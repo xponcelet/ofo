@@ -1,53 +1,64 @@
 <script setup>
-import { Head, router } from '@inertiajs/vue3'
-import RootLayout from "@/Layouts/RootLayout.vue";
+import { ref, computed, watch } from 'vue'
+import { Head } from '@inertiajs/vue3'
+import AppLayout from '@/Layouts/AppLayout.vue'
+import StepList from '@/Components/trip/StepList.vue'
+import StepDetail from '@/Components/trip/StepDetail.vue'
+import StepsMap from '@/Components/trip/StepsMap.vue'
 
 const props = defineProps({
-    trip: Object,
-    isFavorite: Boolean,
+    trip: { type: Object, required: true },
+    steps: { type: Array, default: () => [] },
 })
 
-function toggleFavorite() {
-    const method = props.isFavorite ? 'delete' : 'post'
-    router[method](route(props.isFavorite ? 'favorites.destroy' : 'favorites.store', props.trip.id), {}, {
-        preserveScroll: true,
-        onSuccess: () => router.reload({ only: ['isFavorite'] }), // recharge juste la prop
-    })
-}
+const activeId = ref(props.steps?.[0]?.id ?? null)
+const activeStep = computed(() => props.steps.find(s => s.id === activeId.value) || null)
 
+watch(() => props.steps, (arr) => {
+    if (!arr?.length) { activeId.value = null; return }
+    if (!arr.some(s => s.id === activeId.value)) activeId.value = arr[0].id
+})
 </script>
 
 <template>
-    <Head :title="props.trip.title ?? 'Voyage'" />
+    <AppLayout :title="trip.title">
+        <Head :title="trip.title" />
+        <div class="mx-auto max-w-7xl px-4 py-6 lg:py-8">
+            <div class="mb-6 flex items-center justify-between gap-4">
+                <div>
+                    <h1 class="text-2xl font-semibold tracking-tight">{{ trip.title }}</h1>
+                    <p class="text-sm text-gray-500">
+                        {{ trip.country }} ·
+                        <span v-if="trip.start_date && trip.end_date">
+              {{ trip.start_date }} → {{ trip.end_date }}
+            </span>
+                    </p>
+                </div>
+                <span class="hidden sm:inline-block rounded-full bg-emerald-50 px-3 py-1 text-xs font-medium text-emerald-700">
+          Public
+        </span>
+            </div>
 
-    <div class="max-w-4xl mx-auto px-4 py-8">
-        <div class="rounded-2xl border shadow-sm overflow-hidden">
-            <img v-if="props.trip.image" :src="props.trip.image" alt="" class="w-full h-60 object-cover" />
-            <div class="p-6">
-                <h1 class="text-2xl font-semibold">{{ props.trip.title || 'Sans titre' }}</h1>
-                <p class="text-gray-600 mt-2">{{ props.trip.description }}</p>
-                <p class="text-sm text-gray-500 mt-3">
-                    {{ props.trip.start_date ?? '—' }} → {{ props.trip.end_date ?? '—' }}
-                </p>
+            <div class="grid grid-cols-1 lg:grid-cols-[260px_minmax(0,520px)_1fr] gap-4 lg:gap-6">
+                <aside class="lg:h-[calc(100vh-180px)] lg:sticky lg:top-24">
+                    <div class="rounded-2xl border border-gray-200 bg-white">
+                        <StepList :steps="steps" :active-id="activeId" @select="id => activeId = id" />
+                    </div>
+                </aside>
+
+                <section class="lg:h-[calc(100vh-180px)]">
+                    <div class="rounded-2xl border border-gray-200 bg-white lg:h-full lg:overflow-y-auto">
+                        <StepDetail v-if="activeStep" :step="activeStep" />
+                        <div v-else class="p-6 text-sm text-gray-500">Aucune étape.</div>
+                    </div>
+                </section>
+
+                <section class="h-[420px] lg:h-[calc(100vh-180px)]">
+                    <div class="rounded-2xl border border-gray-200 overflow-hidden bg-white h-full">
+                        <StepsMap :steps="steps" :active-id="activeId" class="h-full" @focusStep="id => activeId = id" />
+                    </div>
+                </section>
             </div>
         </div>
-
-        <button
-            @click="toggleFavorite"
-            class="px-3 py-1 rounded text-white"
-            :class="isFavorite ? 'bg-red-500' : 'bg-gray-500'"
-        >
-            {{ isFavorite ? 'Retirer des favoris' : 'Ajouter aux favoris' }}
-        </button>
-
-        <div class="mt-8">
-            <h2 class="text-lg font-medium mb-3">Étapes</h2>
-            <ol class="space-y-3">
-                <li v-for="step in props.trip.steps" :key="step.id" class="p-4 rounded-xl border">
-                    <div class="font-medium">#{{ step.order ?? '-' }} — {{ step.title ?? step.location ?? 'Étape' }}</div>
-                    <div class="text-sm text-gray-500">{{ step.location }}</div>
-                </li>
-            </ol>
-        </div>
-    </div>
+    </AppLayout>
 </template>
