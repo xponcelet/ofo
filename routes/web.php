@@ -25,8 +25,14 @@ Route::get('/', function () {
 
 Route::prefix('voyages')->name('public.trips.')->group(function () {
     Route::get('/', [PublicTripController::class, 'index'])->name('index');
+    // voyage aléatoire
+    Route::get('/aleatoire', [PublicTripController::class, 'random'])->name('random');
+    // Détail d'un voyage
     Route::get('/{trip}', [PublicTripController::class, 'show'])->name('show');
+
 });
+// dashboard public (séparé de /dashboard authentifié)
+Route::get('/decouvrir', [PublicTripController::class, 'dashboard'])->name('public.dashboard');
 
 // Routes où l'utilisateur doit être vérifié
 

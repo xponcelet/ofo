@@ -5,6 +5,8 @@ namespace App\Http\Controllers;
 use App\Models\Trip;
 use Inertia\Inertia;
 use App\Http\Requests\PublicTripIndexRequest;
+use Inertia\Response;
+use Illuminate\Http\RedirectResponse;
 
 class PublicTripController extends Controller
 {
@@ -60,5 +62,23 @@ class PublicTripController extends Controller
             'trip' => $trip,
             'isFavorite' => $isFavorite,
         ]);
+    }
+
+    public function dashboard(): Response
+    {
+        return Inertia::render('Public/Dashboard', [
+            'canCreate' => (bool) auth()->user(),
+        ]);
+    }
+
+    public function random(): RedirectResponse
+    {
+        $trip = Trip::query()
+            ->where('is_public', true)
+            ->inRandomOrder()
+            ->firstOrFail();
+
+        // ton route model binding /voyages/{trip} attend un Trip => on passe le modèle
+        return redirect()->route('public.trips.show', $trip);
     }
 }
