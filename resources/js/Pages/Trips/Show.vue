@@ -4,6 +4,7 @@ import RootLayout from "@/Layouts/RootLayout.vue";
 import TripSteps from '@/Components/TripSteps.vue'
 import StepsMap from '@/Components/StepsMap.vue'
 import GoogleMapsFullTripLink from '@/Components/GoogleMapsFullTripLink.vue'
+import TripShowView from '@/Components/trip/TripShowView.vue'
 import { Link } from '@inertiajs/vue3'
 
 const props = defineProps({
@@ -13,7 +14,8 @@ const props = defineProps({
     likers: Object,  // paginator OU null si non-proprio
 })
 
-const currentTab = ref('infos')
+// ✅ nouvel onglet par défaut
+const currentTab = ref('resume')
 
 // --- Helpers format ---
 function fmtDateTime(dt) {
@@ -44,6 +46,33 @@ function tabClass(val) {
         ? 'bg-white shadow ring-1 ring-gray-200 text-gray-900'
         : 'text-gray-600 hover:text-gray-900'
 }
+
+// 👉 Normalisation pour la vue Résumé (3 colonnes)
+const stepsSummary = computed(() => {
+    const raw = Array.isArray(props.steps) ? props.steps : []
+    return [...raw]
+        .sort((a,b) => (a.order ?? 0) - (b.order ?? 0))
+        .map((s, idx) => {
+            const day = s.order ?? (idx + 1)
+            return {
+                id: s.id,
+                day,
+                short_title: `Jour ${day}`,
+                title: s.title || s.location || `Étape ${day}`,
+                photo_url: s.photo_url ?? null,
+                description_html: s.description_html ?? null,
+                coords: { lat: Number(s.latitude), lng: Number(s.longitude) },
+            }
+        })
+})
+
+const tripMeta = computed(() => ({
+    title: props.trip?.title,
+    country: props.trip?.destination || props.trip?.location,
+    start_date: props.trip?.start_date,
+    end_date: props.trip?.end_date,
+    visibility: props.trip?.is_public ? 'public' : 'private',
+}))
 </script>
 
 <template>
@@ -63,6 +92,9 @@ function tabClass(val) {
         <!-- Tabs (segmented) -->
         <div class="mb-2">
             <nav class="bg-gray-50 rounded-xl p-1 flex flex-wrap gap-1">
+                <!-- ✅ Nouvel onglet Résumé -->
+                <button @click="currentTab = 'resume'" class="px-3 py-2 rounded-lg text-sm font-medium" :class="tabClass('resume')">🧾 Résumé</button>
+
                 <button @click="currentTab = 'infos'" class="px-3 py-2 rounded-lg text-sm font-medium" :class="tabClass('infos')">ℹ️ Infos</button>
                 <button @click="currentTab = 'steps'" class="px-3 py-2 rounded-lg text-sm font-medium" :class="tabClass('steps')">📍 Étapes <span class="ml-1 text-xs text-gray-500" v-if="stepCount">({{ stepCount }})</span></button>
                 <button @click="currentTab = 'activities'" class="px-3 py-2 rounded-lg text-sm font-medium" :class="tabClass('activities')">🧭 Activités <span class="ml-1 text-xs text-gray-500" v-if="totalActivitiesCount">({{ totalActivitiesCount }})</span></button>
@@ -70,8 +102,26 @@ function tabClass(val) {
             </nav>
         </div>
 
+        <!-- ✅ Onglet: Résumé (3 colonnes: étapes / détail / carte) -->
+        <div v-if="currentTab === 'resume'">
+            <div class="mb-6 flex items-center justify-between gap-4">
+                <div>
+                    <p class="text-sm text-gray-500">
+                        {{ tripMeta.country }}
+                        <span v-if="tripMeta.start_date && tripMeta.end_date"> · {{ tripMeta.start_date }} → {{ tripMeta.end_date }}</span>
+                    </p>
+                </div>
+                <span class="hidden sm:inline-block rounded-full px-3 py-1 text-xs font-medium"
+                      :class="tripMeta.visibility === 'public' ? 'bg-emerald-50 text-emerald-700' : 'bg-gray-100 text-gray-700'">
+                {{ tripMeta.visibility === 'public' ? 'Public' : 'Privé' }}
+              </span>
+            </div>
+
+            <TripShowView :trip-meta="tripMeta" :steps="stepsSummary" />
+        </div>
+
         <!-- Onglet: Infos générales -->
-        <div v-if="currentTab === 'infos'" class="space-y-6">
+        <div v-else-if="currentTab === 'infos'" class="space-y-6">
             <div class="bg-white rounded-2xl shadow p-6 space-y-4 ring-1 ring-gray-100">
                 <p class="text-gray-700">{{ trip.description || 'Aucune description.' }}</p>
 
