@@ -43,7 +43,7 @@ function destroyTrip(id) {
             <!-- Autorisé : lien actif -->
             <Link
                 v-if="canCreate"
-                :href="route('trips.start')"
+                :href="route('trips.destination')"
             class="inline-flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700"
             >
             <span class="text-lg leading-none">＋</span>
