@@ -117,7 +117,14 @@ const tripMeta = computed(() => ({
               </span>
             </div>
 
-            <TripShowView :trip-meta="tripMeta" :steps="stepsSummary" />
+            <TripShowView
+                :trip-meta="tripMeta"
+                :steps="stepsSummary"
+                center-mode="description"
+                :trip-description="trip.description"
+                :trip-description-is-html="false"
+            />
+
         </div>
 
         <!-- Onglet: Infos générales -->

@@ -7,6 +7,12 @@ const props = defineProps({
     // steps: [{ id, day, title, short_title, photo_url?, description_html?, coords:{lat,lng} }]
     steps: { type: Array, default: () => [] },
     initialActiveId: [Number, String],
+    // 'description' (par défaut) pour centrer la description du voyage,
+    // 'step' si tu veux recentrer sur le détail d'étape (ancien comportement).
+    centerMode: { type: String, default: 'description' },
+    // description du voyage (texte/HTML déjà "safe" côté serveur si tu veux l'injecter en HTML)
+    tripDescription: { type: String, default: '' },
+    tripDescriptionIsHtml: { type: Boolean, default: false },
 })
 
 const activeId = ref(props.initialActiveId ?? props.steps?.[0]?.id ?? null)
@@ -88,8 +94,9 @@ watch(activeId, () => { if (!map) return; highlightActive() })
 </script>
 
 <template>
-    <div class="grid grid-cols-1 lg:grid-cols-[260px_minmax(0,520px)_1fr] gap-4 lg:gap-6">
-        <!-- Steps -->
+    <!-- Grille 1/4 - 1/4 - 2/4 -->
+    <div class="grid grid-cols-1 lg:grid-cols-[1fr_1fr_2fr] gap-4 lg:gap-6">
+        <!-- Colonne 1: Étapes -->
         <aside class="lg:h-[calc(100vh-180px)] lg:sticky lg:top-24">
             <div class="rounded-2xl border border-gray-200 bg-white">
                 <div class="px-4 py-3 border-b border-gray-200">
@@ -117,10 +124,39 @@ watch(activeId, () => { if (!map) return; highlightActive() })
             </div>
         </aside>
 
-        <!-- Detail -->
+        <!-- Colonne 2: Description du voyage (ou détail étape si centerMode='step') -->
         <section class="lg:h-[calc(100vh-180px)]">
             <div class="rounded-2xl border border-gray-200 bg-white lg:h-full lg:overflow-y-auto">
-                <article v-if="activeStep">
+                <!-- Mode Description -->
+                <div v-if="centerMode === 'description'" class="p-6 space-y-4">
+                    <h3 class="text-lg font-semibold">Description</h3>
+
+                    <div v-if="tripDescription" class="prose prose-sm max-w-none">
+                        <div v-if="tripDescriptionIsHtml" v-html="tripDescription"></div>
+                        <p v-else class="whitespace-pre-line text-gray-700">{{ tripDescription }}</p>
+                    </div>
+                    <p v-else class="text-sm text-gray-500">Aucune description pour ce voyage.</p>
+
+                    <!-- Mini récap (optionnel) -->
+                    <div class="grid grid-cols-2 gap-3 text-xs text-gray-600 mt-2">
+                        <div class="rounded-lg p-3 ring-1 ring-gray-100 text-center">
+                            <div class="font-medium text-gray-800">Période</div>
+                            <div>
+                                <template v-if="tripMeta.start_date && tripMeta.end_date">
+                                    {{ tripMeta.start_date }} → {{ tripMeta.end_date }}
+                                </template>
+                                <template v-else>—</template>
+                            </div>
+                        </div>
+                        <div class="rounded-lg p-3 ring-1 ring-gray-100 text-center">
+                            <div class="font-medium text-gray-800">Étapes</div>
+                            <div>{{ steps.length }}</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Mode Détail étape (facultatif) -->
+                <article v-else-if="activeStep">
                     <div v-if="activeStep.photo_url" class="aspect-[16/9] w-full overflow-hidden rounded-t-2xl">
                         <img :src="activeStep.photo_url" alt="" class="h-full w-full object-cover" />
                     </div>
@@ -135,11 +171,12 @@ watch(activeId, () => { if (!map) return; highlightActive() })
                         <p v-else class="text-sm text-gray-600">Pas encore de description pour cette étape.</p>
                     </div>
                 </article>
+
                 <div v-else class="p-6 text-sm text-gray-500">Aucune étape.</div>
             </div>
         </section>
 
-        <!-- Map -->
+        <!-- Colonne 3: Carte (2/4) -->
         <section class="h-[420px] lg:h-[calc(100vh-180px)]">
             <div class="rounded-2xl border border-gray-200 overflow-hidden bg-white h-full">
                 <div ref="mapEl" class="w-full h-full"></div>

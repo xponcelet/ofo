@@ -1,5 +1,4 @@
 <script setup>
-import RootLayout from '@/Layouts/RootLayout.vue'
 import { Head, useForm, router } from '@inertiajs/vue3'
 import MapboxAutocomplete from '@/Components/MapboxAutocomplete.vue'
 import StepMapPreview from '@/Components/StepMapPreview.vue'
@@ -7,7 +6,7 @@ import InputError from '@/Components/InputError.vue'
 import TripCreationProgress from '@/Components/Trip/TripCreationProgress.vue'
 
 const form = useForm({
-    location: '',
+    destination: '',
     latitude: null,
     longitude: null,
 })
@@ -18,45 +17,44 @@ function updateCoords({ latitude, longitude }) {
 }
 
 function submit() {
-    form.post(route('trips.start.store'))
+    form.post(route('trips.destination.store'))
 }
 
 function goBack() {
-    router.visit(route('trips.destination'))
+    router.visit(route('trips.index'))
 }
 </script>
 
 <template>
-    <Head title="Où commence votre voyage ?" />
+    <Head title="Destination du voyage" />
+
     <div class="max-w-3xl mx-auto py-10 px-4 space-y-8">
-        <!-- Barre d’avancement -->
+        <!-- Progression -->
         <TripCreationProgress :current-step="1" />
 
         <!-- Titre -->
         <div>
-            <h1 class="text-2xl font-bold text-gray-900">📍 Où commence votre aventure ?</h1>
-            <p class="text-sm text-gray-500 mt-1">Choisissez un lieu de départ avant d’ajouter les détails.</p>
+            <h1 class="text-2xl font-bold text-gray-900">✈️ Quelle est votre destination ?</h1>
+            <p class="text-sm text-gray-500 mt-1">Indiquez le pays ou la région que vous souhaitez explorer.</p>
         </div>
 
         <!-- Formulaire -->
         <form @submit.prevent="submit" class="space-y-6">
-            <!-- Lieu -->
             <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1">Lieu de départ *</label>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Destination *</label>
                 <MapboxAutocomplete
-                    v-model="form.location"
+                    v-model="form.destination"
                     @update:coords="updateCoords"
                 />
-                <InputError :message="form.errors.location" />
+                <InputError :message="form.errors.destination" />
             </div>
 
-            <!-- Carte affichée dès le début -->
             <StepMapPreview
                 class="mt-4"
-                :latitude="form.latitude ?? 50.8503"
-                :longitude="form.longitude ?? 4.3517"
+                :latitude="form.latitude ?? 48.8566"
+                :longitude="form.longitude ?? 2.3522"
             />
-            <!-- Boutons -->
+
             <div class="flex items-center justify-between pt-4">
                 <button
                     type="button"
@@ -69,7 +67,7 @@ function goBack() {
                 <button
                     type="submit"
                     class="bg-blue-600 hover:bg-blue-700 text-white font-semibold px-6 py-2 rounded disabled:opacity-50"
-                    :disabled="form.processing || !form.location"
+                    :disabled="form.processing || !form.destination"
                 >
                     Continuer
                 </button>
@@ -84,11 +82,11 @@ function goBack() {
             </div>
             <div class="flex items-start gap-2">
                 <span class="text-emerald-400">✓</span>
-                <span>Tu peux modifier les infos plus tard</span>
+                <span>Tu pourras modifier les infos ensuite</span>
             </div>
             <div class="flex items-start gap-2">
                 <span class="text-emerald-400">✓</span>
-                <span>Tu peux ajouter des étapes ensuite</span>
+                <span>Les étapes seront ajoutées plus tard</span>
             </div>
         </div>
     </div>

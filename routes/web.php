@@ -45,9 +45,15 @@ Route::middleware([
         return Inertia::render('Dashboard');
     })->name('dashboard');
     // Routes pour créer la 1ère partie de la création du voyage
+    Route::get('/trips/destination', [TripCreationController::class, 'destination'])->name('trips.destination');
+    Route::post('/trips/destination', [TripCreationController::class, 'storeDestination'])->name('trips.destination.store');
+    // Routes pour créer la 2ère partie de la création du voyage
     Route::get('/trips/start', [TripCreationController::class, 'start'])->name('trips.start');
     Route::post('/trips/start', [TripCreationController::class, 'store'])->name('trips.start.store');
-//  CRUD pour trips
+    // Étape 3 : Compléter les infos du voyage
+    Route::get('/trips/details/{trip}', [TripCreationController::class, 'details'])->name('trips.details');
+    Route::post('/trips/details/{trip}', [TripCreationController::class, 'finalize'])->name('trips.details.store');
+    //  CRUD pour trips
     Route::resource('trips', TripController::class);
     // CRUD pour steps
     Route::resource('trips.steps', StepController::class)->shallow();
