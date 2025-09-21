@@ -41,18 +41,24 @@ Route::middleware([
     config('jetstream.auth_session'),
     'verified',
 ])->group(function () {
+    // Dashboard user authentifié
     Route::get('/dashboard', function () {
         return Inertia::render('Dashboard');
     })->name('dashboard');
-    // Routes pour créer la 1ère partie de la création du voyage
-    Route::get('/trips/destination', [TripCreationController::class, 'destination'])->name('trips.destination');
-    Route::post('/trips/destination', [TripCreationController::class, 'storeDestination'])->name('trips.destination.store');
-    // Routes pour créer la 2ère partie de la création du voyage
-    Route::get('/trips/start', [TripCreationController::class, 'start'])->name('trips.start');
-    Route::post('/trips/start', [TripCreationController::class, 'store'])->name('trips.start.store');
-    // Étape 3 : Compléter les infos du voyage
-    Route::get('/trips/details/{trip}', [TripCreationController::class, 'details'])->name('trips.details');
-    Route::post('/trips/details/{trip}', [TripCreationController::class, 'finalize'])->name('trips.details.store');
+
+    // Création de voyage (3 étapes)
+    Route::prefix('trips')->name('trips.')->group(function () {
+        // Étape 1 : Destination
+        Route::get('/destination', [TripCreationController::class, 'destination'])->name('destination');
+        Route::post('/destination', [TripCreationController::class, 'storeDestination'])->name('destination.store');
+        // Étape 2 : Point de départ
+        Route::get('/start', [TripCreationController::class, 'start'])->name('start');
+        Route::post('/start', [TripCreationController::class, 'store'])->name('start.store');
+        // Étape 3 : Détails + création finale
+        Route::get('/details', [TripCreationController::class, 'details'])->name('details');
+        Route::post('/details', [TripCreationController::class, 'finalize'])->name('details.store');
+    });
+
     //  CRUD pour trips
     Route::resource('trips', TripController::class);
     // CRUD pour steps

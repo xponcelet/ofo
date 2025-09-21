@@ -1,5 +1,5 @@
 <script setup>
-import { Head, useForm, router } from '@inertiajs/vue3'
+import { Head, useForm } from '@inertiajs/vue3'
 import MapboxAutocomplete from '@/Components/MapboxAutocomplete.vue'
 import StepMapPreview from '@/Components/StepMapPreview.vue'
 import InputError from '@/Components/InputError.vue'
@@ -17,29 +17,26 @@ function updateCoords({ latitude, longitude }) {
 }
 
 function submit() {
-    form.post(route('trips.destination.store'))
-}
-
-function goBack() {
-    router.visit(route('trips.index'))
+    form.post(route('trips.destination.store'), {
+        preserveScroll: true,
+    })
 }
 </script>
 
 <template>
-    <Head title="Destination du voyage" />
-
+    <Head title="Quelle est la destination ?" />
     <div class="max-w-3xl mx-auto py-10 px-4 space-y-8">
-        <!-- Progression -->
         <TripCreationProgress :current-step="1" />
 
         <!-- Titre -->
         <div>
-            <h1 class="text-2xl font-bold text-gray-900">✈️ Quelle est votre destination ?</h1>
-            <p class="text-sm text-gray-500 mt-1">Indiquez le pays ou la région que vous souhaitez explorer.</p>
+            <h1 class="text-2xl font-bold text-gray-900">🌍 Destination du voyage</h1>
+            <p class="text-sm text-gray-500 mt-1">Commencez par choisir votre destination principale.</p>
         </div>
 
         <!-- Formulaire -->
         <form @submit.prevent="submit" class="space-y-6">
+            <!-- Champ Mapbox -->
             <div>
                 <label class="block text-sm font-medium text-gray-700 mb-1">Destination *</label>
                 <MapboxAutocomplete
@@ -49,21 +46,15 @@ function goBack() {
                 <InputError :message="form.errors.destination" />
             </div>
 
+            <!-- Carte de prévisualisation -->
             <StepMapPreview
                 class="mt-4"
-                :latitude="form.latitude ?? 48.8566"
-                :longitude="form.longitude ?? 2.3522"
+                :latitude="form.latitude ?? 50.8503"
+                :longitude="form.longitude ?? 4.3517"
             />
 
-            <div class="flex items-center justify-between pt-4">
-                <button
-                    type="button"
-                    @click="goBack"
-                    class="text-sm text-gray-600 hover:underline"
-                >
-                    ← Retour
-                </button>
-
+            <!-- Bouton -->
+            <div class="flex justify-end pt-4">
                 <button
                     type="submit"
                     class="bg-blue-600 hover:bg-blue-700 text-white font-semibold px-6 py-2 rounded disabled:opacity-50"
@@ -75,18 +66,18 @@ function goBack() {
         </form>
 
         <!-- Garanties -->
-        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 text-sm text-gray-400 border-t border-gray-700 pt-6">
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 text-sm text-gray-400 border-t border-gray-200 pt-6">
             <div class="flex items-start gap-2">
-                <span class="text-emerald-400">✓</span>
+                <span class="text-emerald-500">✓</span>
                 <span>Les voyages sont privés par défaut</span>
             </div>
             <div class="flex items-start gap-2">
-                <span class="text-emerald-400">✓</span>
-                <span>Tu pourras modifier les infos ensuite</span>
+                <span class="text-emerald-500">✓</span>
+                <span>Tu pourras compléter les infos ensuite</span>
             </div>
             <div class="flex items-start gap-2">
-                <span class="text-emerald-400">✓</span>
-                <span>Les étapes seront ajoutées plus tard</span>
+                <span class="text-emerald-500">✓</span>
+                <span>Tu peux ajouter des étapes secondaires</span>
             </div>
         </div>
     </div>

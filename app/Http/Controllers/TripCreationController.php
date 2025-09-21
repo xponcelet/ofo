@@ -25,14 +25,13 @@ class TripCreationController extends Controller
             'longitude' => 'nullable|numeric',
         ]);
 
-        // Tu peux stocker ça en session ou le passer à l'étape suivante selon ton choix
         session([
             'trip.destination' => $validated['destination'],
             'trip.latitude' => $validated['latitude'],
             'trip.longitude' => $validated['longitude'],
         ]);
 
-        return redirect()->route('trips.start');
+        return redirect()->route('trips.start')->with('success', 'Destination enregistrée.');
     }
 
 
@@ -41,61 +40,93 @@ class TripCreationController extends Controller
         return Inertia::render('Trips/Start');
     }
 
+
     public function store(Request $request)
     {
         $validated = $request->validate([
-            'location' => 'required|string',
+            'departure' => 'required|string|max:100',
             'latitude' => 'required|numeric|between:-90,90',
             'longitude' => 'required|numeric|between:-180,180',
-            'start_date' => 'nullable|date',
-            'end_date' => 'nullable|date|after_or_equal:start_date',
-            'title' => 'nullable|string|max:100',
-            'description' => 'nullable|string',
         ]);
 
-        $trip = Trip::create([
-            'user_id' => auth()->id(),
-            'title' => 'titre',
-            'description' => null,
-            'start_date' => null,
-            'end_date' => null,
-            'budget' => null,
-            'currency' => 'EUR',
-            'is_public' => false,
+        session([
+            'trip.departure' => $validated['departure'],
+            'trip.departure_latitude' => $validated['latitude'],
+            'trip.departure_longitude' => $validated['longitude'],
         ]);
 
+        return redirect()->route('trips.details')->with('success', 'Point de départ enregistré.');
+    }
+
+
+    public function details(): Response
+    {
+        // Optionnel : sécurité pour éviter l’accès sans les 2 étapes précédentes
+        if (
+            !session()->has('trip.destination') ||
+            !session()->has('trip.departure')
+        ) {
+            return redirect()->route('trips.destination')->with('error', 'Veuillez compléter les étapes précédentes.');
+        }
+
+        return Inertia::render('Trips/Details');
+    }
+
+
+    public function finalize(StoreTripRequest $request): RedirectResponse
+    {
+        // Récupération des données de session
+        $destination = session('trip.destination');
+        $destinationLat = session('trip.latitude');
+        $destinationLng = session('trip.longitude');
+        $departure = session('trip.departure');
+        $departureLat = session('trip.departure_latitude');
+        $departureLng = session('trip.departure_longitude');
+
+        if (!$destination || !$departure || $destinationLat === null || $destinationLng === null || $departureLat === null || $departureLng === null) {
+            return redirect()->route('trips.destination')->with('error', 'Les informations sont incomplètes.');
+        }
+
+        // Création du voyage
+        $trip = Trip::create(array_merge(
+            $request->validated(),
+            [
+                'user_id' => auth()->id(),
+                'destination' => $destination,
+                'currency' => $request->currency ?? 'EUR',
+                'is_public' => $request->boolean('is_public', false),
+            ]
+        ));
+
+        // Étape 1 : départ
         $trip->steps()->create([
-            'title' => $validated['title'] ?? null,
-            'description' => $validated['description'] ?? null,
-            'location' => $validated['location'],
-            'latitude' => $validated['latitude'],
-            'longitude' => $validated['longitude'],
-            'start_date' => $validated['start_date'] ?? null,
-            'end_date' => $validated['end_date'] ?? null,
+            'location' => $departure,
+            'latitude' => $departureLat,
+            'longitude' => $departureLng,
             'order' => 1,
+            'is_departure' => true,
+        ]);
+
+        // Étape 2 : destination
+        $trip->steps()->create([
+            'location' => $destination,
+            'latitude' => $destinationLat,
+            'longitude' => $destinationLng,
+            'order' => 2,
             'is_destination' => true,
         ]);
 
-        return redirect()->route('trips.details', $trip)->with('success', 'Destination ajoutée. Complétez votre voyage.');
-    }
-    public function details(Trip $trip): Response
-    {
-        abort_unless($trip->user_id === auth()->id(), 403);
-
-        return Inertia::render('Trips/Details', [
-            'trip' => $trip,
+        // Nettoyage
+        session()->forget([
+            'trip.destination',
+            'trip.latitude',
+            'trip.longitude',
+            'trip.departure',
+            'trip.departure_latitude',
+            'trip.departure_longitude',
         ]);
-    }
-
-    public function finalize(StoreTripRequest $request, Trip $trip): RedirectResponse
-    {
-        abort_unless($trip->user_id === auth()->id(), 403);
-
-        $trip->update($request->validated());
 
         return redirect()->route('trips.edit', $trip)->with('success', 'Voyage créé avec succès 🎉');
     }
-
-
 
 }
