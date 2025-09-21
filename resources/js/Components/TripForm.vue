@@ -1,5 +1,9 @@
 <script setup>
-import InputError from '@/Components/InputError.vue'
+import Input from '@/Components/Input.vue'
+import Textarea from '@/Components/Textarea.vue'
+import Select from '@/Components/Select.vue'
+import Checkbox from '@/Components/Checkbox.vue'
+import Button from '@/Components/Button.vue'
 
 const props = defineProps({
     form: Object,
@@ -11,108 +15,90 @@ const props = defineProps({
 })
 </script>
 
-
 <template>
-    <form @submit.prevent="onSubmit" class="max-w-2xl mx-auto space-y-6">
+    <form @submit.prevent="onSubmit" class="max-w-2xl mx-auto space-y-8">
         <!-- Titre -->
-        <div>
-            <label class="block text-sm font-medium text-gray-700">Titre *</label>
-            <input
-                v-model="form.title"
-                type="text"
-                class="mt-1 block w-full rounded border-gray-300 shadow-sm"
-            />
-            <InputError :message="form.errors.title" />
-        </div>
+        <Input
+            v-model="form.title"
+            label="Titre du voyage"
+            required
+            placeholder="Ex. Road trip au Portugal"
+            :error="form.errors.title"
+        />
 
         <!-- Description -->
-        <div>
-            <label class="block text-sm font-medium text-gray-700">Description</label>
-            <textarea
-                v-model="form.description"
-                rows="4"
-                class="mt-1 block w-full rounded border-gray-300 shadow-sm"
-            />
-            <InputError :message="form.errors.description" />
-        </div>
+        <Textarea
+            v-model="form.description"
+            label="Description"
+            placeholder="Racontez un peu ce que vous comptez faire..."
+            :error="form.errors.description"
+        />
 
         <!-- Image -->
-        <div>
-            <label class="block text-sm font-medium text-gray-700">Image (URL)</label>
-            <input
-                v-model="form.image"
-                type="text"
-                class="mt-1 block w-full rounded border-gray-300 shadow-sm"
-            />
-            <InputError :message="form.errors.image" />
-        </div>
+        <Input
+            v-model="form.image"
+            label="Image (URL)"
+            type="url"
+            placeholder="https://exemple.com/photo.jpg"
+            :error="form.errors.image"
+        />
 
         <!-- Dates -->
         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div>
-                <label class="block text-sm font-medium text-gray-700">Date de début</label>
-                <input
-                    v-model="form.start_date"
-                    type="date"
-                    class="mt-1 block w-full rounded border-gray-300 shadow-sm"
-                />
-                <InputError :message="form.errors.start_date" />
-            </div>
-
-            <div>
-                <label class="block text-sm font-medium text-gray-700">Date de fin</label>
-                <input
-                    v-model="form.end_date"
-                    type="date"
-                    class="mt-1 block w-full rounded border-gray-300 shadow-sm"
-                />
-                <InputError :message="form.errors.end_date" />
-            </div>
+            <Input
+                v-model="form.start_date"
+                label="Date de début"
+                type="date"
+                :error="form.errors.start_date"
+            />
+            <Input
+                v-model="form.end_date"
+                label="Date de fin"
+                type="date"
+                :error="form.errors.end_date"
+            />
         </div>
 
         <!-- Budget et devise -->
         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div>
-                <label class="block text-sm font-medium text-gray-700">Budget</label>
-                <input
-                    v-model="form.budget"
-                    type="number"
-                    class="mt-1 block w-full rounded border-gray-300 shadow-sm"
-                />
-                <InputError :message="form.errors.budget" />
-            </div>
+            <Input
+                v-model="form.budget"
+                label="Budget"
+                type="number"
+                min="0"
+                step="0.01"
+                placeholder="Ex. 1200"
+                :error="form.errors.budget"
+            />
 
-            <div>
-                <label class="block text-sm font-medium text-gray-700">Devise</label>
-                <select
-                    v-model="form.currency"
-                    class="mt-1 block w-full rounded border-gray-300 shadow-sm"
-                >
-                    <option value="EUR">EUR</option>
-                    <option value="USD">USD</option>
-                </select>
-                <InputError :message="form.errors.currency" />
-            </div>
+            <Select
+                v-model="form.currency"
+                label="Devise"
+                :options="[
+                    { value: 'EUR', label: 'Euro (€)' },
+                    { value: 'USD', label: 'Dollar ($)' },
+                ]"
+                :error="form.errors.currency"
+            />
         </div>
 
         <!-- Public -->
-        <div class="flex items-center gap-2">
-            <input v-model="form.is_public" type="checkbox" />
-            <label class="text-sm text-gray-600">Rendre ce voyage public</label>
-        </div>
-        <InputError :message="form.errors.is_public" />
+        <Checkbox
+            v-model="form.is_public"
+            label="Rendre ce voyage public"
+            :error="form.errors.is_public"
+        />
 
         <!-- Bouton -->
-        <div class="flex justify-end">
-            <button
+        <div class="flex justify-end pt-6">
+            <Button
                 type="submit"
-                class="inline-flex items-center px-4 py-2 bg-blue-600 text-white font-semibold rounded hover:bg-blue-700"
+                variant="primary"
                 :disabled="form.processing"
+                :loading="form.processing"
             >
                 {{ submitLabel }}
-            </button>
+            </Button>
         </div>
     </form>
 </template>
-
-
