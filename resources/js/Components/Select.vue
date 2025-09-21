@@ -2,10 +2,12 @@
 const props = defineProps({
     modelValue: { type: [String, Number], default: '' },
     label: { type: String, required: true },
-    type: { type: String, default: 'text' },
     required: { type: Boolean, default: false },
     error: { type: String, default: '' },
-    placeholder: { type: String, default: '' },
+    options: {
+        type: Array,
+        default: () => []  // [{ value: 'EUR', label: 'Euro (€)' }]
+    },
 })
 
 const emit = defineEmits(['update:modelValue'])
@@ -19,16 +21,23 @@ const emit = defineEmits(['update:modelValue'])
             <span v-if="required" class="text-red-500">*</span>
         </label>
 
-        <!-- Input -->
-        <input
-            :type="type"
+        <!-- Select -->
+        <select
             :value="modelValue"
-            :placeholder="placeholder"
-            @input="emit('update:modelValue', $event.target.value)"
+            @change="emit('update:modelValue', $event.target.value)"
             class="w-full rounded-xl border border-gray-300 px-3 py-2
-             focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500
+             focus:outline-none focus:ring-2 focus:ring-primary-500
              shadow-sm transition bg-white"
-        />
+        >
+            <option value="" disabled>-- Choisir --</option>
+            <option
+                v-for="opt in options"
+                :key="opt.value"
+                :value="opt.value"
+            >
+                {{ opt.label }}
+            </option>
+        </select>
 
         <!-- Message d'erreur -->
         <p v-if="error" class="text-red-500 text-sm mt-1">{{ error }}</p>

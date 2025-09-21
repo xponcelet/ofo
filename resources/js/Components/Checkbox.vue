@@ -1,36 +1,26 @@
 <script setup>
-import { computed } from 'vue';
-
-const emit = defineEmits(['update:checked']);
-
 const props = defineProps({
-    checked: {
-        type: [Array, Boolean],
-        default: false,
-    },
-    value: {
-        type: String,
-        default: null,
-    },
-});
+    modelValue: { type: Boolean, default: false },
+    label: { type: String, required: true },
+    error: { type: String, default: '' },
+})
 
-const proxyChecked = computed({
-    get() {
-        return props.checked;
-    },
-
-    set(val) {
-        emit('update:checked', val);
-    },
-});
+const emit = defineEmits(['update:modelValue'])
 </script>
 
-
 <template>
-    <input
-        v-model="proxyChecked"
-        type="checkbox"
-        :value="value"
-        class="rounded border-gray-300 text-indigo-600 shadow-sm focus:ring-indigo-500"
-    >
+    <div class="flex flex-col">
+        <label class="inline-flex items-center gap-2">
+            <input
+                type="checkbox"
+                :checked="modelValue"
+                @change="emit('update:modelValue', $event.target.checked)"
+                class="rounded border-gray-300 text-primary-600 shadow-sm
+               focus:ring-primary-500 transition"
+            />
+            <span class="text-sm text-gray-700">{{ label }}</span>
+        </label>
+
+        <p v-if="error" class="text-red-500 text-sm mt-1">{{ error }}</p>
+    </div>
 </template>
