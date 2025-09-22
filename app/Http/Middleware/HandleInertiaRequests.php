@@ -35,9 +35,59 @@ class HandleInertiaRequests extends Middleware
      */
     public function share(Request $request): array
     {
-        return [
-            ...parent::share($request),
-            //
-        ];
+        return array_merge(parent::share($request), [
+            'auth' => [
+                'user' => function () use ($request) {
+                    $u = $request->user();
+                    if (!$u) return null;
+
+                    /** @var \App\Models\User $user */
+                    $user = $u->fresh();
+                    $user->loadMissing('subscriptions');
+
+                    $invoices = [];
+                    if ($request->routeIs('profile.show') && $user->hasStripeId()) {
+                        try {
+                            $invoices = $user->invoices()->map(function ($inv) {
+                                $date = $inv->date();
+                                $stripe = $inv->asStripeInvoice();
+                                return [
+                                    'id' => $inv->id,
+                                    'number' => $inv->number,
+                                    'date' => $date ? $date->toIso8601String() : null,
+                                    'total' => $inv->total(),
+                                    'hosted_invoice_url' => $stripe->hosted_invoice_url ?? null,
+                                    'pdf' => $stripe->invoice_pdf ?? null,
+                                ];
+                            })->all();
+                        } catch (\Throwable $e) {
+                            $invoices = [];
+                        }
+                    }
+
+                    return [
+                        'id' => $user->id,
+                        'name' => $user->name,
+                        'email' => $user->email,
+                        // ✅ AJOUTS pour la photo & compat Jetstream
+                        'email_verified_at' => $user->email_verified_at?->toIso8601String(),
+                        'profile_photo_url' => $user->profile_photo_url,   // <- important
+                        'profile_photo_path' => $user->profile_photo_path, // optionnel
+
+                        // Ton état d’abonnement
+                        'is_premium' => $user->isPremium(),
+                        'trip_limit' => $user->tripLimit(),
+                        'premium_ends_at' => optional($user->premiumEndsAt())->toIso8601String(),
+                        'invoices' => $invoices,
+                        'on_grace_period' => $user->isOnGracePeriod(),
+                    ];
+                },
+            ],
+
+            'flash' => [
+                'status' => fn() => $request->session()->get('status'),
+            ],
+            'csrf_token' => fn() => csrf_token(),
+        ]);
     }
 }

@@ -11,6 +11,7 @@ use App\Http\Controllers\AccommodationController;
 use App\Http\Controllers\PublicTripController;
 use App\Http\Controllers\FavoriteController;
 use App\Http\Controllers\ActivityController;
+use App\Http\Controllers\BillingController;
 
 Route::get('/', function () {
     return Inertia::render('Welcome', [
@@ -75,6 +76,18 @@ Route::middleware([
     // CRUD des activités liées à une étape
     Route::resource('steps.activities', ActivityController::class)->shallow();
 
+    // Stripe Checkout (crée/relance l’abonnement)
+    Route::post('/billing/checkout', [BillingController::class, 'checkout'])->name('billing.checkout');
+
+    // Stripe Billing Portal (gestion carte, annulation)
+    Route::post('/billing/portal', [BillingController::class, 'portal'])->name('billing.portal');
+
+    // (optionnel) annuler côté app
+    Route::post('/billing/cancel', [BillingController::class, 'cancel'])->name('billing.cancel');
+
+    // Success / Cancel (retour de Checkout)
+    Route::get('/billing/success', [BillingController::class, 'success'])->name('billing.success');
+    Route::get('/billing/cancel', [BillingController::class, 'cancelled'])->name('billing.cancelled');
 });
 
 Route::controller(GoogleAuthController::class)->group(function () {
