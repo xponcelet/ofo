@@ -11,7 +11,8 @@ use Laravel\Fortify\TwoFactorAuthenticatable;
 use Laravel\Jetstream\HasProfilePhoto;
 use Laravel\Sanctum\HasApiTokens;
 use App\Models\Trip;
-
+use Laravel\Cashier\Billable;
+use Carbon\Carbon;
 
 class User extends Authenticatable implements MustVerifyEmail
 {
@@ -22,7 +23,7 @@ class User extends Authenticatable implements MustVerifyEmail
     use HasProfilePhoto;
     use Notifiable;
     use TwoFactorAuthenticatable;
-
+    use Billable;
     /**
      * The attributes that are mass assignable.
      *
@@ -80,10 +81,39 @@ class User extends Authenticatable implements MustVerifyEmail
         return $this->hasMany(Trip::class);
     }
 
+    public function isPremium(): bool
+    {
+        $sub = $this->subscription('default');
+        return $sub && ($sub->valid() || $sub->onGracePeriod());
+    }
+
+    public function isOnGracePeriod(): bool
+    {
+        $sub = $this->subscription('default');
+        return $sub ? $sub->onGracePeriod() : false;
+    }
+
+    public function premiumEndsAt(): ?Carbon
+    {
+        $subscription = $this->subscription('default');
+
+        if ($subscription && $subscription->valid()) {
+            $stripeSub = $subscription->asStripeSubscription();
+            return Carbon::createFromTimestamp($stripeSub->current_period_end);
+        }
+
+        return null;
+    }
+
+
     public function tripLimit(): int
     {
-        // Demain : si tu ajoutes une colonne `trip_limit` ou un système de plan,
-        // tu pourras retourner cette valeur ici. Aujourd’hui => fallback config.
+        // Si abonnement pas de limite
+        if ($this->isPremium()) {
+            return PHP_INT_MAX; // limite virtuelle énorme
+        }
+
+        // sinon limite
         return (int) ($this->trip_limit ?? config('trips.default_max_per_user'));
     }
 

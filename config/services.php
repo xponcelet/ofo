@@ -45,4 +45,12 @@ return [
     'key' => env('MAPBOX_TOKEN'),
     ],
 
+    'stripe' => [
+        'key'   => env('STRIPE_KEY'),
+        'secret'=> env('STRIPE_SECRET'),
+        'webhook' => [
+            'secret' => env('STRIPE_WEBHOOK_SECRET'),
+        ],
+        'price_monthly' => env('STRIPE_PRICE_MONTHLY'),
+    ],
 ];
