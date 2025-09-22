@@ -2,15 +2,9 @@
 import { ref, computed, watch, onMounted, onBeforeUnmount } from 'vue'
 
 const props = defineProps({
-    // { title, country|location, start_date, end_date, visibility: 'public'|'private' }
     tripMeta: { type: Object, required: true },
-    // steps: [{ id, day, title, short_title, photo_url?, description_html?, coords:{lat,lng} }]
     steps: { type: Array, default: () => [] },
     initialActiveId: [Number, String],
-    // 'description' (par défaut) pour centrer la description du voyage,
-    // 'step' si tu veux recentrer sur le détail d'étape (ancien comportement).
-    centerMode: { type: String, default: 'description' },
-    // description du voyage (texte/HTML déjà "safe" côté serveur si tu veux l'injecter en HTML)
     tripDescription: { type: String, default: '' },
     tripDescriptionIsHtml: { type: Boolean, default: false },
 })
@@ -94,93 +88,52 @@ watch(activeId, () => { if (!map) return; highlightActive() })
 </script>
 
 <template>
-    <!-- Grille 1/4 - 1/4 - 2/4 -->
-    <div class="grid grid-cols-1 lg:grid-cols-[1fr_1fr_2fr] gap-4 lg:gap-6">
-        <!-- Colonne 1: Étapes -->
-        <aside class="lg:h-[calc(100vh-180px)] lg:sticky lg:top-24">
-            <div class="rounded-2xl border border-gray-200 bg-white">
-                <div class="px-4 py-3 border-b border-gray-200">
-                    <h2 class="text-sm font-semibold tracking-wide text-gray-700">Étapes</h2>
-                </div>
-
-                <nav class="max-h-[60vh] lg:max-h-[calc(100vh-240px)] overflow-y-auto p-2">
-                    <button
-                        v-for="s in steps" :key="s.id" @click="activeId = s.id"
-                        class="w-full text-left rounded-xl px-3 py-3 mb-1 transition
-                   hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-emerald-500/40
-                   flex items-center gap-3"
-                        :class="s.id === activeId ? 'bg-emerald-50 ring-1 ring-emerald-200' : ''"
-                    >
-                        <div class="flex h-8 w-8 items-center justify-center rounded-full border"
-                             :class="s.id === activeId ? 'border-emerald-400 text-emerald-700' : 'border-gray-300 text-gray-600'">
-                            {{ s.day ?? '?' }}
-                        </div>
-                        <div class="min-w-0">
-                            <p class="truncate text-sm font-medium text-gray-900">{{ s.short_title || ('Jour ' + (s.day ?? '?')) }}</p>
-                            <p class="truncate text-xs text-gray-500">{{ s.title }}</p>
-                        </div>
-                    </button>
-                </nav>
-            </div>
-        </aside>
-
-        <!-- Colonne 2: Description du voyage (ou détail étape si centerMode='step') -->
-        <section class="lg:h-[calc(100vh-180px)]">
-            <div class="rounded-2xl border border-gray-200 bg-white lg:h-full lg:overflow-y-auto">
-                <!-- Mode Description -->
-                <div v-if="centerMode === 'description'" class="p-6 space-y-4">
-                    <h3 class="text-lg font-semibold">Description</h3>
-
-                    <div v-if="tripDescription" class="prose prose-sm max-w-none">
-                        <div v-if="tripDescriptionIsHtml" v-html="tripDescription"></div>
-                        <p v-else class="whitespace-pre-line text-gray-700">{{ tripDescription }}</p>
+    <!-- ✅ Layout Résumé : Étapes (1/4) + Carte (3/4), puis description full width -->
+    <div class="space-y-6">
+        <!-- Étapes + Carte -->
+        <div class="grid grid-cols-1 lg:grid-cols-[1fr_3fr] gap-4 lg:gap-6">
+            <!-- Étapes -->
+            <aside class="lg:h-[calc(100vh-220px)]">
+                <div class="rounded-2xl border border-gray-200 bg-white h-full">
+                    <div class="px-4 py-3 border-b border-gray-200">
+                        <h2 class="text-sm font-semibold tracking-wide text-gray-700">Étapes</h2>
                     </div>
-                    <p v-else class="text-sm text-gray-500">Aucune description pour ce voyage.</p>
-
-                    <!-- Mini récap (optionnel) -->
-                    <div class="grid grid-cols-2 gap-3 text-xs text-gray-600 mt-2">
-                        <div class="rounded-lg p-3 ring-1 ring-gray-100 text-center">
-                            <div class="font-medium text-gray-800">Période</div>
-                            <div>
-                                <template v-if="tripMeta.start_date && tripMeta.end_date">
-                                    {{ tripMeta.start_date }} → {{ tripMeta.end_date }}
-                                </template>
-                                <template v-else>—</template>
+                    <nav class="max-h-[60vh] overflow-y-auto p-2">
+                        <button
+                            v-for="s in steps" :key="s.id" @click="activeId = s.id"
+                            class="w-full text-left rounded-xl px-3 py-3 mb-1 transition hover:bg-gray-50
+                     flex items-center gap-3"
+                            :class="s.id === activeId ? 'bg-emerald-50 ring-1 ring-emerald-200' : ''"
+                        >
+                            <div class="flex h-8 w-8 items-center justify-center rounded-full border"
+                                 :class="s.id === activeId ? 'border-emerald-400 text-emerald-700' : 'border-gray-300 text-gray-600'">
+                                {{ s.day ?? '?' }}
                             </div>
-                        </div>
-                        <div class="rounded-lg p-3 ring-1 ring-gray-100 text-center">
-                            <div class="font-medium text-gray-800">Étapes</div>
-                            <div>{{ steps.length }}</div>
-                        </div>
-                    </div>
+                            <div class="min-w-0">
+                                <p class="truncate text-sm font-medium text-gray-900">{{ s.short_title }}</p>
+                                <p class="truncate text-xs text-gray-500">{{ s.title }}</p>
+                            </div>
+                        </button>
+                    </nav>
                 </div>
+            </aside>
 
-                <!-- Mode Détail étape (facultatif) -->
-                <article v-else-if="activeStep">
-                    <div v-if="activeStep.photo_url" class="aspect-[16/9] w-full overflow-hidden rounded-t-2xl">
-                        <img :src="activeStep.photo_url" alt="" class="h-full w-full object-cover" />
-                    </div>
-                    <div class="p-6 space-y-4">
-                        <div class="flex items-center justify-between gap-4">
-                            <h3 class="text-xl font-semibold">{{ activeStep.title }}</h3>
-                            <span class="rounded-full bg-gray-100 px-3 py-1 text-xs text-gray-700">Jour {{ activeStep.day ?? '?' }}</span>
-                        </div>
-                        <div v-if="activeStep.description_html" class="prose prose-sm max-w-none">
-                            <div v-html="activeStep.description_html"></div>
-                        </div>
-                        <p v-else class="text-sm text-gray-600">Pas encore de description pour cette étape.</p>
-                    </div>
-                </article>
+            <!-- Carte -->
+            <section class="lg:h-[calc(100vh-220px)]">
+                <div class="rounded-2xl border border-gray-200 overflow-hidden bg-white h-full">
+                    <div ref="mapEl" class="w-full h-full"></div>
+                </div>
+            </section>
+        </div>
 
-                <div v-else class="p-6 text-sm text-gray-500">Aucune étape.</div>
+        <!-- Description -->
+        <section class="rounded-2xl border border-gray-200 bg-white p-6">
+            <h3 class="text-lg font-semibold mb-3">Description du voyage</h3>
+            <div v-if="tripDescription" class="prose prose-sm max-w-none">
+                <div v-if="tripDescriptionIsHtml" v-html="tripDescription"></div>
+                <p v-else class="whitespace-pre-line text-gray-700">{{ tripDescription }}</p>
             </div>
-        </section>
-
-        <!-- Colonne 3: Carte (2/4) -->
-        <section class="h-[420px] lg:h-[calc(100vh-180px)]">
-            <div class="rounded-2xl border border-gray-200 overflow-hidden bg-white h-full">
-                <div ref="mapEl" class="w-full h-full"></div>
-            </div>
+            <p v-else class="text-sm text-gray-500">Aucune description pour ce voyage.</p>
         </section>
     </div>
 </template>
