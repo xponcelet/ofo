@@ -16,6 +16,9 @@ watch(() => props.steps, (arr) => {
     if (!arr.some(s => s.id === activeId.value)) activeId.value = arr[0].id
 })
 
+// Gestion description (Lire plus / Réduire)
+const expanded = ref(false)
+
 // MAPBOX
 let map = null, markers = []
 const routeLayerId = 'trip-route', routeSourceId = 'trip-route-source'
@@ -73,6 +76,10 @@ function fitAll() {
 
 onMounted(() => {
     if (!window.mapboxgl?.Map) return
+
+    window.mapboxgl.accessToken = import.meta.env.VITE_MAPBOX_KEY
+    console.log('Mapbox token:', import.meta.env.VITE_MAPBOX_KEY) // debug
+
     map = new window.mapboxgl.Map({
         container: mapEl.value,
         style: 'mapbox://styles/mapbox/streets-v12',
@@ -88,7 +95,6 @@ watch(activeId, () => { if (!map) return; highlightActive() })
 </script>
 
 <template>
-    <!-- ✅ Layout Résumé : Étapes (1/4) + Carte (3/4), puis description full width -->
     <div class="space-y-6">
         <!-- Étapes + Carte -->
         <div class="grid grid-cols-1 lg:grid-cols-[1fr_3fr] gap-4 lg:gap-6">
@@ -127,12 +133,34 @@ watch(activeId, () => { if (!map) return; highlightActive() })
         </div>
 
         <!-- Description -->
-        <section class="rounded-2xl border border-gray-200 bg-white p-6">
+        <section class="rounded-2xl border border-gray-200 bg-white p-6 relative">
             <h3 class="text-lg font-semibold mb-3">Description du voyage</h3>
-            <div v-if="tripDescription" class="prose prose-sm max-w-none">
-                <div v-if="tripDescriptionIsHtml" v-html="tripDescription"></div>
-                <p v-else class="whitespace-pre-line text-gray-700">{{ tripDescription }}</p>
+
+            <div v-if="tripDescription" class="relative">
+                <!-- Contenu limité si pas expand -->
+                <div
+                    :class="expanded ? '' : 'max-h-60 overflow-hidden'"
+                    class="prose prose-sm max-w-none transition-all duration-300"
+                >
+                    <div v-if="tripDescriptionIsHtml" v-html="tripDescription"></div>
+                    <p v-else class="whitespace-pre-line text-gray-700">{{ tripDescription }}</p>
+                </div>
+
+                <!-- Dégradé -->
+                <div v-if="!expanded" class="absolute bottom-12 left-0 right-0 h-16 bg-gradient-to-t from-white to-transparent"></div>
+
+                <!-- Bouton Lire plus -->
+                <div class="mt-4 text-center">
+                    <button
+                        v-if="tripDescription.length > 200"
+                        @click="expanded = !expanded"
+                        class="px-4 py-1.5 text-sm rounded-full bg-gray-100 hover:bg-gray-200 text-gray-700 transition"
+                    >
+                        {{ expanded ? 'Réduire' : 'Lire plus' }}
+                    </button>
+                </div>
             </div>
+
             <p v-else class="text-sm text-gray-500">Aucune description pour ce voyage.</p>
         </section>
     </div>
