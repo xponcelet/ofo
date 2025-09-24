@@ -26,7 +26,7 @@ const stepsSummary = computed(() => {
                 short_title: `Jour ${day}`,
                 title: s.title || s.location || `Étape ${day}`,
                 photo_url: s.photo_url ?? null,
-                description_html: s.description_html ?? null,
+                description: s.description ?? null,
                 coords: { lat: Number(s.latitude), lng: Number(s.longitude) },
             }
         })
