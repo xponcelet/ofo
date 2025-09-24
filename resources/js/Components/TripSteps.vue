@@ -1,4 +1,5 @@
 <script setup>
+import { ref } from 'vue'
 import { Link, router } from '@inertiajs/vue3'
 import AddStepButton from '@/Components/AddStepButton.vue'
 
@@ -8,126 +9,123 @@ const props = defineProps({
 
 function deleteStep(step) {
     if (confirm(`Supprimer l'étape "${step.title}" ?`)) {
-        router.delete(`/steps/${step.id}`)
+        router.delete(route('steps.destroy', step.id))
     }
+}
+
+const openMenuId = ref(null)
+function toggleMenu(stepId) {
+    openMenuId.value = openMenuId.value === stepId ? null : stepId
 }
 </script>
 
 <template>
-    <div>
-        <!-- Header -->
-        <h2 class="text-xl font-semibold">Étapes du voyage</h2>
+    <div class="space-y-6">
+        <h2 class="text-2xl font-semibold text-gray-800">Étapes du voyage</h2>
 
-        <!-- Ajouter au tout début -->
         <AddStepButton :trip-id="trip.id" :at-start="true" label="Ajouter avant la première" />
 
-
-        <!-- Step list -->
-        <div v-if="trip.steps.length" class="space-y-8 mt-4">
+        <div v-if="trip.steps.length" class="space-y-8">
             <div
-                v-for="(step, index) in trip.steps"
+                v-for="step in trip.steps"
                 :key="step.id"
+                class="rounded-2xl border border-gray-200 bg-white shadow-sm overflow-hidden relative"
             >
-                <div class="flex justify-between gap-4 p-4 border rounded-lg shadow-sm bg-white">
-                    <!-- Infos étape -->
-                    <div class="flex-1">
-                        <h3 class="font-bold text-lg">
-                            Étape {{ step.order }} — {{ step.title }}
-                        </h3>
-                        <p v-if="step.description" class="text-sm text-gray-600 mt-1">{{ step.description }}</p>
-                        <p class="text-sm text-gray-500 mt-1">📍 {{ step.location || 'Lieu non précisé' }}</p>
-                        <p class="text-sm text-gray-500">📅 {{ step.start_date }} → {{ step.end_date }}</p>
-                        <a
-                            v-if="step.latitude && step.longitude"
-                            :href="`https://www.google.com/maps/dir/?api=1&destination=${step.latitude},${step.longitude}`"
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            class="text-sm text-blue-600 hover:underline inline-flex items-center gap-1 mt-2"
-                        >
-                            🗺️ Itinéraire Google Maps
-                        </a>
+                <!-- Image -->
+                <div class="h-40 bg-gray-100 flex items-center justify-center text-gray-400 text-sm">
+                    📷 Image de l’étape
+                </div>
 
+                <!-- Contenu -->
+                <div class="p-6 relative">
+                    <!-- Bouton menu -->
+                    <button
+                        @click="toggleMenu(step.id)"
+                        class="absolute top-4 right-4 p-2 rounded-full hover:bg-gray-100"
+                    >
+                        ⋮
+                    </button>
 
-                        <!-- 🏨 Logements -->
-                        <div v-if="step.accommodations.length" class="mt-4 space-y-3">
-                            <h4 class="text-sm font-semibold text-gray-700">Logement(s) lié(s) :</h4>
-
-                            <div
-                                v-for="acc in step.accommodations"
-                                :key="acc.id"
-                                class="border border-gray-200 bg-gray-50 rounded-lg p-3 shadow-sm flex items-start justify-between"
-                            >
-                                <div>
-                                    <p class="font-semibold text-sm">{{ acc.title || 'Sans titre' }}</p>
-                                    <p class="text-sm text-gray-600">{{ acc.location || 'Lieu inconnu' }}</p>
-                                    <p class="text-sm text-gray-500">📅 {{ acc.start_date }} → {{ acc.end_date }}</p>
-                                </div>
-
-                                <div class="ml-4">
-                                    <Link
-                                        :href="route('accommodations.edit', acc.id)"
-                                        class="text-xs px-3 py-1 bg-yellow-100 hover:bg-yellow-200 text-yellow-700 rounded"
-                                    >
-                                        ✏️ Modifier
-                                    </Link>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div v-else class="mt-4 text-sm text-gray-500 italic">Aucun logement enregistré.</div>
+                    <!-- Menu déroulant -->
+                    <div
+                        v-if="openMenuId === step.id"
+                        class="absolute right-4 top-12 w-48 bg-white border border-gray-200 rounded-md shadow-lg z-10"
+                    >
+                        <ul class="py-1 text-sm text-gray-700">
+                            <li>
+                                <Link
+                                    :href="route('steps.edit', step.id)"
+                                    class="flex items-center gap-2 px-4 py-2 hover:bg-gray-50"
+                                >
+                                    ✏️ Modifier
+                                </Link>
+                            </li>
+                            <li>
+                                <Link
+                                    :href="route('steps.accommodations.create', step.id)"
+                                    class="flex items-center gap-2 px-4 py-2 hover:bg-gray-50"
+                                >
+                                    🏨 Ajouter logement
+                                </Link>
+                            </li>
+                            <li>
+                                <button
+                                    @click="deleteStep(step)"
+                                    class="w-full text-left flex items-center gap-2 px-4 py-2 text-red-600 hover:bg-red-50"
+                                >
+                                    🗑️ Supprimer
+                                </button>
+                            </li>
+                            <li class="border-t my-1"></li>
+                            <li>
+                                <Link
+                                    :href="route('steps.move-up', step.id)"
+                                    method="patch"
+                                    as="button"
+                                    class="flex items-center gap-2 px-4 py-2 hover:bg-gray-50"
+                                >
+                                    ⬆️ Monter
+                                </Link>
+                            </li>
+                            <li>
+                                <Link
+                                    :href="route('steps.move-down', step.id)"
+                                    method="patch"
+                                    as="button"
+                                    class="flex items-center gap-2 px-4 py-2 hover:bg-gray-50"
+                                >
+                                    ⬇️ Descendre
+                                </Link>
+                            </li>
+                        </ul>
                     </div>
 
-                    <!-- Actions -->
-                    <div class="flex flex-col items-end gap-2 text-xs whitespace-nowrap">
-                        <Link
-                            :href="`/steps/${step.id}/edit`"
-                            class="px-3 py-1 bg-blue-100 hover:bg-blue-200 rounded"
-                        >
-                            ✏️ Modifier l’étape
-                        </Link>
+                    <!-- Infos étape -->
+                    <h3 class="text-xl font-bold text-gray-800">
+                        Étape {{ step.order }} — {{ step.title }}
+                    </h3>
 
-                        <Link
-                            :href="route('steps.accommodations.create', step.id)"
-                            class="px-3 py-1 bg-green-100 hover:bg-green-200 text-green-700 rounded"
-                        >
-                            🏨 Ajouter un logement
-                        </Link>
+                    <p v-if="step.description" class="mt-2 text-gray-600">
+                        {{ step.description }}
+                    </p>
+                    <p v-else class="mt-2 text-gray-400 italic">Pas encore de description.</p>
 
-                        <button
-                            @click="deleteStep(step)"
-                            class="px-3 py-1 bg-red-100 hover:bg-red-200 text-red-600 rounded"
-                        >
-                            🗑 Supprimer
-                        </button>
-
-                        <Link
-                            :href="route('steps.move-up', step.id)"
-                            method="patch"
-                            as="button"
-                            class="px-3 py-1 bg-gray-100 hover:bg-gray-200 rounded"
-                        >
-                            ↑ Monter
-                        </Link>
-
-                        <Link
-                            :href="route('steps.move-down', step.id)"
-                            method="patch"
-                            as="button"
-                            class="px-3 py-1 bg-gray-100 hover:bg-gray-200 rounded"
-                        >
-                            ↓ Descendre
-                        </Link>
+                    <div class="mt-3 text-sm text-gray-500">
+                        📍 {{ step.location || 'Lieu non précisé' }} <br />
+                        📅 {{ step.start_date }} → {{ step.end_date }}
                     </div>
                 </div>
 
-                <!-- Bouton pour ajouter une étape APRÈS celle-ci -->
-                <div class="mt-4">
+                <!-- Ajouter après -->
+                <div class="bg-gray-50 p-3 border-t text-center">
                     <AddStepButton :trip-id="trip.id" :after-id="step.id" label="Ajouter une étape" />
                 </div>
             </div>
         </div>
 
-        <!-- Empty state -->
-        <div v-else class="text-gray-500 mt-6">Aucune étape enregistrée pour ce voyage.</div>
+        <div v-else class="flex flex-col items-center justify-center py-12 text-gray-500">
+            <p class="text-lg mb-4">🚀 Aucune étape enregistrée pour ce voyage.</p>
+            <AddStepButton :trip-id="trip.id" label="Créer la première étape" />
+        </div>
     </div>
 </template>

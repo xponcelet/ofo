@@ -4,18 +4,18 @@
 </template>
 
 <script setup>
-import { ref, onMounted, watch, computed, onBeforeUnmount } from 'vue'
-import { useMapbox } from '@/Composables/useMapbox.js'
+import { ref, onMounted, onBeforeUnmount, watch, computed, nextTick } from 'vue'
+import mapboxgl from 'mapbox-gl'
 
 const props = defineProps({
     // Cas 1 : un seul point
     latitude:  { type: Number, default: null },
     longitude: { type: Number, default: null },
 
-    // Cas 2 : plusieurs étapes
+    // Cas 2 : plusieurs étapes [{ title, latitude, longitude }, ...]
     steps: {
         type: Array,
-        default: () => [],
+        default: () => [], // <— évite props.steps === undefined
     },
 
     // Options
@@ -27,15 +27,13 @@ const props = defineProps({
 const DEFAULT_CENTER = [10, 50] // [lng, lat]
 
 const mapEl = ref(null)
+let map = null
 let markers = []
 
-// Récupère mapbox via le composable
-const { map, initMap, destroyMap, mapboxgl } = useMapbox()
-
-// Détecte si c’est un point unique ou une liste
 const hasSinglePoint = computed(() => props.latitude !== null && props.longitude !== null)
 
 const points = computed(() => {
+    // Si on a des coords directes, on les utilise
     if (hasSinglePoint.value) {
         return [{
             lng: props.longitude,
@@ -44,6 +42,8 @@ const points = computed(() => {
         }]
     }
 
+    // Sinon, on utilise steps (filtrées)
+    // props.steps est TOUJOURS un array grâce au default: () => []
     return props.steps
         .filter(s => s && s.latitude !== null && s.longitude !== null)
         .map(s => ({
@@ -54,18 +54,18 @@ const points = computed(() => {
         }))
 })
 
-function clearMarkers() {
+function clearMarkers () {
     markers.forEach(m => m.remove())
     markers = []
 }
 
-function renderMarkers() {
-    if (!map.value) return
+function renderMarkers () {
+    if (!map) return
     clearMarkers()
 
     if (points.value.length === 0) {
-        map.value.setCenter(DEFAULT_CENTER)
-        map.value.setZoom(3.5)
+        map.setCenter(DEFAULT_CENTER)
+        map.setZoom(3.5)
         return
     }
 
@@ -75,11 +75,11 @@ function renderMarkers() {
         el.className = 'rounded-full shadow ring-2 ring-white'
         el.style.width = '14px'
         el.style.height = '14px'
-        el.style.background = '#1d4ed8'
+        el.style.background = '#1d4ed8' // bleu (tu peux styliser mieux si tu veux)
 
         const marker = new mapboxgl.Marker({ element: el })
             .setLngLat([p.lng, p.lat])
-            .addTo(map.value)
+            .addTo(map)
 
         if (p.title) {
             const popup = new mapboxgl.Popup({ closeButton: false, offset: 24 }).setText(p.title)
@@ -91,36 +91,50 @@ function renderMarkers() {
     })
 
     if (points.value.length === 1) {
-        map.value.easeTo({ center: [points.value[0].lng, points.value[0].lat], zoom: props.zoom })
+        map.easeTo({ center: [points.value[0].lng, points.value[0].lat], zoom: props.zoom })
     } else {
-        map.value.fitBounds(bounds, { padding: 40, maxZoom: 9 })
+        map.fitBounds(bounds, { padding: 40, maxZoom: 9 })
     }
 }
 
-onMounted(() => {
-    const m = initMap(mapEl.value, {
+onMounted(async () => {
+    await nextTick()
+
+    map = new mapboxgl.Map({
+        container: mapEl.value,
         style: props.style,
         center: DEFAULT_CENTER,
         zoom: 3.5,
+        accessToken: import.meta.env.VITE_MAPBOX_KEY,
     })
 
-    m.on('load', () => {
+    map.addControl(new mapboxgl.NavigationControl(), 'top-right')
+
+    map.on('load', () => {
         renderMarkers()
     })
 })
 
-// Re-rendre si les points changent
+// Re-rendre si les points changent (coords ou steps)
 watch(points, () => {
-    if (!map.value) return
-    if (!map.value.isStyleLoaded()) {
-        map.value.once('load', renderMarkers)
+    if (!map) return
+    // Si la map n’est pas encore prête, attendre le load
+    if (!map.isStyleLoaded()) {
+        map.once('load', renderMarkers)
     } else {
         renderMarkers()
     }
-}, { deep: true })
+}, { immediate: false, deep: true })
 
 onBeforeUnmount(() => {
     clearMarkers()
-    destroyMap()
+    if (map) {
+        map.remove()
+        map = null
+    }
 })
 </script>
+
+<style scoped>
+/* rien de spécial ici */
+</style>

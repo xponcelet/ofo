@@ -9,13 +9,18 @@ export default {
         './vendor/laravel/jetstream/**/*.blade.php',
         './storage/framework/views/*.php',
         './resources/views/**/*.blade.php',
+        "./resources/**/*.js",
         './resources/js/**/*.vue',
     ],
 
     theme: {
         extend: {
+            colors: {
+                primary: '#2563eb',   // blue-600
+                secondary: '#10b981', // emerald-500
+            },
             fontFamily: {
-                sans: ['Figtree', ...defaultTheme.fontFamily.sans],
+                sans: ['Inter', 'ui-sans-serif', 'system-ui'],
             },
         },
     },
