@@ -1,254 +1,167 @@
 <script setup>
-import { ref, computed, watchEffect, watch } from 'vue'
-import RootLayout from "@/Layouts/RootLayout.vue";
-import TripSteps from '@/Components/TripSteps.vue'
-import StepsMap from '@/Components/StepsMap.vue'
-import GoogleMapsFullTripLink from '@/Components/GoogleMapsFullTripLink.vue'
-
-import TripShowView from '@/Components/Trip/TripShowView.vue'
-import TripAccordionInfo from '@/Components/Trip/TripAccordionInfo.vue'
-import StepDescription from '@/Components/Step/StepDescription.vue'
-
+import { ref } from 'vue'
 import { Link } from '@inertiajs/vue3'
+import TripSteps from '@/Components/Step/TripSteps.vue'
+import TripShowView from '@/Components/Trip/TripShowView.vue'
+import { useStepsSummary, useTripMeta } from '@/composables/useStepSummary.js'
 
 const props = defineProps({
     trip: Object,
-    steps: Array,
-    favs: Number,    // total des likes
-    likers: Object,  // paginator OU null si non-proprio
+    stepCount: Number,
+    totalActivitiesCount: Number,
 })
 
-// ✅ onglet par défaut
-const currentTab = ref('resume')
+const currentTab = ref('itineraire')
 
-// Étape active (pilotée par TripShowView, mais on met un défaut ici)
-const activeStep = ref(null)
+// On dérive les données grâce au composable
+const stepsSummary = useStepsSummary(props.trip.steps)
+const tripMeta = useTripMeta(props.trip)
 
-// Helpers
-function fmtDateTime(dt) {
-    if (!dt) return null
-    try {
-        const d = new Date(dt)
-        return new Intl.DateTimeFormat(undefined, {
-            year: 'numeric', month: 'short', day: '2-digit', hour: '2-digit', minute: '2-digit'
-        }).format(d)
-    } catch { return null }
+function tabClass(tab) {
+    return currentTab.value === tab
+        ? 'text-pink-600 border-pink-600 font-semibold'
+        : 'text-gray-500 hover:text-gray-700'
 }
-function fmtMoney(amount, currency) {
-    if (amount == null || amount === '') return null
-    try {
-        return new Intl.NumberFormat(undefined, { style: 'currency', currency: (currency || 'EUR') }).format(Number(amount))
-    } catch {
-        return `${amount} ${currency || ''}`.trim()
-    }
-}
-
-const hasAnyActivities = computed(() => (props.steps || []).some(s => (s.activities || []).length))
-const stepCount = computed(() => (props.steps || []).length)
-const totalActivitiesCount = computed(() => (props.steps || []).reduce((n, s) => n + ((s.activities || []).length), 0))
-
-function tabClass(val) {
-    return currentTab.value === val
-        ? 'bg-white shadow ring-1 ring-gray-200 text-gray-900'
-        : 'text-gray-600 hover:text-gray-900'
-}
-
-// ✅ Normalisation des étapes pour TripShowView (on garde "description")
-const stepsSummary = computed(() => {
-    const raw = Array.isArray(props.steps) ? props.steps : []
-    return [...raw]
-        .sort((a,b) => (a.order ?? 0) - (b.order ?? 0))
-        .map((s, idx) => {
-            const day = s.order ?? (idx + 1)
-            return {
-                id: s.id,
-                day,
-                short_title: `Jour ${day}`,
-                title: s.title || s.location || `Étape ${day}`,
-                photo_url: s.photo_url ?? null,
-                description: s.description ?? null, // ⬅️ important
-                coords: { lat: Number(s.latitude), lng: Number(s.longitude) },
-            }
-        })
-})
-
-// ✅ Première étape active par défaut dès que stepsSummary est dispo
-watchEffect(() => {
-    if (!activeStep.value && stepsSummary.value.length > 0) {
-        activeStep.value = stepsSummary.value[0]
-    }
-})
-
-const tripMeta = computed(() => ({
-    title: props.trip?.title,
-    country: props.trip?.destination || props.trip?.location,
-    start_date: props.trip?.start_date,
-    end_date: props.trip?.end_date,
-    visibility: props.trip?.is_public ? 'public' : 'private',
-}))
-
-watch(() => props.step, (val) => {
-    console.log('📝 StepDescription.vue step:', val)
-})
-
-
 </script>
 
 <template>
-    <div class="max-w-screen-2xl mx-auto py-10 px-4 space-y-6">
-        <!-- Header -->
-        <div class="flex items-start justify-between">
-            <div>
-                <h1 class="text-2xl font-bold tracking-tight">{{ trip.title }}</h1>
-                <p class="text-sm text-gray-500 mt-1">Aperçu, étapes, activités et carte du voyage.</p>
-            </div>
-            <div class="pt-1 inline-flex items-center gap-2 text-sm text-gray-700" :title="`${favs ?? 0} favoris`">
-                <svg viewBox="0 0 24 24" class="w-5 h-5 fill-red-500"><path d="M12 21s-7.5-4.6-9.4-8.5A5.6 5.6 0 0 1 12 5.7a5.6 5.6 0 0 1 9.4 6.8C19.5 16.4 12 21 12 21Z"/></svg>
-                <span><strong>{{ favs ?? 0 }}</strong></span>
-            </div>
-        </div>
+    <div class="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 space-y-8">
+        <!-- =======================
+             Zone 2 : Hero voyage
+        ======================= -->
+        <section
+            class="relative shadow-lg overflow-hidden bg-gradient-to-r from-pink-600 via-red-500 to-orange-400 text-white"
+        >
+            <div class="p-8">
+                <!-- Destination -->
+                <h1 class="text-4xl font-extrabold tracking-tight mb-2">
+                    {{ trip.title }}
+                </h1>
+                <p class="text-base opacity-90">
+                    {{ trip.start_date }} → {{ trip.end_date }} •
+                    {{ trip.steps.length }} étapes
+                </p>
 
-        <!-- Tabs -->
-        <div class="mb-2">
-            <nav class="bg-gray-50 rounded-xl p-1 flex flex-wrap gap-1">
-                <button @click="currentTab = 'resume'" class="px-3 py-2 rounded-lg text-sm font-medium" :class="tabClass('resume')">🧾 Résumé</button>
-                <button @click="currentTab = 'infos'" class="px-3 py-2 rounded-lg text-sm font-medium" :class="tabClass('infos')">ℹ️ Infos</button>
-                <button @click="currentTab = 'steps'" class="px-3 py-2 rounded-lg text-sm font-medium" :class="tabClass('steps')">
-                    📍 Étapes <span v-if="stepCount" class="ml-1 text-xs text-gray-500">({{ stepCount }})</span>
+                <!-- Statistiques -->
+                <div class="mt-8 grid grid-cols-2 sm:grid-cols-4 gap-6">
+                    <div class="bg-white/10 backdrop-blur rounded-xl p-4 text-center">
+                        <p class="text-3xl font-bold">{{ trip.days_count || 0 }}</p>
+                        <p class="text-sm opacity-80">Jours</p>
+                    </div>
+                    <div class="bg-white/10 backdrop-blur rounded-xl p-4 text-center">
+                        <p class="text-3xl font-bold">{{ trip.steps.length }}</p>
+                        <p class="text-sm opacity-80">Étapes</p>
+                    </div>
+                    <div class="bg-white/10 backdrop-blur rounded-xl p-4 text-center">
+                        <p class="text-3xl font-bold">100%</p>
+                        <p class="text-sm opacity-80">Terminé</p>
+                    </div>
+                    <div class="bg-white/10 backdrop-blur rounded-xl p-4 text-center">
+                        <p class="text-3xl font-bold">0</p>
+                        <p class="text-sm opacity-80">Photos</p>
+                    </div>
+                </div>
+
+                <!-- Actions -->
+                <div class="mt-8 flex flex-wrap gap-4">
+                    <Link
+                        :href="route('trips.steps.create', trip.id)"
+                        class="px-5 py-2.5 bg-white text-pink-600 font-semibold rounded-lg shadow hover:bg-gray-100"
+                    >
+                        ➕ Ajouter une étape
+                    </Link>
+                    <button
+                        type="button"
+                        class="px-5 py-2.5 bg-pink-700 hover:bg-pink-800 text-white font-semibold rounded-lg shadow"
+                    >
+                        Partager le voyage
+                    </button>
+                </div>
+            </div>
+        </section>
+
+        <!-- =======================
+             Zone 4 : Onglets
+        ======================= -->
+        <section>
+            <nav class="border-b border-gray-200 flex gap-6">
+                <button
+                    @click="currentTab = 'itineraire'"
+                    class="pb-2 border-b-2 -mb-px text-sm transition-colors"
+                    :class="tabClass('itineraire')"
+                >
+                    🧾 Itinéraire
                 </button>
-                <button @click="currentTab = 'activities'" class="px-3 py-2 rounded-lg text-sm font-medium" :class="tabClass('activities')">
-                    🧭 Activités <span v-if="totalActivitiesCount" class="ml-1 text-xs text-gray-500">({{ totalActivitiesCount }})</span>
+
+                <button
+                    @click="currentTab = 'infos'"
+                    class="pb-2 border-b-2 -mb-px text-sm transition-colors"
+                    :class="tabClass('infos')"
+                >
+                    ℹ️ Infos
                 </button>
-                <button @click="currentTab = 'map'" class="px-3 py-2 rounded-lg text-sm font-medium" :class="tabClass('map')">🗺️ Carte</button>
+
+                <button
+                    @click="currentTab = 'steps'"
+                    class="pb-2 border-b-2 -mb-px text-sm transition-colors flex items-center"
+                    :class="tabClass('steps')"
+                >
+                    📍 Étapes
+                    <span v-if="stepCount" class="ml-1 text-xs text-gray-400">
+            ({{ stepCount }})
+          </span>
+                </button>
+
+                <button
+                    @click="currentTab = 'activities'"
+                    class="pb-2 border-b-2 -mb-px text-sm transition-colors flex items-center"
+                    :class="tabClass('activities')"
+                >
+                    🧭 Activités
+                    <span
+                        v-if="totalActivitiesCount"
+                        class="ml-1 text-xs text-gray-400"
+                    >
+            ({{ totalActivitiesCount }})
+          </span>
+                </button>
+
+                <button
+                    @click="currentTab = 'map'"
+                    class="pb-2 border-b-2 -mb-px text-sm transition-colors"
+                    :class="tabClass('map')"
+                >
+                    🗺️ Carte
+                </button>
             </nav>
-        </div>
+        </section>
 
-        <!-- Résumé -->
-        <div v-if="currentTab === 'resume'" class="space-y-6">
-            <!-- Infos voyage -->
-            <TripAccordionInfo :trip="trip" />
-
-            <!-- Étapes + Carte -->
+        <!-- =======================
+             Zone 3 : contenu des onglets
+        ======================= -->
+        <section v-if="currentTab === 'itineraire'">
             <TripShowView
                 :steps="stepsSummary"
-                @update:activeStep="activeStep = $event"
+                :trip-meta="tripMeta"
+                :trip-description="trip.description"
             />
+        </section>
 
-            <!-- Description étape active -->
-            <StepDescription v-if="activeStep" :step="activeStep" :key="activeStep.id" />
-            <p v-else class="text-sm text-gray-500">— Aucune étape disponible.</p>
-        </div>
+        <section v-else-if="currentTab === 'infos'">
+            <p class="text-gray-600">Infos générales du voyage…</p>
+        </section>
 
-        <!-- Infos -->
-        <div v-else-if="currentTab === 'infos'" class="space-y-6">
-            <div class="bg-white rounded-2xl shadow p-6 space-y-4 ring-1 ring-gray-100">
-                <p class="text-gray-700">{{ trip.description || 'Aucune description.' }}</p>
-                <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 text-sm text-gray-600">
-                    <div class="rounded-xl p-3 text-center ring-1 ring-gray-100">
-                        <div class="font-semibold text-gray-800">Destination</div>
-                        <div>{{ trip.destination }}</div>
-                    </div>
-                    <div class="rounded-xl p-3 text-center ring-1 ring-gray-100">
-                        <div class="font-semibold text-gray-800">Dates</div>
-                        <div>{{ trip.start_date }} → {{ trip.end_date }}</div>
-                    </div>
-                    <div class="rounded-xl p-3 text-center ring-1 ring-gray-100">
-                        <div class="font-semibold text-gray-800">Budget</div>
-                        <div>{{ trip.budget }} {{ trip.currency }}</div>
-                    </div>
-                    <div class="rounded-xl p-3 text-center ring-1 ring-gray-100">
-                        <div class="font-semibold text-gray-800">Visibilité</div>
-                        <div>{{ trip.is_public ? 'Public' : 'Privé' }}</div>
-                    </div>
-                </div>
-                <div v-if="trip.image" class="mt-2">
-                    <img :src="trip.image" alt="Image du voyage" class="rounded-xl shadow w-full max-h-96 object-cover">
-                </div>
-            </div>
+        <section v-else-if="currentTab === 'steps'">
+            <h2 class="text-xl font-semibold mb-6">Itinéraire détaillé</h2>
+            <TripSteps :trip="trip" />
+        </section>
 
-            <!-- Likers -->
-            <section v-if="likers && likers.data?.length" class="bg-white rounded-2xl shadow p-6 ring-1 ring-gray-100">
-                <h2 class="text-lg font-semibold mb-3">Personnes ayant aimé ({{ likers.total }})</h2>
-                <ul class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                    <li v-for="u in likers.data" :key="u.id" class="p-3 border rounded-xl flex items-center gap-3">
-                        <img :src="u.profile_photo_url || '/img/default-avatar.png'" class="w-10 h-10 rounded-full object-cover" alt="" />
-                        <div>
-                            <div class="font-medium">{{ u.name }}</div>
-                            <div class="text-xs text-gray-500" v-if="u.email">{{ u.email }}</div>
-                        </div>
-                    </li>
-                </ul>
-                <div class="flex items-center gap-2 mt-4">
-                    <Link v-if="likers.prev_page_url" :href="likers.prev_page_url" preserve-scroll class="px-3 py-1 border rounded">Précédent</Link>
-                    <span class="text-sm">Page {{ likers.current_page }} / {{ likers.last_page }}</span>
-                    <Link v-if="likers.next_page_url" :href="likers.next_page_url" preserve-scroll class="px-3 py-1 border rounded">Suivant</Link>
-                </div>
-            </section>
-        </div>
+        <section v-else-if="currentTab === 'activities'">
+            <p class="text-gray-600">Activités à afficher…</p>
+        </section>
 
-        <!-- Étapes -->
-        <div v-else-if="currentTab === 'steps'">
-            <section class="bg-white rounded-2xl shadow p-6 ring-1 ring-gray-100">
-                <header class="flex items-center justify-between mb-4">
-                    <h2 class="text-lg font-semibold">📍 Étapes du voyage</h2>
-                    <span class="text-xs text-gray-500">{{ stepCount }} étape(s)</span>
-                </header>
-                <TripSteps :trip="trip" />
-            </section>
-        </div>
-
-        <!-- Activités -->
-        <div v-else-if="currentTab === 'activities'" class="space-y-4">
-            <div v-if="hasAnyActivities" class="space-y-5">
-                <section v-for="s in steps" :key="s.id" class="bg-white rounded-2xl shadow p-5 ring-1 ring-gray-100">
-                    <header class="flex items-start justify-between">
-                        <div>
-                            <h3 class="font-semibold text-lg">Étape #{{ s.order }} — {{ s.location || s.title || 'Lieu non précisé' }}</h3>
-                            <p class="text-xs text-gray-500" v-if="s.start_date || s.end_date">📅 {{ s.start_date }} → {{ s.end_date }}</p>
-                        </div>
-                        <div class="text-xs text-gray-500">{{ (s.activities || []).length }} activité(s)</div>
-                    </header>
-
-                    <div v-if="(s.activities || []).length" class="mt-4 space-y-3">
-                        <article v-for="a in s.activities" :key="a.id" class="p-3 rounded-xl border border-gray-200 hover:border-gray-300 transition">
-                            <div class="flex items-start justify-between gap-3">
-                                <div class="min-w-0">
-                                    <h4 class="font-medium truncate">{{ a.title }}</h4>
-                                    <p class="text-sm text-gray-600" v-if="a.description">{{ a.description }}</p>
-                                    <div class="mt-1 flex flex-wrap items-center gap-2 text-xs text-gray-600">
-                    <span v-if="a.start_at || a.end_at" class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-gray-100">
-                      <svg class="w-3 h-3" viewBox="0 0 24 24"><path fill="currentColor" d="M19 4h-1V2h-2v2H8V2H6v2H5a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2m0 15H5V9h14z"/></svg>
-                      <span>
-                        <template v-if="a.start_at && a.end_at">{{ fmtDateTime(a.start_at) }} → {{ fmtDateTime(a.end_at) }}</template>
-                        <template v-else-if="a.start_at">Le {{ fmtDateTime(a.start_at) }}</template>
-                      </span>
-                    </span>
-                                        <span v-if="a.category" class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-blue-50 text-blue-700">#{{ a.category }}</span>
-                                        <span v-if="a.cost != null" class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700">{{ fmtMoney(a.cost, a.currency) }}</span>
-                                        <a v-if="a.external_link" :href="a.external_link" target="_blank" rel="noopener" class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-purple-50 text-purple-700 hover:bg-purple-100">🔗 Lien</a>
-                                    </div>
-                                </div>
-                                <Link :href="route('activities.edit', a.id)" class="text-sm px-3 py-1.5 rounded-2xl bg-blue-100 hover:bg-blue-200">✏️ Modifier</Link>
-                            </div>
-                        </article>
-                    </div>
-                    <p v-else class="text-sm text-gray-500">— Aucune activité sur cette étape.</p>
-                </section>
-            </div>
-            <p v-else class="text-sm text-gray-500">Aucune activité n’a encore été planifiée.</p>
-        </div>
-
-        <!-- Carte -->
-        <div v-else-if="currentTab === 'map'">
-            <section class="bg-white rounded-2xl shadow p-6 ring-1 ring-gray-100">
-                <header class="flex items-center justify-between mb-4">
-                    <h2 class="text-lg font-semibold">🗺️ Carte du voyage</h2>
-                    <GoogleMapsFullTripLink :steps="steps" />
-                </header>
-                <div class="rounded-xl overflow-hidden ring-1 ring-gray-100">
-                    <StepsMap :steps="steps" />
-                </div>
-            </section>
-        </div>
+        <section v-else-if="currentTab === 'map'">
+            <p class="text-gray-600">Carte interactive du voyage…</p>
+        </section>
     </div>
 </template>
