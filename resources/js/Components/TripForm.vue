@@ -43,21 +43,6 @@ const props = defineProps({
             :error="form.errors.image"
         />
 
-        <!-- Dates -->
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <Input
-                v-model="form.start_date"
-                label="Date de début"
-                type="date"
-                :error="form.errors.start_date"
-            />
-            <Input
-                v-model="form.end_date"
-                label="Date de fin"
-                type="date"
-                :error="form.errors.end_date"
-            />
-        </div>
 
         <!-- Budget et devise -->
         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">

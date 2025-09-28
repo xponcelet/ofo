@@ -2,8 +2,7 @@
 import { ref } from 'vue'
 import { Link } from '@inertiajs/vue3'
 import TripSteps from '@/Components/Step/TripSteps.vue'
-import TripShowView from '@/Components/Trip/TripShowView.vue'
-import { useStepsSummary, useTripMeta } from '@/composables/useStepSummary.js'
+import TripShowView from "@/Components/Trip/TripShowView.vue";
 
 const props = defineProps({
     trip: Object,
@@ -11,11 +10,7 @@ const props = defineProps({
     totalActivitiesCount: Number,
 })
 
-const currentTab = ref('itineraire')
-
-// On dérive les données grâce au composable
-const stepsSummary = useStepsSummary(props.trip.steps)
-const tripMeta = useTripMeta(props.trip)
+const currentTab = ref('resume')
 
 function tabClass(tab) {
     return currentTab.value === tab
@@ -25,12 +20,12 @@ function tabClass(tab) {
 </script>
 
 <template>
-    <div class="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 space-y-8">
+    <div class=" max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 space-y-8">
         <!-- =======================
              Zone 2 : Hero voyage
         ======================= -->
         <section
-            class="relative shadow-lg overflow-hidden bg-gradient-to-r from-pink-600 via-red-500 to-orange-400 text-white"
+            class="relative  shadow-lg overflow-hidden bg-gradient-to-r from-pink-600 via-red-500 to-orange-400 text-white"
         >
             <div class="p-8">
                 <!-- Destination -->
@@ -107,9 +102,11 @@ function tabClass(tab) {
                     :class="tabClass('steps')"
                 >
                     📍 Étapes
-                    <span v-if="stepCount" class="ml-1 text-xs text-gray-400">
-            ({{ stepCount }})
-          </span>
+                    <span
+                        v-if="stepCount"
+                        class="ml-1 text-xs text-gray-400"
+                    >({{ stepCount }})</span
+                    >
                 </button>
 
                 <button
@@ -121,9 +118,8 @@ function tabClass(tab) {
                     <span
                         v-if="totalActivitiesCount"
                         class="ml-1 text-xs text-gray-400"
+                    >({{ totalActivitiesCount }})</span
                     >
-            ({{ totalActivitiesCount }})
-          </span>
                 </button>
 
                 <button
@@ -140,11 +136,7 @@ function tabClass(tab) {
              Zone 3 : contenu des onglets
         ======================= -->
         <section v-if="currentTab === 'itineraire'">
-            <TripShowView
-                :steps="stepsSummary"
-                :trip-meta="tripMeta"
-                :trip-description="trip.description"
-            />
+            <TripShowView :steps="trip.steps" />
         </section>
 
         <section v-else-if="currentTab === 'infos'">

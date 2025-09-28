@@ -18,8 +18,6 @@ class StoreTripRequest extends FormRequest
             'title' => 'nullable|string|max:100',
             'description' => 'nullable|string',
             'image' => 'nullable|image|max:2048',
-            'start_date' => 'nullable|date',
-            'end_date' => 'nullable|date|after_or_equal:start_date',
             'budget' => 'nullable|numeric|min:0',
             'currency' => 'nullable|string|size:3',
             'is_public' => 'boolean',

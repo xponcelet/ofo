@@ -15,8 +15,6 @@ class Trip extends Model
         'title',
         'description',
         'image',
-        'start_date',
-        'end_date',
         'budget',
         'currency',
         'average_rating',
@@ -58,6 +56,24 @@ class Trip extends Model
         // via steps
         return $this->hasManyThrough(Activity::class, Step::class);
     }
+
+    /** on déduit ces champs des steps*/
+    public function getStartDateAttribute(): ?string
+    {
+        return $this->steps()->min('start_date');
+    }
+
+    public function getEndDateAttribute(): ?string
+    {
+        return $this->steps()->max('end_date');
+    }
+
+    public function getTotalNightsAttribute(): int
+    {
+        return (int) $this->steps()->sum('nights');
+    }
+
+
 
     /*
             public function transports()
