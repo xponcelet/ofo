@@ -89,6 +89,25 @@ class Trip extends Model
     {
         return $this->hasMany(ChecklistItem::class)->orderBy('order');
     }
+    /**
+     * Préremplit la checklist à la création du voyage
+     */
+
+    protected static function booted(): void
+    {
+        static::created(function (Trip $trip) {
+            $defaults = config('checklist.defaults', []); // cf. config/checklist.php
+            if (empty($defaults)) return;
+
+            $trip->checklistItems()->createMany(
+                collect($defaults)->values()->map(fn ($label, $i) => [
+                    'label'      => $label,
+                    'is_checked' => false,
+                    'order'      => $i,
+                ])->all()
+            );
+        });
+    }
 
 
     /*
