@@ -9,6 +9,8 @@ use App\Models\Trip;
 use App\Models\Step;
 use Inertia\Inertia;
 use Inertia\Response;
+use App\Services\ItineraryService;
+
 
 class TripCreationController extends Controller
 {
@@ -73,7 +75,7 @@ class TripCreationController extends Controller
     }
 
 
-    public function finalize(StoreTripRequest $request): RedirectResponse
+    public function finalize(StoreTripRequest $request, ItineraryService $itinerary): RedirectResponse
     {
         $destination = session('destination');
         $destinationLat = session('latitude');
@@ -108,6 +110,7 @@ class TripCreationController extends Controller
             $validated,
             [
                 'user_id'   => auth()->id(),
+                'destination'=> $destination,
                 'currency'  => $validated['currency'] ?? 'EUR',
                 'is_public' => $request->boolean('is_public', false),
             ]
@@ -120,12 +123,16 @@ class TripCreationController extends Controller
             'longitude'      => $departureLng,
             'order'          => 1,
             'is_departure'   => true,
-            'start_date'     => $startDate,
-            'end_date'       => $startDate, // départ = même jour
+            'start_date'     => $request->start_date, // = début du séjour
+            'end_date'       => $request->start_date, // même jour
             'nights'         => 0,
+            'transport_mode' => $request->transport_mode ?? 'car',
         ]);
 
         // Étape 2 : destination
+        $startDate = $request->start_date;
+        $endDate   = $request->end_date;
+
         $trip->steps()->create([
             'location'       => $destination,
             'latitude'       => $destinationLat,
@@ -134,9 +141,12 @@ class TripCreationController extends Controller
             'is_destination' => true,
             'start_date'     => $startDate,
             'end_date'       => $endDate,
-            'nights'         => $nights,
-            'transport_mode' => $validated['transport_mode'] ?? 'car',
+            'nights'         => max(0, (int) now()->parse($startDate)->diffInDays($endDate)),
+            'transport_mode' => $request->transport_mode ?? 'car',
         ]);
+
+        //  recalcul des distances/durées une fois le trip prêt
+        $itinerary->recalcDistances($trip);
 
         // Nettoyage
         session()->forget([
