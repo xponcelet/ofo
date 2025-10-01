@@ -4,8 +4,8 @@ namespace App\Http\Controllers;
 
 use App\Models\Trip;
 use App\Models\Step;
-use App\Services\MapboxService;
 use App\Http\Requests\StepRequest;
+use App\Services\ItineraryService;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
@@ -41,7 +41,7 @@ class StepController extends Controller
         ]);
     }
 
-    public function store(StepRequest $request, Trip $trip, MapboxService $mapbox)
+    public function store(StepRequest $request, Trip $trip, ItineraryService $itinerary)
     {
         $this->authorize('update', $trip);
 
@@ -73,7 +73,7 @@ class StepController extends Controller
         });
 
         if ($step) {
-            $this->updateDistances($trip, $mapbox);
+            $itinerary->recalcDistances($trip);
         }
 
         return redirect()->route('trips.show', $trip)->with('success', 'Étape ajoutée.');
@@ -100,7 +100,7 @@ class StepController extends Controller
         ]);
     }
 
-    public function update(StepRequest $request, Step $step, MapboxService $mapbox)
+    public function update(StepRequest $request, Step $step, ItineraryService $itinerary)
     {
         $this->authorize('update', $step->trip);
 
@@ -108,12 +108,12 @@ class StepController extends Controller
 
         $step->update($validated);
 
-        $this->updateDistances($step->trip, $mapbox);
+        $itinerary->recalcDistances($step->trip);
 
         return redirect()->route('trips.show', $step->trip)->with('success', 'Étape mise à jour.');
     }
 
-    public function destroy(Step $step)
+    public function destroy(Step $step, ItineraryService $itinerary)
     {
         $this->authorize('update', $step->trip);
 
@@ -131,10 +131,12 @@ class StepController extends Controller
                 $s->save();
             });
 
+        $itinerary->recalcDistances($trip);
+
         return redirect()->route('trips.show', $trip)->with('success', 'Étape supprimée et ordre mis à jour.');
     }
 
-    public function duplicate(Step $step)
+    public function duplicate(Step $step, ItineraryService $itinerary)
     {
         $this->authorize('update', $step->trip);
 
@@ -161,12 +163,14 @@ class StepController extends Controller
         $newStep->is_destination = false;
         $newStep->save();
 
+        $itinerary->recalcDistances($trip);
+
         return redirect()
             ->route('trips.show', $trip)
             ->with('success', 'Étape dupliquée avec succès.');
     }
 
-    public function moveUp(Step $step)
+    public function moveUp(Step $step, ItineraryService $itinerary)
     {
         $this->authorize('update', $step->trip);
 
@@ -179,12 +183,14 @@ class StepController extends Controller
             [$step->order, $previous->order] = [$previous->order, $step->order];
             $step->save();
             $previous->save();
+
+            $itinerary->recalcDistances($step->trip);
         }
 
         return back()->with('success', 'Étape déplacée vers le haut.');
     }
 
-    public function moveDown(Step $step)
+    public function moveDown(Step $step, ItineraryService $itinerary)
     {
         $this->authorize('update', $step->trip);
 
@@ -197,6 +203,8 @@ class StepController extends Controller
             [$step->order, $next->order] = [$next->order, $step->order];
             $step->save();
             $next->save();
+
+            $itinerary->recalcDistances($step->trip);
         }
 
         return back()->with('success', 'Étape déplacée vers le bas.');
@@ -214,39 +222,5 @@ class StepController extends Controller
         }
 
         return $validated;
-    }
-
-    /**
-     * Recalcule les distances/durées pour toutes les étapes du trip
-     */
-    private function updateDistances(Trip $trip, MapboxService $mapbox): void
-    {
-        $steps = $trip->steps()->orderBy('order')->get();
-
-        foreach ($steps as $index => $step) {
-            $next = $steps->get($index + 1);
-            if (!$next) {
-                $step->update([
-                    'distance_to_next' => null,
-                    'duration_to_next' => null,
-                ]);
-                continue;
-            }
-
-            if ($step->latitude && $step->longitude && $next->latitude && $next->longitude) {
-                $result = $mapbox->getDistanceAndDuration(
-                    $step->latitude, $step->longitude,
-                    $next->latitude, $next->longitude,
-                    $step->transport_mode ?? 'driving'
-                );
-
-                if ($result) {
-                    $step->update([
-                        'distance_to_next' => $result['distance'],
-                        'duration_to_next' => $result['duration'],
-                    ]);
-                }
-            }
-        }
     }
 }
