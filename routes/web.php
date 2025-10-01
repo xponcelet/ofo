@@ -12,6 +12,8 @@ use App\Http\Controllers\PublicTripController;
 use App\Http\Controllers\FavoriteController;
 use App\Http\Controllers\ActivityController;
 use App\Http\Controllers\BillingController;
+use App\Http\Controllers\ChecklistController;
+use App\Http\Controllers\ChecklistItemController;
 
 Route::get('/', function () {
     return Inertia::render('Welcome', [
@@ -75,6 +77,19 @@ Route::middleware([
     Route::get('/favorites', [FavoriteController::class, 'index'])->name('favorites.index');
     // CRUD des activités liées à une étape
     Route::resource('steps.activities', ActivityController::class)->shallow();
+
+    // Checklist (items) liés à un voyage
+    Route::resource('trips.checklist-items', ChecklistItemController::class)
+        ->shallow()
+        ->only(['index', 'store', 'update', 'destroy']);
+    // Toggle rapide (cocher/décocher)
+    Route::patch('/checklist-items/{checklist_item}/toggle', [ChecklistItemController::class, 'toggle'])
+        ->name('checklist-items.toggle');
+
+    // Réordonner plusieurs items d’un coup
+    Route::post('/trips/{trip}/checklist-items/reorder', [ChecklistItemController::class, 'reorder'])
+        ->name('trips.checklist-items.reorder');
+
 
     // Stripe Checkout (crée/relance l’abonnement)
     Route::post('/billing/checkout', [BillingController::class, 'checkout'])->name('billing.checkout');

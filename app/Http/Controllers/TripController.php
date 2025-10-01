@@ -190,6 +190,7 @@ class TripController extends Controller
             'steps.accommodations' => function ($q) {
                 $q->select('id','step_id','title','location','start_date','end_date');
             },
+            'checklistItems' => fn($q) => $q->orderBy('order')->orderBy('id'),
         ]);
 
         // ⚡ Formatage / DTO inline
@@ -210,6 +211,7 @@ class TripController extends Controller
 
             // Relations
             'steps' => $trip->steps,
+            'checklist_items'    => $trip->checklistItems,
         ];
 
         return Inertia::render('Trips/Show', [

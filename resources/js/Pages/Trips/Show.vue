@@ -3,6 +3,7 @@ import { ref } from 'vue'
 import { Link } from '@inertiajs/vue3'
 import TripSteps from '@/Components/Step/TripSteps.vue'
 import TripShowView from "@/Components/Trip/TripShowView.vue";
+import TripChecklist from '@/Components/Trip/TripChecklist.vue'
 
 const props = defineProps({
     trip: Object,
@@ -120,7 +121,7 @@ function tabClass(tab) {
                     class="pb-2 border-b-2 -mb-px text-sm transition-colors"
                     :class="tabClass('itineraire')"
                 >
-                    🧾 Itinéraire
+                    🗺️ Itinéraire
                 </button>
 
                 <button
@@ -156,14 +157,19 @@ function tabClass(tab) {
                     >({{ totalActivitiesCount }})</span
                     >
                 </button>
-
                 <button
-                    @click="currentTab = 'map'"
-                    class="pb-2 border-b-2 -mb-px text-sm transition-colors"
-                    :class="tabClass('map')"
+                    @click="currentTab = 'checklist'"
+                    class="pb-2 border-b-2 -mb-px text-sm transition-colors flex items-center"
+                    :class="tabClass('checklist')"
                 >
-                    🗺️ Carte
+                    🧾 Checklist
+                    <span
+                        v-if="trip.checklist_items && trip.checklist_items.length"
+                        class="ml-1 text-xs text-gray-400"
+                    >({{ trip.checklist_items.length }})</span>
                 </button>
+
+
             </nav>
         </section>
 
@@ -186,9 +192,14 @@ function tabClass(tab) {
         <section v-else-if="currentTab === 'activities'">
             <p class="text-gray-600">Activités à afficher…</p>
         </section>
-
-        <section v-else-if="currentTab === 'map'">
-            <p class="text-gray-600">Carte interactive du voyage…</p>
+        <section v-else-if="currentTab === 'checklist'">
+            <TripChecklist
+                :trip="trip"
+                :items="trip.checklist_items ?? []"
+                width="max-w-3xl"
+                :dense="true"
+            />
         </section>
+
     </div>
 </template>

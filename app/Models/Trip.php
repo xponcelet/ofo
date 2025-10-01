@@ -85,6 +85,10 @@ class Trip extends Model
         return 0;
     }
 
+    public function checklistItems()
+    {
+        return $this->hasMany(ChecklistItem::class)->orderBy('order');
+    }
 
 
     /*
