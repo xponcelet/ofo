@@ -94,7 +94,7 @@ function computeStatus(trip) {
                             {{ trip.start_date }} → {{ trip.end_date }}
                         </p>
                         <p>
-                            {{ trip.total_nights }} nuits · {{ trip.steps_count }} étapes
+                            {{ trip.days_count }} jours · {{ trip.steps_count }} étapes
                         </p>
                     </div>
 

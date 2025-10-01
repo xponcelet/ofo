@@ -4,7 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-
+use Carbon\Carbon;
 class Trip extends Model
 {
     /** @use HasFactory<\Database\Factories\TripFactory> */
@@ -68,9 +68,21 @@ class Trip extends Model
         return $this->steps()->max('end_date');
     }
 
-    public function getTotalNightsAttribute(): int
+    public function getTotalNightsAttribute()
     {
-        return (int) $this->steps()->sum('nights');
+        if ($this->start_date && $this->end_date) {
+            return Carbon::parse($this->start_date)->diffInDays(Carbon::parse($this->end_date));
+        }
+        return 0;
+    }
+
+    public function getDaysCountAttribute()
+    {
+        if ($this->start_date && $this->end_date) {
+            // +1 pour inclure le jour d'arrivée
+            return Carbon::parse($this->start_date)->diffInDays(Carbon::parse($this->end_date)) + 1;
+        }
+        return 0;
     }
 
 

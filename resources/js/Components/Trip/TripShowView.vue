@@ -4,8 +4,6 @@ import TripMap from '@/Components/Trip/TripMap.vue'
 
 const props = defineProps({
     steps: { type: Array, default: () => [] },
-    tripMeta: Object,
-    tripDescription: String,
     initialActiveId: [Number, String],
 })
 const emit = defineEmits(['update:activeStep'])
@@ -18,7 +16,7 @@ const activeStep = computed(() =>
     props.steps.find((s) => s.id === activeId.value) || null
 )
 
-// ⚡️ Informe le parent quand l’étape change
+// ⚡ Informe le parent quand l’étape change
 watch(activeStep, (s) => emit('update:activeStep', s))
 </script>
 
@@ -47,14 +45,14 @@ watch(activeStep, (s) => emit('update:activeStep', s))
                 ? 'border-emerald-400 text-emerald-700'
                 : 'border-gray-300 text-gray-600'"
                         >
-                            {{ s.day ?? '?' }}
+                            {{ s.order ?? '?' }}
                         </div>
                         <div class="min-w-0">
                             <p class="truncate text-sm font-medium text-gray-900">
-                                {{ s.short_title }}
+                                {{ s.title || s.location }}
                             </p>
                             <p class="truncate text-xs text-gray-500">
-                                {{ s.title }}
+                                {{ s.start_date }} → {{ s.end_date }}
                             </p>
                         </div>
                     </button>

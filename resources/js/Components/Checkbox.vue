@@ -5,22 +5,29 @@ const props = defineProps({
     error: { type: String, default: '' },
 })
 
+// ✅ permet de propager tous les attributs HTML natifs (disabled, required…)
+defineOptions({ inheritAttrs: false })
+
 const emit = defineEmits(['update:modelValue'])
 </script>
 
 <template>
-    <div class="flex flex-col">
-        <label class="inline-flex items-center gap-2">
-            <input
-                type="checkbox"
-                :checked="modelValue"
-                @change="emit('update:modelValue', $event.target.checked)"
-                class="rounded border-gray-300 text-primary-600 shadow-sm
-               focus:ring-primary-500 transition"
-            />
-            <span class="text-sm text-gray-700">{{ label }}</span>
+    <div class="flex items-start space-x-2">
+        <!-- Checkbox -->
+        <input
+            v-bind="$attrs"
+        type="checkbox"
+        :checked="modelValue"
+        @change="emit('update:modelValue', $event.target.checked)"
+        class="rounded border-gray-300 text-primary-600 shadow-sm focus:ring-primary-500"
+        />
+
+        <!-- Label -->
+        <label class="text-sm text-gray-700 cursor-pointer select-none">
+            {{ label }}
         </label>
 
-        <p v-if="error" class="text-red-500 text-sm mt-1">{{ error }}</p>
+        <!-- Message d'erreur -->
+        <p v-if="error" class="text-red-500 text-sm mt-1 w-full">{{ error }}</p>
     </div>
 </template>
