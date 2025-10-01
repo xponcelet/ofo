@@ -16,7 +16,7 @@ const activeStep = computed(() =>
     props.steps.find((s) => s.id === activeId.value) || null
 )
 
-// ⚡️ Informe le parent quand l’étape change
+// ⚡ Informe le parent quand l’étape change
 watch(activeStep, (s) => emit('update:activeStep', s))
 </script>
 
@@ -25,8 +25,11 @@ watch(activeStep, (s) => emit('update:activeStep', s))
         <!-- Étapes -->
         <aside class="lg:h-[calc(100vh-220px)]">
             <div class="rounded-2xl border border-gray-200 bg-white h-full">
-                <div class="px-4 py-3 border-b border-gray-200">
-                    <h2 class="text-sm font-semibold tracking-wide text-gray-700">Étapes</h2>
+                <div class="px-4 py-3 border-b border-gray-200 flex justify-between items-center">
+                    <h2 class="text-sm font-semibold tracking-wide text-gray-700">
+                        Étapes
+                    </h2>
+                    <span class="text-xs text-gray-500">{{ steps.length }} total</span>
                 </div>
                 <nav class="max-h-[60vh] overflow-y-auto p-2">
                     <button
@@ -39,17 +42,17 @@ watch(activeStep, (s) => emit('update:activeStep', s))
                         <div
                             class="flex h-8 w-8 items-center justify-center rounded-full border"
                             :class="s.id === activeId
-                                ? 'border-emerald-400 text-emerald-700'
-                                : 'border-gray-300 text-gray-600'"
+                ? 'border-emerald-400 text-emerald-700'
+                : 'border-gray-300 text-gray-600'"
                         >
-                            {{ s.day ?? '?' }}
+                            {{ s.order ?? '?' }}
                         </div>
                         <div class="min-w-0">
                             <p class="truncate text-sm font-medium text-gray-900">
-                                {{ s.short_title }}
+                                {{ s.title || s.location }}
                             </p>
                             <p class="truncate text-xs text-gray-500">
-                                {{ s.title }}
+                                {{ s.start_date }} → {{ s.end_date }}
                             </p>
                         </div>
                     </button>
@@ -64,7 +67,6 @@ watch(activeStep, (s) => emit('update:activeStep', s))
                 :active-id="activeId"
                 @update:activeId="activeId = $event"
             />
-
         </section>
     </div>
 </template>

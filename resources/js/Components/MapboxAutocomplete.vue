@@ -7,7 +7,7 @@ const props = defineProps({
     modelValue: { type: String, default: '' },
 })
 
-const emit = defineEmits(['update:modelValue', 'update:coords'])
+const emit = defineEmits(['update:modelValue', 'update:coords', 'update:country'])
 
 const inputElement = ref(null)
 let geocoder = null
@@ -37,25 +37,47 @@ onMounted(async () => {
         accessToken: mapboxgl.accessToken,
         mapboxgl,
         placeholder: 'Cherche un lieu ou un pays...',
-        // 👉 Ici on ajoute "country" et "region"
         types: 'country,region,place,locality,address',
         marker: false,
-        language: 'fr',     // optionnel
-        limit: 5,           // optionnel
+        language: 'fr',
+        limit: 5,
     })
 
     geocoder.on('result', (e) => {
-        const { place_name, center } = e.result
+        const { place_name, center, context = [], place_type = [] } = e.result
+
+        // Nom affiché
         emit('update:modelValue', place_name)
+
+        // Coordonnées
         emit('update:coords', {
             latitude: center?.[1] ?? null,
             longitude: center?.[0] ?? null,
         })
+
+        // Pays
+        let country = null
+
+        // Cherche dans context (ex: [ { id: 'country.123', text: 'France' } ])
+        if (context.length) {
+            const countryContext = context.find((c) => c.id.startsWith('country'))
+            if (countryContext) {
+                country = countryContext.text
+            }
+        }
+
+        // Fallback : si l’objet lui-même est un pays
+        if (!country && place_type.includes('country')) {
+            country = e.result.text
+        }
+
+        emit('update:country', country || '')
     })
 
     geocoder.on('clear', () => {
         emit('update:modelValue', '')
         emit('update:coords', { latitude: null, longitude: null })
+        emit('update:country', '')
     })
 
     await nextTick()
@@ -71,7 +93,9 @@ onBeforeUnmount(() => {
     observer?.disconnect()
     observer = null
     if (geocoder) {
-        try { geocoder.onRemove() } catch (_) {}
+        try {
+            geocoder.onRemove()
+        } catch (_) {}
         geocoder = null
     }
     attached = false

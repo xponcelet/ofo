@@ -1,6 +1,6 @@
 <script setup>
 import { ref, computed } from 'vue'
-import { Head } from '@inertiajs/vue3'
+import { Head, Link } from '@inertiajs/vue3'
 import AppLayout from '@/Layouts/AppLayout.vue'
 import TripShowView from '@/Components/trip/TripShowView.vue'
 import StepsMap from '@/Components/StepsMap.vue'

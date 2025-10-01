@@ -88,6 +88,9 @@ class HandleInertiaRequests extends Middleware
                 'status' => fn() => $request->session()->get('status'),
             ],
             'csrf_token' => fn() => csrf_token(),
+            // Dispo dans $page.props.destination / $page.props.start
+            'destination' => fn () => $request->session()->get('destination'),
+            'start'       => fn () => $request->session()->get('start'),
         ]);
     }
 }

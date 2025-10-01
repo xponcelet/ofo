@@ -14,7 +14,19 @@ const routeSourceId = 'trip-route-source'
 const mapEl = ref(null)
 
 function toLngLat(s) {
-    return [Number(s?.coords?.lng), Number(s?.coords?.lat)]
+    if (!s) return [NaN, NaN]
+
+    // ⚡ Priorité aux champs stockés en DB
+    if (s.latitude !== undefined && s.longitude !== undefined) {
+        return [Number(s.longitude), Number(s.latitude)]
+    }
+
+    // fallback si coords existe
+    if (s.coords) {
+        return [Number(s.coords.lng), Number(s.coords.lat)]
+    }
+
+    return [NaN, NaN]
 }
 
 function drawRoute() {
@@ -62,7 +74,9 @@ function placeMarkers() {
             alignItems: 'center',
             justifyContent: 'center',
         })
-        el.textContent = String(s.day ?? i + 1)
+
+        // Utilise l'ordre si dispo, sinon day, sinon index
+        el.textContent = String(s.order ?? s.day ?? i + 1)
 
         el.addEventListener('click', () => {
             emit('update:activeId', s.id) // notifie le parent
@@ -87,12 +101,15 @@ function highlightActive() {
 
     // 🔍 Zoom sur l’étape active
     const activeStep = props.steps.find((s) => s.id === props.activeId)
-    if (activeStep?.coords && map) {
-        map.easeTo({
-            center: toLngLat(activeStep),
-            zoom: Math.max(map.getZoom(), 7),
-            duration: 600,
-        })
+    if (activeStep && map) {
+        const [lng, lat] = toLngLat(activeStep)
+        if (isFinite(lng) && isFinite(lat)) {
+            map.easeTo({
+                center: [lng, lat],
+                zoom: Math.max(map.getZoom(), 7),
+                duration: 600,
+            })
+        }
     }
 }
 

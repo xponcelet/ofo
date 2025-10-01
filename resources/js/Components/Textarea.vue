@@ -8,6 +8,9 @@ const props = defineProps({
     rows: { type: Number, default: 4 },
 })
 
+// ✅ permet de propager tous les attributs HTML (maxlength, minlength, disabled, etc.)
+defineOptions({ inheritAttrs: false })
+
 const emit = defineEmits(['update:modelValue'])
 </script>
 
@@ -21,14 +24,15 @@ const emit = defineEmits(['update:modelValue'])
 
         <!-- Textarea -->
         <textarea
-            :rows="rows"
-            :value="modelValue"
-            :placeholder="placeholder"
-            @input="emit('update:modelValue', $event.target.value)"
-            class="w-full rounded-xl border border-gray-300 px-3 py-2
-             focus:outline-none focus:ring-2 focus:ring-primary-500
-             shadow-sm transition bg-white"
-        />
+            v-bind="$attrs"
+        :value="modelValue"
+        :rows="rows"
+        :placeholder="placeholder"
+        @input="emit('update:modelValue', $event.target.value)"
+        class="w-full rounded-xl border border-gray-300 px-3 py-2
+        focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500
+        shadow-sm transition bg-white resize-none"
+        ></textarea>
 
         <!-- Message d'erreur -->
         <p v-if="error" class="text-red-500 text-sm mt-1">{{ error }}</p>

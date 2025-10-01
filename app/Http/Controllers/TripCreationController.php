@@ -26,9 +26,9 @@ class TripCreationController extends Controller
         ]);
 
         session([
-            'trip.destination' => $validated['destination'],
-            'trip.latitude' => $validated['latitude'],
-            'trip.longitude' => $validated['longitude'],
+            'destination' => $validated['destination'],
+            'latitude' => $validated['latitude'],
+            'longitude' => $validated['longitude'],
         ]);
 
         return redirect()->route('trips.start')->with('success', 'Destination enregistrée.');
@@ -50,9 +50,9 @@ class TripCreationController extends Controller
         ]);
 
         session([
-            'trip.departure' => $validated['departure'],
-            'trip.departure_latitude' => $validated['latitude'],
-            'trip.departure_longitude' => $validated['longitude'],
+            'departure' => $validated['departure'],
+            'departure_latitude' => $validated['latitude'],
+            'departure_longitude' => $validated['longitude'],
         ]);
 
         return redirect()->route('trips.details')->with('success', 'Point de départ enregistré.');
@@ -63,8 +63,8 @@ class TripCreationController extends Controller
     {
         // Optionnel : sécurité pour éviter l’accès sans les 2 étapes précédentes
         if (
-            !session()->has('trip.destination') ||
-            !session()->has('trip.departure')
+            !session()->has('destination') ||
+            !session()->has('departure')
         ) {
             return redirect()->route('trips.destination')->with('error', 'Veuillez compléter les étapes précédentes.');
         }
@@ -75,58 +75,76 @@ class TripCreationController extends Controller
 
     public function finalize(StoreTripRequest $request): RedirectResponse
     {
-        // Récupération des données de session
-        $destination = session('trip.destination');
-        $destinationLat = session('trip.latitude');
-        $destinationLng = session('trip.longitude');
-        $departure = session('trip.departure');
-        $departureLat = session('trip.departure_latitude');
-        $departureLng = session('trip.departure_longitude');
+        $destination = session('destination');
+        $destinationLat = session('latitude');
+        $destinationLng = session('longitude');
+        $departure = session('departure');
+        $departureLat = session('departure_latitude');
+        $departureLng = session('departure_longitude');
 
         if (!$destination || !$departure || $destinationLat === null || $destinationLng === null || $departureLat === null || $departureLng === null) {
             return redirect()->route('trips.destination')->with('error', 'Les informations sont incomplètes.');
         }
 
+        $validated = $request->validated();
+
+        $startDate = $validated['start_date'] ?? null;
+        $endDate   = $validated['end_date'] ?? null;
+        $nights    = $validated['nights'] ?? null;
+
+        // ⚡ logique de cohérence
+        if ($startDate && $endDate) {
+            $nights = \Carbon\Carbon::parse($startDate)->diffInDays(\Carbon\Carbon::parse($endDate));
+        } elseif ($startDate && $nights !== null) {
+            $endDate = \Carbon\Carbon::parse($startDate)->addDays((int) $nights)->toDateString();
+        } elseif ($startDate && !$nights && !$endDate) {
+            // fallback = voyage d’un jour
+            $endDate = $startDate;
+            $nights  = 0;
+        }
+
         // Création du voyage
         $trip = Trip::create(array_merge(
-            $request->validated(),
+            $validated,
             [
-                'user_id' => auth()->id(),
-                'destination' => $destination,
-                'currency' => $request->currency ?? 'EUR',
+                'user_id'   => auth()->id(),
+                'currency'  => $validated['currency'] ?? 'EUR',
                 'is_public' => $request->boolean('is_public', false),
             ]
         ));
 
         // Étape 1 : départ
         $trip->steps()->create([
-            'location' => $departure,
-            'latitude' => $departureLat,
-            'longitude' => $departureLng,
-            'order' => 1,
-            'is_departure' => true,
+            'location'       => $departure,
+            'latitude'       => $departureLat,
+            'longitude'      => $departureLng,
+            'order'          => 1,
+            'is_departure'   => true,
+            'start_date'     => $startDate,
+            'end_date'       => $startDate, // départ = même jour
+            'nights'         => 0,
         ]);
 
         // Étape 2 : destination
         $trip->steps()->create([
-            'location' => $destination,
-            'latitude' => $destinationLat,
-            'longitude' => $destinationLng,
-            'order' => 2,
+            'location'       => $destination,
+            'latitude'       => $destinationLat,
+            'longitude'      => $destinationLng,
+            'order'          => 2,
             'is_destination' => true,
+            'start_date'     => $startDate,
+            'end_date'       => $endDate,
+            'nights'         => $nights,
+            'transport_mode' => $validated['transport_mode'] ?? 'car',
         ]);
 
         // Nettoyage
         session()->forget([
-            'trip.destination',
-            'trip.latitude',
-            'trip.longitude',
-            'trip.departure',
-            'trip.departure_latitude',
-            'trip.departure_longitude',
+            'destination', 'latitude', 'longitude',
+            'departure', 'departure_latitude', 'departure_longitude',
         ]);
 
-        return redirect()->route('trips.edit', $trip)->with('success', 'Voyage créé avec succès 🎉');
+        return redirect()->route('trips.show', $trip)->with('success', 'Voyage créé avec succès 🎉');
     }
 
 }

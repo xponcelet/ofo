@@ -4,7 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-
+use Carbon\Carbon;
 class Trip extends Model
 {
     /** @use HasFactory<\Database\Factories\TripFactory> */
@@ -15,8 +15,6 @@ class Trip extends Model
         'title',
         'description',
         'image',
-        'start_date',
-        'end_date',
         'budget',
         'currency',
         'average_rating',
@@ -58,6 +56,36 @@ class Trip extends Model
         // via steps
         return $this->hasManyThrough(Activity::class, Step::class);
     }
+
+    /** on déduit ces champs des steps*/
+    public function getStartDateAttribute(): ?string
+    {
+        return $this->steps()->min('start_date');
+    }
+
+    public function getEndDateAttribute(): ?string
+    {
+        return $this->steps()->max('end_date');
+    }
+
+    public function getTotalNightsAttribute()
+    {
+        if ($this->start_date && $this->end_date) {
+            return Carbon::parse($this->start_date)->diffInDays(Carbon::parse($this->end_date));
+        }
+        return 0;
+    }
+
+    public function getDaysCountAttribute()
+    {
+        if ($this->start_date && $this->end_date) {
+            // +1 pour inclure le jour d'arrivée
+            return Carbon::parse($this->start_date)->diffInDays(Carbon::parse($this->end_date)) + 1;
+        }
+        return 0;
+    }
+
+
 
     /*
             public function transports()

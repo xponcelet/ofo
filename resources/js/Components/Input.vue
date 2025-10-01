@@ -8,6 +8,9 @@ const props = defineProps({
     placeholder: { type: String, default: '' },
 })
 
+// on laisse passer tous les autres attributs HTML
+defineOptions({ inheritAttrs: false })
+
 const emit = defineEmits(['update:modelValue'])
 </script>
 
@@ -21,13 +24,14 @@ const emit = defineEmits(['update:modelValue'])
 
         <!-- Input -->
         <input
-            :type="type"
-            :value="modelValue"
-            :placeholder="placeholder"
-            @input="emit('update:modelValue', $event.target.value)"
-            class="w-full rounded-xl border border-gray-300 px-3 py-2
-             focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500
-             shadow-sm transition bg-white"
+            v-bind="$attrs"
+        :type="type"
+        :value="modelValue"
+        :placeholder="placeholder"
+        @input="emit('update:modelValue', $event.target.value)"
+        class="w-full rounded-xl border border-gray-300 px-3 py-2
+        focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500
+        shadow-sm transition bg-white"
         />
 
         <!-- Message d'erreur -->

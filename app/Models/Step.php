@@ -21,6 +21,11 @@ class Step extends Model
         'end_date',
         'order',
         'is_destination',
+        'country',
+        'transport_mode',
+        'distance_to_next',
+        'duration_to_next',
+        'nights',
     ];
 
     protected $casts = [
