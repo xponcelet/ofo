@@ -40,7 +40,7 @@ class ActivityController extends Controller
 
         return Inertia::render('Activities/Edit', [
             'activity' => Arr::only($activity->toArray(), [
-                'id','step_id','title','description','start_at','end_at','external_link','cost','currency','category',
+                'id','step_id','title','description','location','start_at','end_at','external_link','cost','currency','category',
             ]),
             'step' => Arr::only($step->toArray(), ['id','order','location','title']),
             'steps' => $steps,

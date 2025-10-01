@@ -13,6 +13,7 @@ class StoreActivityRequest extends FormRequest
         return [
             'title'         => ['required','string','max:120'],
             'description'   => ['nullable','string'],
+            'location' => ['nullable', 'string', 'max:255'],
             'start_at'      => ['nullable','date'],
             'end_at'        => ['nullable','date','after_or_equal:start_at'],
             'external_link' => ['nullable','url'],

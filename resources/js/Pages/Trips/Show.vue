@@ -4,6 +4,7 @@ import { Link } from '@inertiajs/vue3'
 import TripSteps from '@/Components/Step/TripSteps.vue'
 import TripShowView from "@/Components/Trip/TripShowView.vue";
 import TripChecklist from '@/Components/Trip/TripChecklist.vue'
+import TripActivities from "@/Components/Trip/TripActivities.vue";
 
 const props = defineProps({
     trip: Object,
@@ -190,8 +191,9 @@ function tabClass(tab) {
         </section>
 
         <section v-else-if="currentTab === 'activities'">
-            <p class="text-gray-600">Activités à afficher…</p>
+            <TripActivities :steps="trip.steps" />
         </section>
+
         <section v-else-if="currentTab === 'checklist'">
             <TripChecklist
                 :trip="trip"

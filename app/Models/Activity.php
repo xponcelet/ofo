@@ -10,10 +10,16 @@ class Activity extends Model
     use SoftDeletes;
 
     protected $fillable = [
-        'step_id', 'title', 'description',
-        'start_at', 'end_at',
+        'step_id',
+        'title',
+        'description',
+        'location',   // ✅ ajouté
+        'start_at',
+        'end_at',
         'external_link',
-        'cost', 'currency', 'category',
+        'cost',
+        'currency',
+        'category',
     ];
 
     protected $casts = [
