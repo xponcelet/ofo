@@ -179,13 +179,17 @@ class TripController extends Controller
         $trip->load([
             'steps' => function ($q) {
                 $q->orderBy('order')
-                    ->select('id','trip_id','order','title','location',
-                        'start_date','end_date','latitude','longitude','nights');
+                    ->select(
+                        'id','trip_id','order','title','location',
+                        'start_date','end_date','latitude','longitude','nights'
+                    );
             },
             'steps.activities' => function ($q) {
                 $q->orderBy('start_at')
-                    ->select('id','step_id','title','description',
-                        'start_at','end_at','external_link','cost','currency','category');
+                    ->select(
+                        'id','step_id','title','description','location',
+                        'start_at','end_at','external_link','cost','currency','category'
+                    );
             },
             'steps.accommodations' => function ($q) {
                 $q->select('id','step_id','title','location','start_date','end_date');
@@ -193,7 +197,31 @@ class TripController extends Controller
             'checklistItems' => fn($q) => $q->orderBy('order')->orderBy('id'),
         ]);
 
-        // ⚡ Formatage / DTO inline
+        // ⚡ Formatage des activités
+        $activities = $trip->steps->flatMap(function ($step) {
+            return $step->activities->map(function ($a) use ($step) {
+                return [
+                    'id'            => $a->id,
+                    'step_id'       => $a->step_id,
+                    'title'         => $a->title,
+                    'description'   => $a->description,
+                    'location'      => $a->location,
+                    'start_at'      => optional($a->start_at)->toDateTimeString(),
+                    'end_at'        => optional($a->end_at)->toDateTimeString(),
+                    'external_link' => $a->external_link,
+                    'cost'          => $a->cost,
+                    'currency'      => $a->currency,
+                    'category'      => $a->category,
+                    // ✅ utile pour grouper dans TripActivities.vue
+                    'date'          => optional($a->start_at)->toDateString(),
+                    // contexte étape
+                    'step_location' => $step->location,
+                    'step_title'    => $step->title,
+                ];
+            });
+        })->values();
+
+        // ⚡ Formatage du trip
         $tripData = [
             'id'           => $trip->id,
             'title'        => $trip->title,
@@ -203,22 +231,23 @@ class TripController extends Controller
             'favs'         => $trip->favs,
 
             // Champs dérivés
-            'start_date'   => $trip->start_date,   // accessor → min des étapes
-            'end_date'     => $trip->end_date,     // accessor → max des étapes
-            'total_nights' => $trip->total_nights, // accessor → somme des nuits
+            'start_date'   => $trip->start_date,
+            'end_date'     => $trip->end_date,
+            'total_nights' => $trip->total_nights,
             'days_count'   => $trip->days_count,
-            'steps_count'  => $trip->steps_count,  // withCount
+            'steps_count'  => $trip->steps_count,
 
             // Relations
-            'steps' => $trip->steps,
-            'checklist_items'    => $trip->checklistItems,
+            'steps'            => $trip->steps,
+            'checklist_items'  => $trip->checklistItems,
         ];
 
         return Inertia::render('Trips/Show', [
-            'trip'   => $tripData,
-            'steps'  => $trip->steps,
-            'favs'   => $trip->favs,
-            'likers' => $likers,
+            'trip'       => $tripData,
+            'steps'      => $trip->steps,
+            'activities' => $activities, // ✅ on envoie les activités formatées
+            'favs'       => $trip->favs,
+            'likers'     => $likers,
         ]);
     }
 

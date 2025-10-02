@@ -71,9 +71,15 @@ class ActivityController extends Controller
         abort_unless($step->trip->user_id === auth()->id(), 403);
         return redirect()->to(route('steps.edit', $step).'?tab=activities');
     }
-    public function create(Step $step) {
+    public function create(Step $step)
+    {
         abort_unless($step->trip->user_id === auth()->id(), 403);
-        return redirect()->to(route('steps.edit', $step).'?tab=activities');
+
+        return Inertia::render('Activities/Create', [
+            'step' => $step->only(['id','title','location']),
+            'trip' => $step->trip->only(['id','title']),
+            'date' => request('date'), // ✅ date passée depuis l'UI
+        ]);
     }
     public function show(Activity $activity) {
         abort_unless($activity->step->trip->user_id === auth()->id(), 403);
