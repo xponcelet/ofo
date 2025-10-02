@@ -76,7 +76,7 @@ class StepController extends Controller
             $itinerary->recalcDistances($trip);
         }
 
-        return redirect()->route('trips.show', $trip)->with('success', 'Étape ajoutée.');
+        return redirect()->route('trips.show', $trip)->with('success', __('step.created'));
     }
 
     public function edit(Step $step)
@@ -110,7 +110,7 @@ class StepController extends Controller
 
         $itinerary->recalcDistances($step->trip);
 
-        return redirect()->route('trips.show', $step->trip)->with('success', 'Étape mise à jour.');
+        return redirect()->route('trips.show', $step->trip)->with('success', __('step.updated'));
     }
 
     public function destroy(Step $step, ItineraryService $itinerary)
@@ -133,7 +133,7 @@ class StepController extends Controller
 
         $itinerary->recalcDistances($trip);
 
-        return redirect()->route('trips.show', $trip)->with('success', 'Étape supprimée et ordre mis à jour.');
+        return redirect()->route('trips.show', $trip)->with('success', __('step.deleted'));
     }
 
     public function duplicate(Step $step, ItineraryService $itinerary)
@@ -167,7 +167,7 @@ class StepController extends Controller
 
         return redirect()
             ->route('trips.show', $trip)
-            ->with('success', 'Étape dupliquée avec succès.');
+            ->with('success', __('step.duplicated'));
     }
 
     public function moveUp(Step $step, ItineraryService $itinerary)
@@ -187,7 +187,7 @@ class StepController extends Controller
             $itinerary->recalcDistances($step->trip);
         }
 
-        return back()->with('success', 'Étape déplacée vers le haut.');
+        return back()->with('success', __('step.moved_up'));
     }
 
     public function moveDown(Step $step, ItineraryService $itinerary)
@@ -207,12 +207,9 @@ class StepController extends Controller
             $itinerary->recalcDistances($step->trip);
         }
 
-        return back()->with('success', 'Étape déplacée vers le bas.');
+        return back()->with('success', __('step.moved_down'));
     }
 
-    /**
-     * Applique la logique de calcul des champs automatiques
-     */
     private function prepareData(array $validated): array
     {
         if (!empty($validated['start_date']) && isset($validated['nights'])) {

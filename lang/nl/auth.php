@@ -1,8 +1,14 @@
 <?php
 
 return [
-    'google_error' => "Fout bij Google-authenticatie.",
-    'google_email_missing' => "Kan uw e-mailadres niet ophalen via Google.",
-    'google_account_exists' => "Dit account bestaat al. Log in met uw e-mail en wachtwoord.",
+
+    'failed' => "Deze inloggegevens komen niet overeen met onze gegevens.",
+    'password' => "Het opgegeven wachtwoord is onjuist.",
+    'throttle' => "Te veel mislukte pogingen. Probeer het opnieuw over :seconds seconden.",
+    'google_error' => "Fout tijdens Google-authenticatie.",
+    'google_email_missing' => "Uw e-mailadres kon niet van Google worden opgehaald.",
+    'google_account_exists' => "Dit account bestaat al. Log in met uw e-mailadres en wachtwoord.",
+
 ];
+
 

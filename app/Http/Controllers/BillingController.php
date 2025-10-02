@@ -13,7 +13,7 @@ class BillingController extends Controller
 
         if ($user->subscribed('default')) {
             return redirect()->route('profile.show')
-                ->with('status', 'Vous êtes déjà abonné.');
+                ->with('status', __('billing.already_subscribed'));
         }
 
         return $user->newSubscription('default', $price)->checkout([
@@ -35,6 +35,6 @@ class BillingController extends Controller
             $sub->cancel();
         }
 
-        return redirect()->route('profile.show')->with('status', 'Abonnement annulé.');
+        return redirect()->route('profile.show')->with('status', __('billing.cancelled'));
     }
 }

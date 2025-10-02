@@ -12,7 +12,6 @@ use App\Http\Controllers\PublicTripController;
 use App\Http\Controllers\FavoriteController;
 use App\Http\Controllers\ActivityController;
 use App\Http\Controllers\BillingController;
-use App\Http\Controllers\ChecklistController;
 use App\Http\Controllers\ChecklistItemController;
 
 Route::get('/', function () {

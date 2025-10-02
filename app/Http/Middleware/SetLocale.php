@@ -3,24 +3,28 @@
 namespace App\Http\Middleware;
 
 use Closure;
-use Illuminate\Http\Request;
-use Symfony\Component\HttpFoundation\Response;
 use Illuminate\Support\Facades\App;
-use Illuminate\Support\Facades\Session;
 
 class SetLocale
 {
     public function handle($request, Closure $next)
     {
-        if ($request->user()) {
-            // si l'utilisateur est connecté, on prend sa langue
-            $locale = $request->user()->locale;
-        } else {
-            // sinon on regarde en session
-            $locale = Session::get('locale', config('app.locale'));
-        }
+        // 1. Si l'utilisateur est connecté et a une locale en DB
+        if (auth()->check() && auth()->user()->locale) {
+            App::setLocale(auth()->user()->locale);
 
-        App::setLocale($locale);
+            // 2. Sinon on regarde la session
+        } elseif (session()->has('locale')) {
+            App::setLocale(session('locale'));
+
+            // 3. Sinon on regarde le cookie
+        } elseif ($request->cookie('locale')) {
+            App::setLocale($request->cookie('locale'));
+
+            // 4. Sinon fallback vers config/app.php
+        } else {
+            App::setLocale(config('app.locale'));
+        }
 
         return $next($request);
     }
