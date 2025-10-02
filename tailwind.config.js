@@ -16,8 +16,20 @@ export default {
     theme: {
         extend: {
             colors: {
-                primary: '#2563eb',   // blue-600
-                secondary: '#10b981', // emerald-500
+                primary: {
+                    DEFAULT: '#6750A4', // violet Material 3
+                    foreground: '#FFFFFF',
+                },
+                secondary: {
+                    DEFAULT: '#625B71',
+                    foreground: '#FFFFFF',
+                },
+                background: '#FFFBFE',
+                surface: '#FFFBFE',
+                'surface-variant': '#E7E0EC',
+                'on-surface': '#1C1B1F',
+                'on-surface-variant': '#49454F',
+                outline: '#79747E',
             },
             fontFamily: {
                 sans: ['Inter', 'ui-sans-serif', 'system-ui'],

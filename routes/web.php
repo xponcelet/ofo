@@ -37,6 +37,21 @@ Route::prefix('voyages')->name('public.trips.')->group(function () {
 // dashboard public (séparé de /dashboard authentifié)
 Route::get('/decouvrir', [PublicTripController::class, 'dashboard'])->name('public.dashboard');
 
+
+// changement de langue
+Route::get('/lang/{locale}', function ($locale) {
+    if (! in_array($locale, ['fr', 'en', 'nl'])) {
+        abort(400, 'Langue non supportée');
+    }
+    if (Auth::check()) {
+        Auth::user()->update(['locale' => $locale]);
+    } else {
+        session(['locale' => $locale]);
+    }
+    return back();
+})->name('lang.switch');
+
+
 // Routes où l'utilisateur doit être vérifié
 
 Route::middleware([
