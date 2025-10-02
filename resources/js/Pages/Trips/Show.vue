@@ -10,6 +10,7 @@ const props = defineProps({
     trip: Object,
     stepCount: Number,
     totalActivitiesCount: Number,
+    activities: { type: Array, default: () => [] },
 })
 
 const currentTab = ref('resume')
@@ -191,7 +192,7 @@ function tabClass(tab) {
         </section>
 
         <section v-else-if="currentTab === 'activities'">
-            <TripActivities :steps="trip.steps" />
+            <TripActivities :steps="trip.steps" :activities="activities" />
         </section>
 
         <section v-else-if="currentTab === 'checklist'">

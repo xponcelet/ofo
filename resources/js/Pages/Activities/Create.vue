@@ -1,18 +1,19 @@
 <script setup>
 import { useForm, Head, Link } from '@inertiajs/vue3'
+import MapboxAutocomplete from '@/Components/MapboxAutocomplete.vue' // ⚡ comme Steps/Create.vue
 
 const props = defineProps({
-    step: Object,   // Étape à laquelle l'activité sera liée
-    trip: Object    // Voyage parent (utile pour afficher le contexte)
+    step: Object,
+    trip: Object,
+    date: String,
 })
 
-// Formulaire
 const form = useForm({
     title: '',
     description: '',
     location: '',
-    start_at: '',
-    end_at: '',
+    start_at: props.date + ' 09:00', // par défaut matin
+    end_at: props.date + ' 18:00',   // par défaut soir
     external_link: '',
     cost: '',
     currency: 'EUR',
@@ -42,40 +43,40 @@ function submit() {
                 <input v-model="form.title" type="text"
                        class="mt-1 block w-full border-gray-300 rounded-md shadow-sm"
                        required />
-                <span v-if="form.errors.title" class="text-red-600 text-sm">{{ form.errors.title }}</span>
             </div>
 
             <!-- Description -->
             <div>
                 <label class="block text-sm font-medium text-gray-700">Description</label>
-                <textarea v-model="form.description"
-                          rows="3"
+                <textarea v-model="form.description" rows="3"
                           class="mt-1 block w-full border-gray-300 rounded-md shadow-sm" />
-                <span v-if="form.errors.description" class="text-red-600 text-sm">{{ form.errors.description }}</span>
             </div>
 
-            <!-- Localisation -->
+            <!-- Localisation avec Mapbox -->
             <div>
                 <label class="block text-sm font-medium text-gray-700">Localisation</label>
-                <input v-model="form.location" type="text"
-                       placeholder="Ex : Jardin Majorelle"
-                       class="mt-1 block w-full border-gray-300 rounded-md shadow-sm" />
-                <span v-if="form.errors.location" class="text-red-600 text-sm">{{ form.errors.location }}</span>
+                <MapboxAutocomplete v-model="form.location" placeholder="Chercher un lieu..." />
             </div>
 
-            <!-- Dates -->
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <!-- Date fixée -->
+            <div>
+                <label class="block text-sm font-medium text-gray-700">Date</label>
+                <input type="text" :value="props.date" disabled
+                       class="mt-1 block w-full border-gray-300 rounded-md shadow-sm bg-gray-100" />
+                <p class="text-sm text-gray-500">La date est fixée par le jour choisi dans l’itinéraire</p>
+            </div>
+
+            <!-- Heure début + fin -->
+            <div class="grid grid-cols-2 gap-4">
                 <div>
-                    <label class="block text-sm font-medium text-gray-700">Début</label>
-                    <input v-model="form.start_at" type="datetime-local"
+                    <label class="block text-sm font-medium text-gray-700">Heure de début</label>
+                    <input v-model="form.start_at" type="time"
                            class="mt-1 block w-full border-gray-300 rounded-md shadow-sm" />
-                    <span v-if="form.errors.start_at" class="text-red-600 text-sm">{{ form.errors.start_at }}</span>
                 </div>
                 <div>
-                    <label class="block text-sm font-medium text-gray-700">Fin</label>
-                    <input v-model="form.end_at" type="datetime-local"
+                    <label class="block text-sm font-medium text-gray-700">Heure de fin</label>
+                    <input v-model="form.end_at" type="time"
                            class="mt-1 block w-full border-gray-300 rounded-md shadow-sm" />
-                    <span v-if="form.errors.end_at" class="text-red-600 text-sm">{{ form.errors.end_at }}</span>
                 </div>
             </div>
 
@@ -85,24 +86,19 @@ function submit() {
                 <input v-model="form.external_link" type="url"
                        placeholder="https://exemple.com"
                        class="mt-1 block w-full border-gray-300 rounded-md shadow-sm" />
-                <span v-if="form.errors.external_link" class="text-red-600 text-sm">{{ form.errors.external_link }}</span>
             </div>
 
             <!-- Coût + devise -->
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div class="grid grid-cols-2 gap-4">
                 <div>
                     <label class="block text-sm font-medium text-gray-700">Coût</label>
                     <input v-model="form.cost" type="number" step="0.01"
                            class="mt-1 block w-full border-gray-300 rounded-md shadow-sm" />
-                    <span v-if="form.errors.cost" class="text-red-600 text-sm">{{ form.errors.cost }}</span>
                 </div>
                 <div>
                     <label class="block text-sm font-medium text-gray-700">Devise</label>
-                    <input v-model="form.currency" type="text"
-                           maxlength="3"
-                           class="mt-1 block w-full border-gray-300 rounded-md shadow-sm uppercase"
-                           placeholder="EUR" />
-                    <span v-if="form.errors.currency" class="text-red-600 text-sm">{{ form.errors.currency }}</span>
+                    <input v-model="form.currency" type="text" maxlength="3" placeholder="EUR"
+                           class="mt-1 block w-full border-gray-300 rounded-md shadow-sm uppercase" />
                 </div>
             </div>
 
@@ -112,7 +108,6 @@ function submit() {
                 <input v-model="form.category" type="text"
                        placeholder="ex: Culture, Gastronomie, Nature"
                        class="mt-1 block w-full border-gray-300 rounded-md shadow-sm" />
-                <span v-if="form.errors.category" class="text-red-600 text-sm">{{ form.errors.category }}</span>
             </div>
 
             <!-- Boutons -->

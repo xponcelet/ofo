@@ -2,7 +2,7 @@
 import { ref, computed } from 'vue'
 import { Head, Link } from '@inertiajs/vue3'
 import AppLayout from '@/Layouts/AppLayout.vue'
-import TripShowView from '@/Components/trip/TripShowView.vue'
+import TripShowView from '@/Components/Trip/TripShowView.vue'
 import StepsMap from '@/Components/StepsMap.vue'
 import GoogleMapsFullTripLink from '@/Components/GoogleMapsFullTripLink.vue'
 
