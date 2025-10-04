@@ -4,7 +4,7 @@ namespace App\Http\Middleware;
 
 use Illuminate\Http\Request;
 use Inertia\Middleware;
-
+use App\Services\TranslationService;
 class HandleInertiaRequests extends Middleware
 {
     /**
@@ -33,6 +33,8 @@ class HandleInertiaRequests extends Middleware
      *
      * @return array<string, mixed>
      */
+
+
     public function share(Request $request): array
     {
         return array_merge(parent::share($request), [
@@ -69,7 +71,7 @@ class HandleInertiaRequests extends Middleware
                         'id' => $user->id,
                         'name' => $user->name,
                         'email' => $user->email,
-                        // ✅ AJOUTS pour la photo & compat Jetstream
+                        // AJOUTS pour la photo & compat Jetstream
                         'email_verified_at' => $user->email_verified_at?->toIso8601String(),
                         'profile_photo_url' => $user->profile_photo_url,   // <- important
                         'profile_photo_path' => $user->profile_photo_path, // optionnel
@@ -91,6 +93,10 @@ class HandleInertiaRequests extends Middleware
             // Dispo dans $page.props.destination / $page.props.start
             'destination' => fn () => $request->session()->get('destination'),
             'start'       => fn () => $request->session()->get('start'),
+            // la langue
+            'locale' => fn () => app()->getLocale(),
+            // traduction front
+            'translations' => fn () => TranslationService::getVueTranslations(app()->getLocale()),
         ]);
     }
 }

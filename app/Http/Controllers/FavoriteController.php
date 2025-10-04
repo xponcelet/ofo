@@ -13,14 +13,14 @@ class FavoriteController extends Controller
     {
         auth()->user()->favoriteTrips()->syncWithoutDetaching([$trip->id]);
 
-        return back()->with('success', 'Voyage ajouté aux favoris.');
+        return back()->with('success', __('favorite.added'));
     }
 
     public function destroy(Trip $trip): RedirectResponse
     {
         auth()->user()->favoriteTrips()->detach($trip->id);
 
-        return back()->with('success', 'Voyage retiré des favoris.');
+        return back()->with('success', __('favorite.removed'));
     }
 
     public function index(): Response
@@ -28,9 +28,9 @@ class FavoriteController extends Controller
         $favorites = auth()->user()
             ->favoriteTrips()
             ->select('trips.id', 'trips.title', 'trips.image', 'trips.start_date', 'trips.end_date')
-            ->withCount('favoredBy')                 // -> favorites_count
+            ->withCount('favoredBy')
             ->withPivot('created_at')
-            ->orderByDesc('favorites.created_at')    // tri par date d’ajout (pivot)
+            ->orderByDesc('favorites.created_at')
             ->paginate(12)
             ->withQueryString();
 

@@ -11,7 +11,6 @@ use Inertia\Inertia;
 use Inertia\Response;
 use App\Services\ItineraryService;
 
-
 class TripCreationController extends Controller
 {
     public function destination()
@@ -33,15 +32,13 @@ class TripCreationController extends Controller
             'longitude' => $validated['longitude'],
         ]);
 
-        return redirect()->route('trips.start')->with('success', 'Destination enregistrée.');
+        return redirect()->route('trips.start')->with('success', __('trip_creation.destination_saved'));
     }
-
 
     public function start()
     {
         return Inertia::render('Trips/Start');
     }
-
 
     public function store(Request $request)
     {
@@ -57,23 +54,20 @@ class TripCreationController extends Controller
             'departure_longitude' => $validated['longitude'],
         ]);
 
-        return redirect()->route('trips.details')->with('success', 'Point de départ enregistré.');
+        return redirect()->route('trips.details')->with('success', __('trip_creation.departure_saved'));
     }
-
 
     public function details(): Response
     {
-        // Optionnel : sécurité pour éviter l’accès sans les 2 étapes précédentes
         if (
             !session()->has('destination') ||
             !session()->has('departure')
         ) {
-            return redirect()->route('trips.destination')->with('error', 'Veuillez compléter les étapes précédentes.');
+            return redirect()->route('trips.destination')->with('error', __('trip_creation.previous_steps_required'));
         }
 
         return Inertia::render('Trips/Details');
     }
-
 
     public function finalize(StoreTripRequest $request, ItineraryService $itinerary): RedirectResponse
     {
@@ -85,7 +79,7 @@ class TripCreationController extends Controller
         $departureLng = session('departure_longitude');
 
         if (!$destination || !$departure || $destinationLat === null || $destinationLng === null || $departureLat === null || $departureLng === null) {
-            return redirect()->route('trips.destination')->with('error', 'Les informations sont incomplètes.');
+            return redirect()->route('trips.destination')->with('error', __('trip_creation.incomplete_information'));
         }
 
         $validated = $request->validated();
@@ -94,18 +88,15 @@ class TripCreationController extends Controller
         $endDate   = $validated['end_date'] ?? null;
         $nights    = $validated['nights'] ?? null;
 
-        // ⚡ logique de cohérence
         if ($startDate && $endDate) {
             $nights = \Carbon\Carbon::parse($startDate)->diffInDays(\Carbon\Carbon::parse($endDate));
         } elseif ($startDate && $nights !== null) {
             $endDate = \Carbon\Carbon::parse($startDate)->addDays((int) $nights)->toDateString();
         } elseif ($startDate && !$nights && !$endDate) {
-            // fallback = voyage d’un jour
             $endDate = $startDate;
             $nights  = 0;
         }
 
-        // Création du voyage
         $trip = Trip::create(array_merge(
             $validated,
             [
@@ -116,20 +107,18 @@ class TripCreationController extends Controller
             ]
         ));
 
-        // Étape 1 : départ
         $trip->steps()->create([
             'location'       => $departure,
             'latitude'       => $departureLat,
             'longitude'      => $departureLng,
             'order'          => 1,
             'is_departure'   => true,
-            'start_date'     => $request->start_date, // = début du séjour
-            'end_date'       => $request->start_date, // même jour
+            'start_date'     => $request->start_date,
+            'end_date'       => $request->start_date,
             'nights'         => 0,
             'transport_mode' => $request->transport_mode ?? 'car',
         ]);
 
-        // Étape 2 : destination
         $startDate = $request->start_date;
         $endDate   = $request->end_date;
 
@@ -145,16 +134,13 @@ class TripCreationController extends Controller
             'transport_mode' => $request->transport_mode ?? 'car',
         ]);
 
-        //  recalcul des distances/durées une fois le trip prêt
         $itinerary->recalcDistances($trip);
 
-        // Nettoyage
         session()->forget([
             'destination', 'latitude', 'longitude',
             'departure', 'departure_latitude', 'departure_longitude',
         ]);
 
-        return redirect()->route('trips.show', $trip)->with('success', 'Voyage créé avec succès 🎉');
+        return redirect()->route('trips.show', $trip)->with('success', __('trip_creation.created'));
     }
-
 }

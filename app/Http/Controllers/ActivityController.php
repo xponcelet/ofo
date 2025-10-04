@@ -20,20 +20,18 @@ class ActivityController extends Controller
             'step_id' => $step->id,
         ]));
 
-        return back()->with('success', 'Activité ajoutée.');
+        return back()->with('success', __('activity.created'));
     }
 
     public function edit(Activity $activity)
     {
         abort_unless($activity->step->trip->user_id === auth()->id(), 403);
 
-        // Étape + trip de l’activité
         $step = $activity->step()
             ->select('id','trip_id','order','location','title')
             ->with('trip:id,title,user_id')
             ->firstOrFail();
 
-        // Étapes du même voyage (pour réassigner)
         $steps = $step->trip->steps()
             ->orderBy('order')
             ->get(['id','order','location']);
@@ -54,7 +52,7 @@ class ActivityController extends Controller
 
         $activity->update($request->validated());
 
-        return back()->with('success', 'Activité mise à jour.');
+        return back()->with('success', __('activity.updated'));
     }
 
     public function destroy(Activity $activity): RedirectResponse
@@ -63,14 +61,14 @@ class ActivityController extends Controller
 
         $activity->delete();
 
-        return back()->with('success', 'Activité supprimée.');
+        return back()->with('success', __('activity.deleted'));
     }
 
-    // (Optionnel) si tu as laissé la ressource complète:
     public function index(Step $step) {
         abort_unless($step->trip->user_id === auth()->id(), 403);
         return redirect()->to(route('steps.edit', $step).'?tab=activities');
     }
+
     public function create(Step $step)
     {
         abort_unless($step->trip->user_id === auth()->id(), 403);
@@ -78,9 +76,10 @@ class ActivityController extends Controller
         return Inertia::render('Activities/Create', [
             'step' => $step->only(['id','title','location']),
             'trip' => $step->trip->only(['id','title']),
-            'date' => request('date'), // ✅ date passée depuis l'UI
+            'date' => request('date'),
         ]);
     }
+
     public function show(Activity $activity) {
         abort_unless($activity->step->trip->user_id === auth()->id(), 403);
         return redirect()->route('activities.edit', $activity);

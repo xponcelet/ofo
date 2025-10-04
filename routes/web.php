@@ -12,8 +12,9 @@ use App\Http\Controllers\PublicTripController;
 use App\Http\Controllers\FavoriteController;
 use App\Http\Controllers\ActivityController;
 use App\Http\Controllers\BillingController;
-use App\Http\Controllers\ChecklistController;
 use App\Http\Controllers\ChecklistItemController;
+use App\Http\Controllers\LanguageController;
+use App\Http\Controllers\TranslationController;
 
 Route::get('/', function () {
     return Inertia::render('Welcome', [
@@ -36,6 +37,14 @@ Route::prefix('voyages')->name('public.trips.')->group(function () {
 });
 // dashboard public (séparé de /dashboard authentifié)
 Route::get('/decouvrir', [PublicTripController::class, 'dashboard'])->name('public.dashboard');
+
+
+// changement de langue
+Route::get('/lang/{locale}', [LanguageController::class, 'switch'])->name('lang.switch');
+
+// traduction frontend
+Route::get('/translations/{locale}', [TranslationController::class, 'index'])
+    ->name('translations.index');
 
 // Routes où l'utilisateur doit être vérifié
 

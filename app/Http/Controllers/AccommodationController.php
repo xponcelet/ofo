@@ -8,10 +8,10 @@ use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 
-
 class AccommodationController extends Controller
 {
     use AuthorizesRequests;
+
     public function create(Step $step)
     {
         $this->authorize('update', $step->trip);
@@ -36,25 +36,30 @@ class AccommodationController extends Controller
 
         $validated['step_id'] = $step->id;
 
-        // Validation métier personnalisée (logement dans la période de l'étape)
+        // Validation métier personnalisée
         if (
             ($validated['start_date'] ?? null) &&
             ($step->start_date && $validated['start_date'] < $step->start_date)
         ) {
-            return back()->withErrors(['start_date' => 'La date d’arrivée du logement ne peut pas être antérieure à celle de l’étape.'])->withInput();
+            return back()->withErrors([
+                'start_date' => __('accommodation.errors.start_before_step'),
+            ])->withInput();
         }
 
         if (
             ($validated['end_date'] ?? null) &&
             ($step->end_date && $validated['end_date'] > $step->end_date)
         ) {
-            return back()->withErrors(['end_date' => 'La date de départ du logement ne peut pas dépasser celle de l’étape.'])->withInput();
+            return back()->withErrors([
+                'end_date' => __('accommodation.errors.end_after_step'),
+            ])->withInput();
         }
-
 
         Accommodation::create($validated);
 
-        return redirect()->route('trips.show', $step->trip)->with('success', 'Logement ajouté avec succès.');
+        return redirect()
+            ->route('trips.show', $step->trip)
+            ->with('success', __('accommodation.created'));
     }
 
     public function show(Accommodation $accommodation)
@@ -66,7 +71,6 @@ class AccommodationController extends Controller
             'step' => $accommodation->step,
         ]);
     }
-
 
     public function edit(Accommodation $accommodation)
     {
@@ -93,7 +97,9 @@ class AccommodationController extends Controller
 
         $accommodation->update($validated);
 
-        return redirect()->route('trips.show', $accommodation->step->trip)->with('success', 'Logement mis à jour.');
+        return redirect()
+            ->route('trips.show', $accommodation->step->trip)
+            ->with('success', __('accommodation.updated'));
     }
 
     public function destroy(Accommodation $accommodation)
@@ -102,6 +108,8 @@ class AccommodationController extends Controller
 
         $accommodation->delete();
 
-        return redirect()->route('trips.show', $accommodation->step->trip)->with('success', 'Logement supprimé.');
+        return redirect()
+            ->route('trips.show', $accommodation->step->trip)
+            ->with('success', __('accommodation.deleted'));
     }
 }

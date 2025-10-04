@@ -9,10 +9,6 @@ use Inertia\Inertia;
 
 class ChecklistItemController extends Controller
 {
-    /**
-     * Affiche la page/onglet Checklist d'un voyage
-     * GET /trips/{trip}/checklist-items
-     */
     public function index(Trip $trip)
     {
         $this->authorize('view', $trip);
@@ -22,17 +18,12 @@ class ChecklistItemController extends Controller
             ->orderBy('id')
             ->get();
 
-        // Tu peux rendre une page dédiée (ex: Trips/TripChecklist.vue)
         return Inertia::render('Trips/Checklist', [
             'trip'  => $trip,
             'items' => $items,
         ]);
     }
 
-    /**
-     * Ajoute un item dans la checklist d'un voyage
-     * POST /trips/{trip}/checklist-items
-     */
     public function store(Request $request, Trip $trip)
     {
         $this->authorize('update', $trip);
@@ -41,7 +32,6 @@ class ChecklistItemController extends Controller
             'label' => 'required|string|max:255',
         ]);
 
-        // Position à la fin
         $nextOrder = (int) $trip->checklistItems()->max('order') + 1;
 
         $trip->checklistItems()->create([
@@ -50,14 +40,9 @@ class ChecklistItemController extends Controller
             'order'      => $nextOrder,
         ]);
 
-        return back()->with('success', 'Élément ajouté à la checklist.');
+        return back()->with('success', __('checklist.created'));
     }
 
-    /**
-     * Met à jour un item (label ou is_checked)
-     * PUT/PATCH /checklist-items/{checklist_item}
-     * (shallow route)
-     */
     public function update(Request $request, ChecklistItem $checklist_item)
     {
         $trip = $checklist_item->trip;
@@ -71,15 +56,9 @@ class ChecklistItemController extends Controller
 
         $checklist_item->update($validated);
 
-        // Pour des requêtes XHR depuis Inertia, on peut simplement revenir en arrière
         return back();
     }
 
-    /**
-     * Supprime un item
-     * DELETE /checklist-items/{checklist_item}
-     * (shallow route)
-     */
     public function destroy(ChecklistItem $checklist_item)
     {
         $trip = $checklist_item->trip;
@@ -87,14 +66,9 @@ class ChecklistItemController extends Controller
 
         $checklist_item->delete();
 
-        return back()->with('success', 'Élément supprimé.');
+        return back()->with('success', __('checklist.deleted'));
     }
 
-    /**
-     * Toggle rapide (cocher / décocher)
-     * PATCH /checklist-items/{checklist_item}/toggle
-     * (route optionnelle)
-     */
     public function toggle(ChecklistItem $checklist_item)
     {
         $trip = $checklist_item->trip;
@@ -107,16 +81,6 @@ class ChecklistItemController extends Controller
         return back();
     }
 
-    /**
-     * Réordonner plusieurs items d'un coup
-     * POST /trips/{trip}/checklist-items/reorder
-     * Payload attendu:
-     *   items: [
-     *     { id: 12, order: 0 },
-     *     { id: 15, order: 1 },
-     *     ...
-     *   ]
-     */
     public function reorder(Request $request, Trip $trip)
     {
         $this->authorize('update', $trip);
@@ -127,7 +91,6 @@ class ChecklistItemController extends Controller
             'items.*.order'      => 'required|integer|min:0',
         ]);
 
-        // Sécurise: ne réordonne que les items appartenant à ce trip
         $ids = collect($data['items'])->pluck('id')->all();
         $items = ChecklistItem::whereIn('id', $ids)
             ->where('trip_id', $trip->id)
@@ -140,6 +103,6 @@ class ChecklistItemController extends Controller
             }
         }
 
-        return back()->with('success', 'Checklist réordonnée.');
+        return back()->with('success', __('checklist.reordered'));
     }
 }

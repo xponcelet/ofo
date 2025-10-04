@@ -24,7 +24,7 @@ class TripController extends Controller
         $trips = Trip::query()
             ->where('user_id', $user->id)
             ->withCount(['steps','favoredBy as favs'])
-            ->with(['steps:id,trip_id,start_date,end_date,nights']) // ⚡ on charge les étapes
+            ->with(['steps:id,trip_id,start_date,end_date,nights'])
             ->latest()
             ->paginate($perPage)
             ->through(fn ($trip) => [
@@ -34,13 +34,11 @@ class TripController extends Controller
                 'image'        => $trip->image,
                 'is_public'    => $trip->is_public,
                 'favs'         => $trip->favs,
-
-                // Champs dérivés
-                'start_date'   => $trip->start_date,   // accessor
-                'end_date'     => $trip->end_date,     // accessor
-                'total_nights' => $trip->total_nights, // accessor
+                'start_date'   => $trip->start_date,
+                'end_date'     => $trip->end_date,
+                'total_nights' => $trip->total_nights,
                 'days_count'   => $trip->days_count,
-                'steps_count'  => $trip->steps_count,  // withCount
+                'steps_count'  => $trip->steps_count,
             ]);
 
         $count = Trip::where('user_id', $user->id)->count();
@@ -58,7 +56,6 @@ class TripController extends Controller
         ]);
     }
 
-
     public function create(): InertiaResponse
     {
         $response = Gate::inspect('create', Trip::class);
@@ -66,7 +63,7 @@ class TripController extends Controller
         if (! $response->allowed()) {
             return Inertia::render('Trips/Index', [
                 'trips' => Trip::where('user_id', auth()->id())
-                    ->select(['id','title','description','image']) // ⚡
+                    ->select(['id','title','description','image'])
                     ->withCount(['steps','favoredBy as favs'])
                     ->latest()->paginate(12),
                 'limits' => [
@@ -74,7 +71,7 @@ class TripController extends Controller
                     'count' => auth()->user()->trips()->count(),
                 ],
                 'errors' => [
-                    'base' => __('Vous avez atteint la limite de :max voyages.', [
+                    'base' => __('trip.limit_reached', [
                         'max' => auth()->user()->tripLimit(),
                     ]),
                 ],
@@ -94,12 +91,10 @@ class TripController extends Controller
 
             $validated = $request->validated();
 
-            // Dates
             $startDate = $validated['start_date'] ?? null;
             $endDate   = $validated['end_date'] ?? null;
             $nights    = $validated['nights'] ?? null;
 
-            // ⚡ Cohérence des dates / nuits
             if ($startDate && $endDate) {
                 $nights = \Carbon\Carbon::parse($startDate)
                     ->diffInDays(\Carbon\Carbon::parse($endDate));
@@ -112,21 +107,19 @@ class TripController extends Controller
                 $nights  = 0;
             }
 
-            // 1. Créer le Trip
             $trip = Trip::create([
                 'user_id'     => $user->id,
                 'title'       => $validated['title'],
                 'description' => $validated['description'] ?? null,
-                'image'       => null, // TODO: upload plus tard
+                'image'       => null,
                 'budget'      => $validated['budget'] ?? null,
                 'currency'    => $validated['currency'] ?? 'EUR',
                 'is_public'   => (bool) ($validated['is_public'] ?? false),
             ]);
 
-            // 2. Créer la Step départ
             if ($start = session('start')) {
                 $trip->steps()->create([
-                    'title'          => "Départ",
+                    'title'          => __('trip.departure'),
                     'location'       => $start,
                     'order'          => 1,
                     'is_destination' => false,
@@ -136,7 +129,6 @@ class TripController extends Controller
                 ]);
             }
 
-            // 3. Créer la Step destination
             if ($destination = session('destination')) {
                 $trip->steps()->create([
                     'title'          => $validated['title'] ?? $destination,
@@ -152,19 +144,16 @@ class TripController extends Controller
 
             return redirect()
                 ->route('trips.show', $trip)
-                ->with('success', __('Voyage créé !'));
+                ->with('success', __('trip.created'));
         });
     }
-
 
     public function show(Trip $trip): InertiaResponse
     {
         $this->authorize('view', $trip);
 
-        // Compteur de likes
         $trip->loadCount(['favoredBy as favs', 'steps']);
 
-        // Likers (seulement pour le propriétaire)
         $likers = null;
         if (auth()->check() && auth()->user()->can('viewLikers', $trip)) {
             $likers = $trip->favoredBy()
@@ -175,7 +164,6 @@ class TripController extends Controller
                 ->withQueryString();
         }
 
-        // Étapes + relations utiles
         $trip->load([
             'steps' => function ($q) {
                 $q->orderBy('order')
@@ -197,7 +185,6 @@ class TripController extends Controller
             'checklistItems' => fn($q) => $q->orderBy('order')->orderBy('id'),
         ]);
 
-        // ⚡ Formatage des activités
         $activities = $trip->steps->flatMap(function ($step) {
             return $step->activities->map(function ($a) use ($step) {
                 return [
@@ -212,16 +199,13 @@ class TripController extends Controller
                     'cost'          => $a->cost,
                     'currency'      => $a->currency,
                     'category'      => $a->category,
-                    // ✅ utile pour grouper dans TripActivities.vue
                     'date'          => optional($a->start_at)->toDateString(),
-                    // contexte étape
                     'step_location' => $step->location,
                     'step_title'    => $step->title,
                 ];
             });
         })->values();
 
-        // ⚡ Formatage du trip
         $tripData = [
             'id'           => $trip->id,
             'title'        => $trip->title,
@@ -229,15 +213,11 @@ class TripController extends Controller
             'image'        => $trip->image,
             'is_public'    => $trip->is_public,
             'favs'         => $trip->favs,
-
-            // Champs dérivés
             'start_date'   => $trip->start_date,
             'end_date'     => $trip->end_date,
             'total_nights' => $trip->total_nights,
             'days_count'   => $trip->days_count,
             'steps_count'  => $trip->steps_count,
-
-            // Relations
             'steps'            => $trip->steps,
             'checklist_items'  => $trip->checklistItems,
         ];
@@ -245,7 +225,7 @@ class TripController extends Controller
         return Inertia::render('Trips/Show', [
             'trip'       => $tripData,
             'steps'      => $trip->steps,
-            'activities' => $activities, // ✅ on envoie les activités formatées
+            'activities' => $activities,
             'favs'       => $trip->favs,
             'likers'     => $likers,
         ]);
@@ -268,7 +248,7 @@ class TripController extends Controller
 
         return redirect()
             ->route('trips.show', $trip)
-            ->with('success', __('Voyage mis à jour avec succès.'));
+            ->with('success', __('trip.updated'));
     }
 
     public function destroy(Trip $trip)
@@ -276,21 +256,19 @@ class TripController extends Controller
         $this->authorize('delete', $trip);
         $trip->delete();
 
-        return redirect()->route('trips.index')->with('success', 'Voyage supprimé.');
+        return redirect()->route('trips.index')->with('success', __('trip.deleted'));
     }
 
     public function details(Request $request): InertiaResponse
     {
         $this->authorize('create', Trip::class);
 
-        // On récupère depuis la session les infos précédentes
         $destination = session('destination');
         $start       = session('start');
 
         if (!$destination) {
-            // sécurité : si l’utilisateur saute une étape, on le redirige
             return redirect()->route('trips.create')
-                ->with('error', 'Veuillez d’abord choisir une destination.');
+                ->with('error', __('trip.choose_destination_first'));
         }
 
         return Inertia::render('Trips/Details', [
@@ -298,6 +276,4 @@ class TripController extends Controller
             'start'       => $start,
         ]);
     }
-
-
 }
