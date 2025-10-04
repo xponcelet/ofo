@@ -18,49 +18,58 @@ function toggleMenu(stepId) {
     openMenuId.value = openMenuId.value === stepId ? null : stepId
 }
 
-// Helper pour formater la durée (minutes → h + min)
+// Helper durée (minutes → h + min)
 function formatDuration(minutes) {
     if (!minutes) return null
     const h = Math.floor(minutes / 60)
     const m = minutes % 60
     return h > 0 ? `${h}h ${m}min` : `${m}min`
 }
+
+// Emoji drapeau depuis le code pays (FR → 🇫🇷)
+function flagFromCode(code) {
+    if (!code) return ''
+    const cc = String(code).toUpperCase()
+    if (cc.length !== 2) return ''
+    const A = 0x1F1E6 // base unicode indicators
+    const first = cc.codePointAt(0) - 65 + A
+    const second = cc.codePointAt(1) - 65 + A
+    if (first < A || second < A) return ''
+    return String.fromCodePoint(first, second)
+}
 </script>
 
 <template>
-    <div class="space-y-8">
+    <div class="space-y-8 max-w-5xl mx-auto">
         <h2 class="text-2xl font-semibold text-gray-800">Itinéraire</h2>
 
         <!-- Ajouter avant la première -->
         <AddStepButton :trip-id="trip.id" :at-start="true" label="➕ Ajouter avant la première" />
 
-        <!-- Timeline -->
-        <div v-if="trip.steps.length" class="relative">
-            <!-- Ligne verticale -->
-            <div class="absolute top-0 left-6 bottom-0 w-1 bg-gray-200"></div>
-
+        <!-- Liste des étapes (dates à gauche, carte/contenu à droite) -->
+        <div v-if="trip.steps.length" class="space-y-8">
             <div
                 v-for="step in trip.steps"
                 :key="step.id"
-                class="relative flex items-start space-x-6 mb-12"
+                class="grid grid-cols-[110px_1fr] gap-4 items-start"
             >
-                <!-- Bulle sur la timeline -->
-                <div class="relative z-10">
-                    <div class="w-6 h-6 rounded-full bg-pink-600 border-2 border-white shadow"></div>
+                <!-- Colonne gauche : ordre + dates -->
+                <div class="flex flex-col items-start pt-1">
+                    <div class="flex items-center gap-3">
+                        <div class="h-8 w-8 rounded-full bg-pink-600 text-white flex items-center justify-center text-sm font-semibold shadow">
+                            {{ step.order }}
+                        </div>
+                        <div class="text-xs font-medium text-gray-500">
+                            <div v-if="step.start_date && step.end_date">
+                                {{ step.start_date }} → {{ step.end_date }}
+                            </div>
+                            <div v-else class="italic text-gray-400">Dates à préciser</div>
+                        </div>
+                    </div>
                 </div>
 
-                <!-- Carte étape -->
-                <div class="flex-1 bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
-
-                    <!-- Image (seulement si présente) -->
-                    <div v-if="step.image" class="h-40 overflow-hidden">
-                        <img
-                            :src="step.image"
-                            alt="Image de l’étape"
-                            class="w-full h-full object-cover"
-                        />
-                    </div>
-
+                <!-- Carte étape / contenu -->
+                <div class="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
                     <!-- Contenu -->
                     <div class="p-6 relative">
                         <!-- Menu contextuel -->
@@ -79,11 +88,6 @@ function formatDuration(minutes) {
                                 <li>
                                     <Link :href="route('steps.edit', step.id)" class="block px-4 py-2 hover:bg-gray-50">
                                         ✏️ Modifier
-                                    </Link>
-                                </li>
-                                <li>
-                                    <Link :href="route('steps.accommodations.create', step.id)" class="block px-4 py-2 hover:bg-gray-50">
-                                        🏨 Ajouter logement
                                     </Link>
                                 </li>
                                 <li>
@@ -118,72 +122,39 @@ function formatDuration(minutes) {
                             </ul>
                         </div>
 
-                        <!-- Jour + titre -->
-                        <div class="mb-4">
-                            <span class="text-xs font-semibold bg-pink-100 text-pink-700 px-3 py-1 rounded-full">
-                                Jour {{ step.order }}
-                            </span>
-                            <h3 class="mt-2 text-xl font-bold text-gray-800">
-                                {{ step.title }}
+                        <!-- Titre + lieu -->
+                        <div class="mb-3">
+                            <h3 class="text-xl font-bold text-gray-800 leading-tight">
+                                {{ step.title || 'Étape' }}
                             </h3>
+
+                            <p class="mt-1 text-pink-700 font-medium flex items-center gap-2">
+                                <span>📍 {{ step.location || 'Lieu non précisé' }}</span>
+                                <!-- Drapeau si country_code, sinon nom du pays en grisé -->
+                                <span v-if="step.country_code" class="text-lg" :title="step.country">{{ flagFromCode(step.country_code) }}</span>
+                                <span v-else-if="step.country" class="text-xs text-gray-500">({{ step.country }})</span>
+                            </p>
                         </div>
 
-                        <!-- Infos étape -->
-                        <div class="mt-2 space-y-1">
-                            <p class="text-lg font-semibold text-pink-700 flex items-center">
-                                📍 {{ step.location || 'Lieu non précisé' }}
-                                <span v-if="step.country" class="ml-2 text-sm text-gray-500">({{ step.country }})</span>
-                            </p>
-                            <p class="text-sm text-gray-600">
-                                📅 {{ step.start_date }} → {{ step.end_date }}
-                            </p>
-                            <p v-if="step.transport_mode" class="text-sm text-gray-700">
-                                🚗 Transport : {{ step.transport_mode }}
-                            </p>
-                            <p v-if="step.nights > 0" class="text-sm text-gray-700">
-                                🌙 {{ step.nights }} nuit<span v-if="step.nights > 1">s</span>
-                            </p>
-                            <p v-if="step.distance_to_next" class="text-sm text-gray-700">
-                                📏 Distance → {{ step.distance_to_next.toFixed(1) }} km
-                            </p>
-                            <p v-if="step.duration_to_next" class="text-sm text-gray-700">
-                                ⏱️ Durée estimée → {{ formatDuration(step.duration_to_next) }}
-                            </p>
+                        <!-- Infos -->
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm text-gray-700">
+                            <p v-if="step.transport_mode">🚗 Transport : {{ step.transport_mode }}</p>
+                            <p v-if="step.nights > 0">🌙 {{ step.nights }} nuit<span v-if="step.nights > 1">s</span></p>
+                            <p v-if="step.distance_to_next">📏 Distance → {{ step.distance_to_next.toFixed(1) }} km</p>
+                            <p v-if="step.duration_to_next">⏱️ Durée estimée → {{ formatDuration(step.duration_to_next) }}</p>
+                        </div>
 
+                        <!-- Itinéraire -->
+                        <div class="mt-3">
                             <a
                                 v-if="step.latitude && step.longitude"
                                 :href="`https://www.google.com/maps/dir/?api=1&destination=${step.latitude},${step.longitude}`"
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                class="block text-sm text-pink-600 hover:underline mt-1"
+                                class="inline-flex items-center text-sm text-pink-600 hover:underline"
                             >
-                                🗺️ Itinéraire Google Maps
+                                Itinéraire
                             </a>
-                        </div>
-
-                        <!-- Logements -->
-                        <div class="mt-6">
-                            <h4 class="font-semibold text-sm text-gray-700 mb-2">🏨 Logement(s)</h4>
-                            <div v-if="step.accommodations.length" class="space-y-3">
-                                <div
-                                    v-for="acc in step.accommodations"
-                                    :key="acc.id"
-                                    class="rounded-lg border border-gray-100 bg-gray-50 p-3 flex justify-between items-start"
-                                >
-                                    <div>
-                                        <p class="font-medium text-sm text-gray-800">{{ acc.title || 'Sans titre' }}</p>
-                                        <p class="text-xs text-gray-600">{{ acc.location || 'Lieu inconnu' }}</p>
-                                        <p class="text-xs text-gray-500">📅 {{ acc.start_date }} → {{ acc.end_date }}</p>
-                                    </div>
-                                    <Link
-                                        :href="route('accommodations.edit', acc.id)"
-                                        class="text-xs px-2 py-1 bg-yellow-100 hover:bg-yellow-200 text-yellow-700 rounded"
-                                    >
-                                        ✏️ Modifier
-                                    </Link>
-                                </div>
-                            </div>
-                            <p v-else class="text-sm text-gray-400 italic">Aucun logement enregistré.</p>
                         </div>
                     </div>
 

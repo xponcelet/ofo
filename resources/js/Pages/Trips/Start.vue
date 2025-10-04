@@ -9,11 +9,21 @@ const form = useForm({
     departure: '',
     latitude: null,
     longitude: null,
+    country: '',
+    country_code: '',
 })
 
 function updateCoords({ latitude, longitude }) {
     form.latitude = latitude
     form.longitude = longitude
+}
+
+function updateCountry(country) {
+    form.country = country
+}
+
+function updateCountryCode(code) {
+    form.country_code = code
 }
 
 function submit() {
@@ -29,36 +39,37 @@ function goBack() {
 
 <template>
     <Head title="Où commence votre voyage ?" />
+
     <div class="max-w-3xl mx-auto py-10 px-4 space-y-8">
-        <!-- Étape 2 / 3 -->
         <TripCreationProgress :current-step="2" />
 
-        <!-- Titre -->
         <div>
             <h1 class="text-2xl font-bold text-gray-900">📍 Point de départ</h1>
-            <p class="text-sm text-gray-500 mt-1">Choisissez l’endroit où commence votre voyage.</p>
+            <p class="text-sm text-gray-500 mt-1">
+                Choisissez l’endroit où commence votre voyage.
+            </p>
         </div>
 
-        <!-- Formulaire -->
         <form @submit.prevent="submit" class="space-y-6">
-            <!-- Point de départ -->
             <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1">Lieu de départ *</label>
+                <label class="block text-sm font-medium text-gray-700 mb-1">
+                    Lieu de départ *
+                </label>
                 <MapboxAutocomplete
                     v-model="form.departure"
                     @update:coords="updateCoords"
+                    @update:country="updateCountry"
+                    @update:countryCode="updateCountryCode"
                 />
                 <InputError :message="form.errors.departure" />
             </div>
 
-            <!-- Carte -->
             <StepMapPreview
                 class="mt-4"
                 :latitude="form.latitude ?? 50.8503"
                 :longitude="form.longitude ?? 4.3517"
             />
 
-            <!-- Boutons -->
             <div class="flex items-center justify-between pt-4">
                 <button
                     type="button"
@@ -78,8 +89,9 @@ function goBack() {
             </div>
         </form>
 
-        <!-- Garanties -->
-        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 text-sm text-gray-400 border-t border-gray-200 pt-6">
+        <div
+            class="grid grid-cols-1 sm:grid-cols-3 gap-4 text-sm text-gray-400 border-t border-gray-200 pt-6"
+        >
             <div class="flex items-start gap-2">
                 <span class="text-emerald-500">✓</span>
                 <span>Les étapes sont visibles uniquement par toi</span>

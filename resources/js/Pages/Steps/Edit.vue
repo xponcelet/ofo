@@ -18,6 +18,7 @@ const form = useForm({
     start_date: props.step.start_date || '',
     end_date: props.step.end_date || '',
     country: props.step.country || '',
+    country_code: '',
     transport_mode: props.step.transport_mode || 'car',
     nights: props.step.nights || 0,
 })

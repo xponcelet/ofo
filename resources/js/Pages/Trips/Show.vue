@@ -179,7 +179,10 @@ function tabClass(tab) {
              Zone 3 : contenu des onglets
         ======================= -->
         <section v-if="currentTab === 'itineraire'">
-            <TripShowView :steps="trip.steps" />
+            <TripShowView
+                :steps="trip.steps"
+                @go-to-activities="currentTab = 'activities'"
+            />
         </section>
 
         <section v-else-if="currentTab === 'infos'">

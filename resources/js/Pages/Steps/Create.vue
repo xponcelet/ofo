@@ -19,6 +19,7 @@ const form = useForm({
     start_date: '',
     end_date: '',
     country: '',
+    country_code: '',
     transport_mode: 'car',
     nights: 0,
     insert_after_id: props.insert_after_id,

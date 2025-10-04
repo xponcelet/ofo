@@ -22,6 +22,7 @@ class Step extends Model
         'order',
         'is_destination',
         'country',
+        'country_code',
         'transport_mode',
         'distance_to_next',
         'duration_to_next',
