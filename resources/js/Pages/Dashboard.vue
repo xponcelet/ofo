@@ -1,29 +1,37 @@
+<!-- resources/js/Pages/Dashboard.vue -->
 <script setup>
-import { Head } from '@inertiajs/vue3'
+import { Head, usePage } from '@inertiajs/vue3'
 import DashboardSearch from '@/Components/Public/DashboardSearch.vue'
 import RandomTripCard from '@/Components/Public/RandomTripCard.vue'
+import { t } from '@/Composables/useTranslations.js'
 
-const props = defineProps({ canCreate: { type: Boolean, default: false } })
+const props = defineProps({
+    canCreate: { type: Boolean, default: false }
+})
+
+const page = usePage()
 </script>
 
 <template>
-    <Head title="Prépare un nouveau voyage" />
+    <Head :title="t('dashboard.title')" />
 
-    <!-- FULL-BLEED: échappe le max-w du layout, uniquement pour cette section -->
-    <section class="relative left-1/2 right-1/2 -mx-[50vw] w-screen bg-gray-50 overflow-x-hidden">
-        <div class="mx-auto max-w-screen-2xl px-6 md:px-10 lg:px-14 py-12">
-            <header class="mb-10 text-center">
-                <h1 class="text-4xl md:text-5xl font-semibold tracking-tight">
-                    Prépare un nouveau voyage
+    <main class="flex-1 bg-surface text-on-surface">
+        <section class="max-w-screen-xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+            <!-- En-tête -->
+            <header class="mb-12 text-center">
+                <h1 class="text-4xl md:text-5xl font-bold tracking-tight text-primary">
+                    {{ t('dashboard.title') }}
                 </h1>
-                <p class="mt-2 text-gray-600">Choisis ta destination ou laisse-toi surprendre.</p>
+                <p class="mt-3 text-lg text-on-surface-variant">
+                    {{ t('dashboard.subtitle') }}
+                </p>
             </header>
 
-            <!-- Éléments centrés, même largeur -->
-            <div class="grid gap-8 md:grid-cols-2 items-stretch justify-items-stretch">
+            <!-- Grille de choix -->
+            <div class="grid gap-8 md:grid-cols-2">
                 <DashboardSearch :can-create="props.canCreate" />
                 <RandomTripCard />
             </div>
-        </div>
-    </section>
+        </section>
+    </main>
 </template>

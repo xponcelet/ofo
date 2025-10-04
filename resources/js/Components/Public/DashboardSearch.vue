@@ -8,9 +8,7 @@ const props = defineProps({
     canCreate: { type: Boolean, default: false },
 })
 
-// Valeurs par défaut
 const query = ref('Espagne')
-// Centre par défaut (lng, lat)
 const selected = ref({ label: 'Espagne', center: [-3.7, 40.4], bbox: null })
 
 function onSelect(place) {
@@ -21,56 +19,51 @@ function onSelect(place) {
         center: Array.isArray(center) ? center : selected.value.center,
         bbox: place.bbox ?? null,
     }
-    if (selected.value.label) {
-        query.value = selected.value.label
-    }
+    if (selected.value.label) query.value = selected.value.label
 }
 
 const previewSteps = computed(() => {
     const [lng, lat] = selected.value.center
-    return [
-        { id: 'preview', title: query.value, latitude: lat, longitude: lng }
-    ]
+    return [{ id: 'preview', title: query.value, latitude: lat, longitude: lng }]
 })
 
 function searchTrips() {
-    router.get(
-        route('public.trips.index'),
-        { q: query.value || undefined },
-        { preserveScroll: true, replace: true },
-    )
+    router.get(route('public.trips.index'), { q: query.value || undefined }, { preserveScroll: true, replace: true })
 }
 </script>
 
 <template>
-    <section class="bg-white h-full flex flex-col rounded-2xl border border-gray-200 shadow-sm">
+    <section class="flex flex-col h-full rounded-2xl border border-outline/20 bg-surface shadow-md overflow-hidden">
         <div class="p-6">
-            <h2 class="text-2xl font-semibold text-center">Créer</h2>
-            <p class="text-gray-600 text-center mt-1">Je sais où je veux aller</p>
+            <h2 class="text-xl font-semibold text-on-surface text-center">Créer</h2>
+            <p class="text-on-surface-variant text-center mt-1">Je sais où je veux aller</p>
 
-            <label class="block text-sm text-gray-700 mt-5 mb-2 text-left">Pays, région ou ville</label>
+            <label class="block text-sm text-on-surface mt-5 mb-2">Pays, région ou ville</label>
 
-            <!-- Selon ton composant, l’événement peut être @select OU @place-selected. On écoute les deux. -->
             <MapboxAutocomplete
                 v-model="query"
                 @select="onSelect"
                 @place-selected="onSelect"
                 :placeholder="'Espagne, Italie, Bretagne…'"
-                class="w-full rounded-xl border border-gray-300 bg-white/70 px-4 py-2.5 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                class="w-full rounded-xl border border-outline/30 bg-surface-variant px-4 py-2.5 shadow-sm
+                       focus:outline-none focus:ring-2 focus:ring-primary/50"
             />
 
             <div class="mt-5">
                 <StepMapPreview
                     :steps="previewSteps"
-                    class="w-full h-56 md:h-64 rounded-xl overflow-hidden border border-gray-200"
+                    class="w-full h-56 md:h-64 rounded-xl overflow-hidden border border-outline/20"
                 />
             </div>
         </div>
 
+        <!-- CTA -->
         <div class="mt-auto p-6 pt-0 flex items-center justify-center gap-4">
             <Link
                 :href="route('trips.start')"
-                class="inline-flex items-center justify-center rounded-xl px-4 py-2 bg-gray-200 text-gray-600"
+                class="inline-flex items-center justify-center rounded-full px-5 py-2.5
+                       bg-surface-variant text-on-surface-variant font-medium shadow-sm
+                       hover:bg-surface-variant/70 hover:shadow transition"
                 :class="{ 'pointer-events-none opacity-50': !props.canCreate }"
             >
                 Créer un voyage
@@ -79,14 +72,16 @@ function searchTrips() {
             <button
                 type="button"
                 @click="searchTrips"
-                class="inline-flex items-center justify-center rounded-xl px-4 py-2 bg-blue-600 text-white hover:bg-blue-700"
+                class="inline-flex items-center justify-center rounded-full px-5 py-2.5
+                       bg-primary text-white font-medium shadow-sm
+                       hover:bg-primary/90 hover:shadow-md transition"
             >
                 Chercher un voyage
             </button>
         </div>
 
-        <div v-if="!props.canCreate" class="px-6 pb-6 -mt-2">
-            <Link :href="route('register')" class="text-sm text-blue-600 hover:underline">Créer un compte</Link>
+        <div v-if="!props.canCreate" class="px-6 pb-6 -mt-2 text-center">
+            <Link :href="route('register')" class="text-sm text-primary hover:underline">Créer un compte</Link>
         </div>
     </section>
 </template>
