@@ -6,6 +6,7 @@ use App\Models\Trip;
 use App\Models\Step;
 use App\Http\Requests\StepRequest;
 use App\Services\ItineraryService;
+use App\Services\GeocodingService;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
@@ -41,14 +42,21 @@ class StepController extends Controller
         ]);
     }
 
-    public function store(StepRequest $request, Trip $trip, ItineraryService $itinerary)
+    public function store(StepRequest $request, Trip $trip, ItineraryService $itinerary, GeocodingService $geo)
     {
         $this->authorize('update', $trip);
 
         $validated = $this->prepareData($request->validated());
 
+        if (!empty($validated['latitude']) && !empty($validated['longitude'])) {
+            $validated['country'] = $geo->getCountryCode(
+                (float) $validated['latitude'],
+                (float) $validated['longitude']
+            );
+        }
+
         $insertAfterId = $request->input('insert_after_id');
-        $atStart       = $request->boolean('at_start');
+        $atStart = $request->boolean('at_start');
 
         $step = null;
 
@@ -100,11 +108,18 @@ class StepController extends Controller
         ]);
     }
 
-    public function update(StepRequest $request, Step $step, ItineraryService $itinerary)
+    public function update(StepRequest $request, Step $step, ItineraryService $itinerary, GeocodingService $geo)
     {
         $this->authorize('update', $step->trip);
 
         $validated = $this->prepareData($request->validated());
+
+        if (!empty($validated['latitude']) && !empty($validated['longitude'])) {
+            $validated['country'] = $geo->getCountryCode(
+                (float) $validated['latitude'],
+                (float) $validated['longitude']
+            );
+        }
 
         $step->update($validated);
 
@@ -134,80 +149,6 @@ class StepController extends Controller
         $itinerary->recalcDistances($trip);
 
         return redirect()->route('trips.show', $trip)->with('success', __('step.deleted'));
-    }
-
-    public function duplicate(Step $step, ItineraryService $itinerary)
-    {
-        $this->authorize('update', $step->trip);
-
-        $trip = $step->trip;
-        $destinationStep = $trip->steps()->where('is_destination', true)->first();
-
-        $newOrder = $destinationStep ? $destinationStep->order : ($trip->steps()->max('order') + 1);
-
-        Step::where('trip_id', $trip->id)
-            ->where('order', '>=', $newOrder)
-            ->orderBy('order', 'desc')
-            ->get()
-            ->each(function ($s) {
-                $s->order++;
-                $s->save();
-            });
-
-        $newStep = $step->replicate([
-            'order', 'created_at', 'updated_at', 'id'
-        ]);
-
-        $newStep->order = $newOrder;
-        $newStep->trip_id = $trip->id;
-        $newStep->is_destination = false;
-        $newStep->save();
-
-        $itinerary->recalcDistances($trip);
-
-        return redirect()
-            ->route('trips.show', $trip)
-            ->with('success', __('step.duplicated'));
-    }
-
-    public function moveUp(Step $step, ItineraryService $itinerary)
-    {
-        $this->authorize('update', $step->trip);
-
-        $previous = Step::where('trip_id', $step->trip_id)
-            ->where('order', '<', $step->order)
-            ->orderBy('order', 'desc')
-            ->first();
-
-        if ($previous) {
-            [$step->order, $previous->order] = [$previous->order, $step->order];
-            $step->save();
-            $previous->save();
-
-            $itinerary->recalcDistances($step->trip);
-        }
-
-        return back()->with('success', __('step.moved_up'));
-    }
-
-    public function moveDown(Step $step, ItineraryService $itinerary)
-    {
-        $this->authorize('update', $step->trip);
-
-        $next = Step::where('trip_id', $step->trip_id)
-            ->where('order', '>', $step->order)
-            ->orderBy('order')
-            ->first();
-
-        if ($next) {
-            [$step->order, $next->order] = [$next->order, $step->order];
-            $step->save();
-            $next->save();
-
-            $itinerary->recalcDistances($step->trip);
-        }
-
-        return back()->with('success', __('step.moved_down'));
     }
 
     private function prepareData(array $validated): array

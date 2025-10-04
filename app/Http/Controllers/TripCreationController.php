@@ -6,19 +6,19 @@ use Illuminate\Http\Request;
 use App\Http\Requests\StoreTripRequest;
 use Illuminate\Http\RedirectResponse;
 use App\Models\Trip;
-use App\Models\Step;
 use Inertia\Inertia;
 use Inertia\Response;
 use App\Services\ItineraryService;
+use App\Services\GeocodingService;
 
 class TripCreationController extends Controller
 {
-    public function destination()
+    public function destination(): Response
     {
         return Inertia::render('Trips/Destination');
     }
 
-    public function storeDestination(Request $request)
+    public function storeDestination(Request $request): RedirectResponse
     {
         $validated = $request->validate([
             'destination' => 'required|string|max:100',
@@ -35,12 +35,12 @@ class TripCreationController extends Controller
         return redirect()->route('trips.start')->with('success', __('trip_creation.destination_saved'));
     }
 
-    public function start()
+    public function start(): Response
     {
         return Inertia::render('Trips/Start');
     }
 
-    public function store(Request $request)
+    public function store(Request $request): RedirectResponse
     {
         $validated = $request->validate([
             'departure' => 'required|string|max:100',
@@ -59,18 +59,18 @@ class TripCreationController extends Controller
 
     public function details(): Response
     {
-        if (
-            !session()->has('destination') ||
-            !session()->has('departure')
-        ) {
+        if (!session()->has('destination') || !session()->has('departure')) {
             return redirect()->route('trips.destination')->with('error', __('trip_creation.previous_steps_required'));
         }
 
         return Inertia::render('Trips/Details');
     }
 
-    public function finalize(StoreTripRequest $request, ItineraryService $itinerary): RedirectResponse
-    {
+    public function finalize(
+        StoreTripRequest $request,
+        ItineraryService $itinerary,
+        GeocodingService $geo
+    ): RedirectResponse {
         $destination = session('destination');
         $destinationLat = session('latitude');
         $destinationLng = session('longitude');
@@ -78,7 +78,7 @@ class TripCreationController extends Controller
         $departureLat = session('departure_latitude');
         $departureLng = session('departure_longitude');
 
-        if (!$destination || !$departure || $destinationLat === null || $destinationLng === null || $departureLat === null || $departureLng === null) {
+        if (!$destination || !$departure) {
             return redirect()->route('trips.destination')->with('error', __('trip_creation.incomplete_information'));
         }
 
@@ -97,35 +97,35 @@ class TripCreationController extends Controller
             $nights  = 0;
         }
 
-        $trip = Trip::create(array_merge(
-            $validated,
-            [
-                'user_id'   => auth()->id(),
-                'destination'=> $destination,
-                'currency'  => $validated['currency'] ?? 'EUR',
-                'is_public' => $request->boolean('is_public', false),
-            ]
-        ));
+        // Création du voyage
+        $trip = Trip::create([
+            ...$validated,
+            'user_id' => auth()->id(),
+            'destination' => $destination,
+            'currency' => $validated['currency'] ?? 'EUR',
+            'is_public' => $request->boolean('is_public', false),
+        ]);
 
+        // Étape 1 : départ
         $trip->steps()->create([
             'location'       => $departure,
             'latitude'       => $departureLat,
             'longitude'      => $departureLng,
+            'country'        => $geo->getCountryCode($departureLat, $departureLng),
             'order'          => 1,
             'is_departure'   => true,
-            'start_date'     => $request->start_date,
-            'end_date'       => $request->start_date,
+            'start_date'     => $startDate,
+            'end_date'       => $startDate,
             'nights'         => 0,
             'transport_mode' => $request->transport_mode ?? 'car',
         ]);
 
-        $startDate = $request->start_date;
-        $endDate   = $request->end_date;
-
+        // Étape 2 : destination
         $trip->steps()->create([
             'location'       => $destination,
             'latitude'       => $destinationLat,
             'longitude'      => $destinationLng,
+            'country'        => $geo->getCountryCode($destinationLat, $destinationLng),
             'order'          => 2,
             'is_destination' => true,
             'start_date'     => $startDate,
