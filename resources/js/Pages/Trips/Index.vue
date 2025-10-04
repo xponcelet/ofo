@@ -11,6 +11,7 @@ const props = defineProps({
 const items = computed(() => Array.isArray(props.trips?.data) ? props.trips.data : [])
 const canCreate = computed(() => !!props.can?.create_trip)
 
+/** Supprimer un voyage */
 function destroyTrip(id) {
     if (!confirm('Supprimer ce voyage ?')) return
 
@@ -22,16 +23,26 @@ function destroyTrip(id) {
     })
 }
 
-// Petite aide UX : statut calculé
+/**  Statut du voyage */
 function computeStatus(trip) {
     const start = trip.start_date ? new Date(trip.start_date) : null
     const end   = trip.end_date ? new Date(trip.end_date) : null
     const today = new Date()
 
-    if (!start || !end) return 'Planifié'
-    if (today < start) return 'Planifié'
+    if (!start || !end) return 'À venir'
+    if (today < start) return 'À venir'
     if (today >= start && today <= end) return 'En cours'
     return 'Terminé'
+}
+
+/** 🇫🇷 Convertit le code pays (FR, IT, ES...) en emoji drapeau */
+function getFlagEmoji(code) {
+    if (!code) return ''
+    return code
+        .toUpperCase()
+        .replace(/./g, char =>
+            String.fromCodePoint(127397 + char.charCodeAt())
+        )
 }
 </script>
 
@@ -62,30 +73,29 @@ function computeStatus(trip) {
             </button>
         </div>
 
-        <!-- Grille -->
+        <!-- Grille de voyages -->
         <div v-if="items.length" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
             <article
                 v-for="trip in items"
                 :key="trip.id"
                 class="relative rounded-2xl text-white overflow-hidden shadow-lg"
                 :class="[
-          'bg-gradient-to-br',
-          computeStatus(trip) === 'Terminé' ? 'from-indigo-700 to-blue-500' :
-          computeStatus(trip) === 'En cours' ? 'from-purple-700 to-pink-500' :
-          'from-slate-700 to-purple-500'
-        ]"
+                    'bg-gradient-to-br',
+                    computeStatus(trip) === 'Terminé' ? 'from-indigo-700 to-blue-500' :
+                    computeStatus(trip) === 'En cours' ? 'from-purple-700 to-pink-500' :
+                    'from-slate-700 to-purple-500'
+                ]"
             >
-                <!-- Overlay -->
+                <!-- Contenu -->
                 <Link :href="route('trips.show', trip.id)" class="block p-6 space-y-3">
                     <header class="flex justify-between items-start">
-                        <h2 class="text-xl font-semibold line-clamp-1">
-                            {{ trip.title || 'Sans titre' }}
+                        <h2 class="text-xl font-semibold line-clamp-1 flex items-center gap-2">
+                            <span v-if="trip.destination_country_code" class="mr-2">{{ getFlagEmoji(trip.destination_country_code) }}</span>
+                            <span>{{ trip.title || 'Sans titre' }}</span>
                         </h2>
-                        <span
-                            class="text-xs font-semibold px-2 py-1 rounded-full bg-white/20"
-                        >
-              {{ computeStatus(trip) }}
-            </span>
+                        <span class="text-xs font-semibold px-2 py-1 rounded-full bg-white/20">
+                            {{ computeStatus(trip) }}
+                        </span>
                     </header>
 
                     <!-- Dates + étapes -->
@@ -98,7 +108,7 @@ function computeStatus(trip) {
                         </p>
                     </div>
 
-                    <!-- Progress bar -->
+                    <!-- Barre de progression -->
                     <div class="w-full bg-white/20 h-1 rounded-full mt-3">
                         <div
                             class="h-1 rounded-full bg-white"

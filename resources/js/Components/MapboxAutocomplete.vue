@@ -7,7 +7,12 @@ const props = defineProps({
     modelValue: { type: String, default: '' },
 })
 
-const emit = defineEmits(['update:modelValue', 'update:coords', 'update:country'])
+const emit = defineEmits([
+    'update:modelValue',
+    'update:coords',
+    'update:country',
+    'update:countryCode',
+])
 
 const inputElement = ref(null)
 let geocoder = null
@@ -21,15 +26,31 @@ async function attachGeocoder() {
     if (inputElement.value && document.body.contains(inputElement.value)) {
         geocoder.addTo(inputElement.value)
         attached = true
-
         await nextTick()
-        if (props.modelValue) {
-            geocoder.setInput(props.modelValue)
-        }
-
+        if (props.modelValue) geocoder.setInput(props.modelValue)
         observer?.disconnect()
         observer = null
     }
+}
+
+function cleanLocationName(name, context = []) {
+    if (!name) return ''
+    // Supprime les parties après la première virgule
+    let short = name.split(',')[0].trim()
+
+    // Supprime les répétitions comme "Paris Paris"
+    short = short
+        .split(' ')
+        .filter((v, i, arr) => i === 0 || v.toLowerCase() !== arr[i - 1].toLowerCase())
+        .join(' ')
+
+    // Si le lieu correspond aussi à une région/pays du contexte, on garde seulement la 1re partie
+    const allContextTexts = context.map(c => c.text.toLowerCase())
+    if (allContextTexts.includes(short.toLowerCase())) {
+        short = context[0]?.text ?? short
+    }
+
+    return short
 }
 
 onMounted(async () => {
@@ -46,38 +67,50 @@ onMounted(async () => {
     geocoder.on('result', (e) => {
         const { place_name, center, context = [], place_type = [] } = e.result
 
-        // Nom affiché
-        emit('update:modelValue', place_name)
+        // 🔹 Nettoyage du nom
+        let cleanName = cleanLocationName(e.result.text, context)
 
-        // Coordonnées
+        // 🔹 Cas particulier : adresse → tenter de récupérer la localité
+        if (place_type.includes('address')) {
+            const locality = context.find(c =>
+                c.id.startsWith('place') || c.id.startsWith('locality')
+            )
+            if (locality) cleanName = cleanLocationName(locality.text)
+        }
+
+        emit('update:modelValue', cleanName)
+
+        // 🔹 Coordonnées
         emit('update:coords', {
             latitude: center?.[1] ?? null,
             longitude: center?.[0] ?? null,
         })
 
-        // Pays
+        // 🔹 Pays + code ISO
         let country = null
+        let countryCode = null
 
-        // Cherche dans context (ex: [ { id: 'country.123', text: 'France' } ])
-        if (context.length) {
-            const countryContext = context.find((c) => c.id.startsWith('country'))
-            if (countryContext) {
-                country = countryContext.text
-            }
+        const countryContext = context.find(c => c.id.startsWith('country'))
+        if (countryContext) {
+            country = countryContext.text
+            countryCode = countryContext.short_code?.toUpperCase() ?? null
         }
 
-        // Fallback : si l’objet lui-même est un pays
+        // Fallback si le lieu est lui-même un pays
         if (!country && place_type.includes('country')) {
             country = e.result.text
+            countryCode = e.result.properties?.short_code?.toUpperCase() ?? null
         }
 
         emit('update:country', country || '')
+        emit('update:countryCode', countryCode || '')
     })
 
     geocoder.on('clear', () => {
         emit('update:modelValue', '')
         emit('update:coords', { latitude: null, longitude: null })
         emit('update:country', '')
+        emit('update:countryCode', '')
     })
 
     await nextTick()
@@ -93,9 +126,7 @@ onBeforeUnmount(() => {
     observer?.disconnect()
     observer = null
     if (geocoder) {
-        try {
-            geocoder.onRemove()
-        } catch (_) {}
+        try { geocoder.onRemove() } catch (_) {}
         geocoder = null
     }
     attached = false
@@ -104,9 +135,7 @@ onBeforeUnmount(() => {
 watch(
     () => props.modelValue,
     (val) => {
-        if (geocoder) {
-            geocoder.setInput(val || '')
-        }
+        if (geocoder) geocoder.setInput(val || '')
     }
 )
 </script>

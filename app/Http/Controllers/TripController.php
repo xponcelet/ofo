@@ -23,23 +23,34 @@ class TripController extends Controller
 
         $trips = Trip::query()
             ->where('user_id', $user->id)
-            ->withCount(['steps','favoredBy as favs'])
-            ->with(['steps:id,trip_id,start_date,end_date,nights'])
+            ->withCount(['steps', 'favoredBy as favs'])
+            ->with([
+                'steps:id,trip_id,start_date,end_date,nights,is_destination,country,country_code'
+            ])
             ->latest()
             ->paginate($perPage)
-            ->through(fn ($trip) => [
-                'id'           => $trip->id,
-                'title'        => $trip->title,
-                'description'  => $trip->description,
-                'image'        => $trip->image,
-                'is_public'    => $trip->is_public,
-                'favs'         => $trip->favs,
-                'start_date'   => $trip->start_date,
-                'end_date'     => $trip->end_date,
-                'total_nights' => $trip->total_nights,
-                'days_count'   => $trip->days_count,
-                'steps_count'  => $trip->steps_count,
-            ]);
+            ->through(function ($trip) {
+                // Trouver l’étape marquée comme destination
+                $destinationStep = $trip->steps->firstWhere('is_destination', true);
+
+                return [
+                    'id'           => $trip->id,
+                    'title'        => $trip->title,
+                    'description'  => $trip->description,
+                    'image'        => $trip->image,
+                    'is_public'    => $trip->is_public,
+                    'favs'         => $trip->favs,
+                    'start_date'   => $trip->start_date,
+                    'end_date'     => $trip->end_date,
+                    'total_nights' => $trip->total_nights,
+                    'days_count'   => $trip->days_count,
+                    'steps_count'  => $trip->steps_count,
+
+                    // 🏳️ Ajout du pays de destination
+                    'destination_country'      => $destinationStep?->country,
+                    'destination_country_code' => $destinationStep?->country_code,
+                ];
+            });
 
         $count = Trip::where('user_id', $user->id)->count();
         $max   = $user->tripLimit();

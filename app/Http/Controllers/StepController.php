@@ -15,6 +15,7 @@ class StepController extends Controller
 {
     use AuthorizesRequests;
 
+    /** Formulaire de création d’une étape */
     public function create(\Illuminate\Http\Request $request, Trip $trip)
     {
         $this->authorize('update', $trip);
@@ -41,11 +42,17 @@ class StepController extends Controller
         ]);
     }
 
+    /** Création d’une étape */
     public function store(StepRequest $request, Trip $trip, ItineraryService $itinerary)
     {
         $this->authorize('update', $trip);
 
         $validated = $this->prepareData($request->validated());
+
+        // Nettoie les codes pays
+        if (!empty($validated['country_code'])) {
+            $validated['country_code'] = strtoupper($validated['country_code']);
+        }
 
         $insertAfterId = $request->input('insert_after_id');
         $atStart       = $request->boolean('at_start');
@@ -79,6 +86,7 @@ class StepController extends Controller
         return redirect()->route('trips.show', $trip)->with('success', __('step.created'));
     }
 
+    /** Édition d’une étape */
     public function edit(Step $step)
     {
         $this->authorize('update', $step->trip);
@@ -100,11 +108,16 @@ class StepController extends Controller
         ]);
     }
 
+    /** Mise à jour d’une étape */
     public function update(StepRequest $request, Step $step, ItineraryService $itinerary)
     {
         $this->authorize('update', $step->trip);
 
         $validated = $this->prepareData($request->validated());
+
+        if (!empty($validated['country_code'])) {
+            $validated['country_code'] = strtoupper($validated['country_code']);
+        }
 
         $step->update($validated);
 
@@ -113,6 +126,7 @@ class StepController extends Controller
         return redirect()->route('trips.show', $step->trip)->with('success', __('step.updated'));
     }
 
+    /** Suppression */
     public function destroy(Step $step, ItineraryService $itinerary)
     {
         $this->authorize('update', $step->trip);
@@ -136,6 +150,7 @@ class StepController extends Controller
         return redirect()->route('trips.show', $trip)->with('success', __('step.deleted'));
     }
 
+    /** Duplication d’une étape */
     public function duplicate(Step $step, ItineraryService $itinerary)
     {
         $this->authorize('update', $step->trip);
@@ -154,10 +169,7 @@ class StepController extends Controller
                 $s->save();
             });
 
-        $newStep = $step->replicate([
-            'order', 'created_at', 'updated_at', 'id'
-        ]);
-
+        $newStep = $step->replicate(['order', 'created_at', 'updated_at', 'id']);
         $newStep->order = $newOrder;
         $newStep->trip_id = $trip->id;
         $newStep->is_destination = false;
@@ -170,6 +182,7 @@ class StepController extends Controller
             ->with('success', __('step.duplicated'));
     }
 
+    /** Déplacement vers le haut */
     public function moveUp(Step $step, ItineraryService $itinerary)
     {
         $this->authorize('update', $step->trip);
@@ -183,13 +196,13 @@ class StepController extends Controller
             [$step->order, $previous->order] = [$previous->order, $step->order];
             $step->save();
             $previous->save();
-
             $itinerary->recalcDistances($step->trip);
         }
 
         return back()->with('success', __('step.moved_up'));
     }
 
+    /** Déplacement vers le bas */
     public function moveDown(Step $step, ItineraryService $itinerary)
     {
         $this->authorize('update', $step->trip);
@@ -203,13 +216,13 @@ class StepController extends Controller
             [$step->order, $next->order] = [$next->order, $step->order];
             $step->save();
             $next->save();
-
             $itinerary->recalcDistances($step->trip);
         }
 
         return back()->with('success', __('step.moved_down'));
     }
 
+    /** Ajout automatique de la date de fin si “nights” présent */
     private function prepareData(array $validated): array
     {
         if (!empty($validated['start_date']) && isset($validated['nights'])) {

@@ -1,3 +1,62 @@
+<script setup>
+import { computed, onMounted } from 'vue'
+import { usePage } from '@inertiajs/vue3'
+import InputError from '@/Components/InputError.vue'
+import MapboxAutocomplete from '@/Components/MapboxAutocomplete.vue'
+import StepMapPreview from '@/Components/StepMapPreview.vue'
+
+const props = defineProps({
+    form: { type: Object, required: true },
+    onSubmit: { type: Function, required: true },
+    submitLabel: { type: String, default: 'Valider' },
+})
+
+const page = usePage()
+const routeStepId =
+    page?.props?.ziggy?.routeParameters?.id ??
+    page?.props?.routeParams?.id ??
+    null
+
+const mapboxInstanceKey = computed(() => {
+    return `step-${props.form?.id ?? routeStepId ?? 'new'}`
+})
+
+// Date de fin = start_date + nights
+const computedEndDate = computed(() => {
+    if (!props.form.start_date || !props.form.nights) return ''
+    const start = new Date(props.form.start_date)
+    const end = new Date(start)
+    end.setDate(start.getDate() + props.form.nights)
+    return end.toISOString().split('T')[0]
+})
+
+onMounted(() => {
+    Object.assign(props.form, {
+        location: props.form.location ?? '',
+        latitude: props.form.latitude ?? null,
+        longitude: props.form.longitude ?? null,
+        country: props.form.country ?? '',
+        country_code: props.form.country_code ?? '',
+        transport_mode: props.form.transport_mode ?? 'car',
+        nights: props.form.nights ?? 0,
+    })
+})
+
+// --- Mapbox callbacks ---
+function updateCoords({ latitude, longitude }) {
+    props.form.latitude = latitude
+    props.form.longitude = longitude
+}
+
+function updateCountry(country) {
+    props.form.country = country
+}
+
+function updateCountryCode(code) {
+    props.form.country_code = code
+}
+</script>
+
 <template>
     <form @submit.prevent="props.onSubmit" class="space-y-8">
         <!-- Section infos générales -->
@@ -24,6 +83,7 @@
                     v-model="props.form.location"
                     @update:coords="updateCoords"
                     @update:country="updateCountry"
+                    @update:countryCode="updateCountryCode"
                 />
                 <InputError :message="props.form.errors?.location" />
             </div>
@@ -64,7 +124,7 @@
                     <InputError :message="props.form.errors?.nights" />
                 </div>
 
-                <!-- Date fin (calculée) -->
+                <!-- Date fin -->
                 <div>
                     <label class="block text-sm font-medium text-gray-700">Date de fin</label>
                     <input
@@ -95,7 +155,7 @@
             </div>
         </div>
 
-        <!-- Section description -->
+        <!-- Description -->
         <div class="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
             <h3 class="text-lg font-semibold text-gray-800 mb-4">Description</h3>
             <textarea
@@ -119,56 +179,3 @@
         </div>
     </form>
 </template>
-
-<script setup>
-import { computed, onMounted } from 'vue'
-import { usePage } from '@inertiajs/vue3'
-import InputError from '@/Components/InputError.vue'
-import MapboxAutocomplete from '@/Components/MapboxAutocomplete.vue'
-import StepMapPreview from '@/Components/StepMapPreview.vue'
-
-const props = defineProps({
-    form: { type: Object, required: true },
-    onSubmit: { type: Function, required: true },
-    submitLabel: { type: String, default: 'Valider' },
-})
-
-const page = usePage()
-const routeStepId =
-    page?.props?.ziggy?.routeParameters?.id ??
-    page?.props?.routeParams?.id ??
-    null
-
-const mapboxInstanceKey = computed(() => {
-    return `step-${props.form?.id ?? routeStepId ?? 'new'}`
-})
-
-// Date de fin = start_date + nights
-const computedEndDate = computed(() => {
-    if (!props.form.start_date || !props.form.nights) return ''
-    const start = new Date(props.form.start_date)
-    const end = new Date(start)
-    end.setDate(start.getDate() + props.form.nights)
-    return end.toISOString().split('T')[0] // format YYYY-MM-DD
-})
-
-onMounted(() => {
-    if (props.form.location === undefined) props.form.location = ''
-    if (props.form.latitude === undefined) props.form.latitude = null
-    if (props.form.longitude === undefined) props.form.longitude = null
-    if (props.form.country === undefined) props.form.country = ''
-    if (props.form.transport_mode === undefined) props.form.transport_mode = 'car'
-    if (props.form.nights === undefined) props.form.nights = 0
-})
-
-// Maj coordonnées
-function updateCoords({ latitude, longitude }) {
-    props.form.latitude = latitude
-    props.form.longitude = longitude
-}
-
-// Maj pays depuis MapboxAutocomplete
-function updateCountry(country) {
-    props.form.country = country
-}
-</script>

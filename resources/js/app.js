@@ -13,16 +13,16 @@ import { resolvePageComponent } from 'laravel-vite-plugin/inertia-helpers';
 import { ZiggyVue } from '../../vendor/tightenco/ziggy';
 import RootLayout from '@/Layouts/RootLayout.vue';
 
-import axios from 'axios'; // ✅ on ajoute axios
+import axios from 'axios'; // ✅ pour gérer les requêtes et CSRF
 
-// 🔑 Configuration Axios pour CSRF
+// 🔑 Configuration CSRF pour Axios
 axios.defaults.headers.common['X-Requested-With'] = 'XMLHttpRequest';
 
-let token = document.head.querySelector('meta[name="csrf-token"]');
+const token = document.head.querySelector('meta[name="csrf-token"]');
 if (token) {
     axios.defaults.headers.common['X-CSRF-TOKEN'] = token.content;
 } else {
-    console.error('CSRF token not found: check <meta name="csrf-token"> in your app.blade.php');
+    console.error('❌ CSRF token not found in app.blade.php');
 }
 
 const appName = import.meta.env.VITE_APP_NAME || 'OFO';
@@ -35,7 +35,7 @@ createInertiaApp({
             return page;
         }),
     setup({ el, App, props, plugin }) {
-        return createApp({ render: () => h(App, props) })
+        createApp({ render: () => h(App, props) })
             .use(plugin)
             .use(ZiggyVue)
             .mount(el);
@@ -44,6 +44,6 @@ createInertiaApp({
         color: '#4B5563',
         showSpinner: false,
         includeCSS: true,
-        delay: 200, // pour ne pas lancer la barre de chargement directement
+        delay: 200,
     },
 });
