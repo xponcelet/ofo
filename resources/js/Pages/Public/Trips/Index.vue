@@ -1,103 +1,111 @@
 <script setup>
-import { Head, Link, router } from '@inertiajs/vue3'
-import { ref, watch } from 'vue'
-import TripForm from "@/Components/TripForm.vue";
-import RootLayout from "@/Layouts/RootLayout.vue";
+import { Head, Link } from '@inertiajs/vue3'
+import { computed } from 'vue'
 
 const props = defineProps({
-    trips: Object,    // pagination payload Laravel
-    filters: Object,  // { q, sort }
+    trips: { type: Object, required: true },
 })
 
-const q = ref(props.filters.q ?? '')
-const sort = ref(props.filters.sort ?? 'latest')
+const items = computed(() =>
+    Array.isArray(props.trips?.data) ? props.trips.data : []
+)
 
-// Déclenche une navigation propre (querystring conservé)
-function applyFilters() {
-    router.get(route('public.trips.index'), { q: q.value, sort: sort.value }, {
-        preserveState: true,
-        preserveScroll: true,
-        replace: true,
-    })
+/** 🇫🇷 Convertit un code pays (FR, ES...) en emoji drapeau */
+function getFlagEmoji(code) {
+    if (!code) return ''
+    return code
+        .toUpperCase()
+        .replace(/./g, char =>
+            String.fromCodePoint(127397 + char.charCodeAt())
+        )
 }
-
-// UX: recherche après 300ms
-let t
-watch([q, sort], () => {
-    clearTimeout(t)
-    t = setTimeout(applyFilters, 300)
-})
 </script>
 
 <template>
     <Head title="Voyages publics" />
-    <div class="max-w-6xl mx-auto px-4 py-8">
-        <h1 class="text-2xl font-semibold mb-4">Voyages publics</h1>
 
-        <div class="flex flex-col sm:flex-row gap-3 mb-6">
-            <input
-                v-model="q"
-                type="search"
-                placeholder="Rechercher un voyage…"
-                class="w-full sm:flex-1 rounded-lg border px-3 py-2"
-            />
-            <select v-model="sort" class="rounded-lg border px-3 py-2">
-                <option value="latest">Plus récents</option>
-                <option value="oldest">Plus anciens</option>
-                <option value="title">Titre (A→Z)</option>
-            </select>
+    <div class="max-w-7xl mx-auto px-6 py-10">
+        <!-- =======================
+             Header
+        ======================= -->
+        <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-6 gap-3">
+            <h1 class="text-3xl font-bold text-gray-800">Voyages publics</h1>
+
+            <Link
+                :href="route('public.trips.random')"
+                class="inline-flex items-center gap-2 bg-pink-600 text-white px-4 py-2 rounded-xl shadow hover:bg-pink-700 transition"
+            >
+                🎲 Voyage aléatoire
+            </Link>
         </div>
 
-        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-            <article v-for="trip in trips.data" :key="trip.id" class="rounded-2xl border shadow-sm overflow-hidden">
-                <Link :href="route('public.trips.show', trip.id)">
-                    <img v-if="trip.image" :src="trip.image" alt="" class="w-full h-40 object-cover" />
-                    <div class="p-4">
-                        <h2 class="text-lg font-medium line-clamp-1">{{ trip.title || 'Sans titre' }}</h2>
-                        <p class="text-sm text-gray-600 line-clamp-2 mt-1">{{ trip.description }}</p>
+        <!-- =======================
+             Grille de voyages
+        ======================= -->
+        <div
+            v-if="items.length"
+            class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6"
+        >
+            <article
+                v-for="trip in items"
+                :key="trip.id"
+                class="relative rounded-2xl text-white overflow-hidden shadow-lg
+                       bg-gradient-to-br from-purple-700 to-pink-500"
+            >
+                <Link
+                    :href="route('public.trips.show', trip.id)"
+                    class="block p-6 space-y-3"
+                >
+                    <!-- Titre -->
+                    <header class="flex items-start gap-2">
+                        <h2 class="text-xl font-semibold line-clamp-1 flex items-center gap-2">
+                            <span v-if="trip.destination_country_code" class="mr-1">
+                                {{ getFlagEmoji(trip.destination_country_code) }}
+                            </span>
+                            <span>{{ trip.title || 'Sans titre' }}</span>
+                        </h2>
+                    </header>
 
-                        <div class="mt-2 flex items-center justify-between text-xs text-gray-500">
-                            <span>{{ trip.start_date ?? '—' }} → {{ trip.end_date ?? '—' }}</span>
-                            <span class="inline-flex items-center gap-1" :title="`${trip.favs ?? trip.favorites_count ?? 0} favoris`">
-                            <!-- coeur -->
-                            <svg viewBox="0 0 24 24" class="w-4 h-4 fill-red-500">
-                              <path d="M12 21s-7.5-4.6-9.4-8.5A5.6 5.6 0 0 1 12 5.7a5.6 5.6 0 0 1 9.4 6.8C19.5 16.4 12 21 12 21Z"/>
-                            </svg>
-                            <span>{{ trip.favs ?? 0 }}</span>
-                          </span>
-                        </div>
-                    </div>
+                    <!-- Description uniquement si existante -->
+                    <p
+                        v-if="trip.description"
+                        class="text-sm opacity-90 line-clamp-2"
+                    >
+                        {{ trip.description }}
+                    </p>
+
+                    <!-- Nombre d’étapes et jours -->
+                    <p class="text-xs opacity-80">
+                        {{ trip.steps_count ?? 0 }} étapes
+                        <span v-if="trip.days_count">• {{ trip.days_count }} jours</span>
+                    </p>
                 </Link>
-
             </article>
         </div>
 
-        <!-- Pagination simple -->
-        <div class="flex items-center justify-center gap-2 mt-8">
-            <Link
-                v-if="trips.prev_page_url"
-                :href="trips.prev_page_url"
-                preserve-scroll
-                class="px-3 py-2 rounded border"
-            >Précédent</Link>
-
-            <span class="text-sm">Page {{ trips.current_page }} / {{ trips.last_page }}</span>
-
-            <Link
-                v-if="trips.next_page_url"
-                :href="trips.next_page_url"
-                preserve-scroll
-                class="px-3 py-2 rounded border"
-            >Suivant</Link>
+        <!-- =======================
+             Vide
+        ======================= -->
+        <div
+            v-else
+            class="text-gray-500 border rounded-xl p-6 mt-6 text-center"
+        >
+            🌍 Aucun voyage public pour le moment.
         </div>
     </div>
 </template>
 
 <style scoped>
 .line-clamp-1 {
-    display: -webkit-box; -webkit-line-clamp: 1; -webkit-box-orient: vertical; overflow: hidden;
+    display: -webkit-box;
+    -webkit-line-clamp: 1;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
 }
 .line-clamp-2 {
-    display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
 }
 </style>

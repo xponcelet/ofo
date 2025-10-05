@@ -28,10 +28,11 @@ Route::get('/', function () {
 // Routes publiques
 
 Route::prefix('voyages')->name('public.trips.')->group(function () {
+
+    Route::get('/', [PublicTripController::class, 'index'])->name('index');
     // voyage aléatoire
     Route::get('/aleatoire', [PublicTripController::class, 'random'])->name('random');
     // Détail d'un voyage
-    Route::get('/', [PublicTripController::class, 'index'])->name('index');
     Route::get('/{trip}', [PublicTripController::class, 'show'])->name('show');
 
 });

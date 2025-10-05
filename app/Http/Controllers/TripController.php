@@ -11,7 +11,11 @@ use App\Http\Requests\UpdateTripRequest;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Auth\Access\AuthorizationException;
-
+use Illuminate\Support\Collection;
+use Carbon\Carbon;
+use DatePeriod;
+use DateInterval;
+use DateTime;
 class TripController extends Controller
 {
     use \Illuminate\Foundation\Auth\Access\AuthorizesRequests;
@@ -168,7 +172,7 @@ class TripController extends Controller
         $likers = null;
         if (auth()->check() && auth()->user()->can('viewLikers', $trip)) {
             $likers = $trip->favoredBy()
-                ->select('users.id','users.name','users.email')
+                ->select('users.id', 'users.name', 'users.email')
                 ->withPivot('created_at')
                 ->orderByDesc('favorites.created_at')
                 ->paginate(12)
@@ -177,25 +181,41 @@ class TripController extends Controller
 
         $trip->load([
             'steps' => function ($q) {
-                $q->orderBy('order')
-                    ->select(
-                        'id','trip_id','order','title','location',
-                        'start_date','end_date','latitude','longitude','nights'
-                    );
+                $q->orderBy('order')->select(
+                    'id',
+                    'trip_id',
+                    'order',
+                    'title',
+                    'location',
+                    'start_date',
+                    'end_date',
+                    'latitude',
+                    'longitude',
+                    'nights'
+                );
             },
             'steps.activities' => function ($q) {
-                $q->orderBy('start_at')
-                    ->select(
-                        'id','step_id','title','description','location',
-                        'start_at','end_at','external_link','cost','currency','category'
-                    );
+                $q->orderBy('start_at')->select(
+                    'id',
+                    'step_id',
+                    'title',
+                    'description',
+                    'location',
+                    'start_at',
+                    'end_at',
+                    'external_link',
+                    'cost',
+                    'currency',
+                    'category'
+                );
             },
             'steps.accommodations' => function ($q) {
-                $q->select('id','step_id','title','location','start_date','end_date');
+                $q->select('id', 'step_id', 'title', 'location', 'start_date', 'end_date');
             },
             'checklistItems' => fn($q) => $q->orderBy('order')->orderBy('id'),
         ]);
 
+        // 🧭 Rassemble toutes les activités
         $activities = $trip->steps->flatMap(function ($step) {
             return $step->activities->map(function ($a) use ($step) {
                 return [
@@ -217,20 +237,46 @@ class TripController extends Controller
             });
         })->values();
 
+        // 🗓️ Génère la liste complète des jours
+        $days = [];
+        if ($trip->start_date && $trip->end_date) {
+            $period = new DatePeriod(
+                new DateTime($trip->start_date),
+                new DateInterval('P1D'),
+                (new DateTime($trip->end_date))->modify('+1 day')
+            );
+
+            foreach ($period as $date) {
+                $dayStep = $trip->steps->first(function ($step) use ($date) {
+                    return $date >= new DateTime($step->start_date)
+                        && $date <= new DateTime($step->end_date);
+                });
+
+                $days[] = [
+                    'date'      => $date->format('Y-m-d'),
+                    'location'  => $dayStep->location ?? null,
+                    'step_id'   => $dayStep->id ?? null,
+                    'step'      => $dayStep ?? null,
+                ];
+            }
+        }
+
+        // 🎒 Données du voyage
         $tripData = [
-            'id'           => $trip->id,
-            'title'        => $trip->title,
-            'description'  => $trip->description,
-            'image'        => $trip->image,
-            'is_public'    => $trip->is_public,
-            'favs'         => $trip->favs,
-            'start_date'   => $trip->start_date,
-            'end_date'     => $trip->end_date,
-            'total_nights' => $trip->total_nights,
-            'days_count'   => $trip->days_count,
-            'steps_count'  => $trip->steps_count,
-            'steps'            => $trip->steps,
-            'checklist_items'  => $trip->checklistItems,
+            'id'             => $trip->id,
+            'title'          => $trip->title,
+            'description'    => $trip->description,
+            'image'          => $trip->image,
+            'is_public'      => $trip->is_public,
+            'favs'           => $trip->favs,
+            'start_date'     => $trip->start_date,
+            'end_date'       => $trip->end_date,
+            'total_nights'   => $trip->total_nights,
+            'days_count'     => $trip->days_count,
+            'steps_count'    => $trip->steps_count,
+            'steps'          => $trip->steps,
+            'checklist_items'=> $trip->checklistItems,
+            'days'           => $days, // ✅ ajout ici
         ];
 
         return Inertia::render('Trips/Show', [
