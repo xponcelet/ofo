@@ -1,6 +1,7 @@
 <script setup>
 import { ref } from 'vue'
 import { Link } from '@inertiajs/vue3'
+import { useForm } from '@inertiajs/vue3'
 import TripShowView from "@/Components/Trip/TripShowView.vue"
 import TripChecklist from '@/Components/Trip/TripChecklist.vue'
 import TripActivities from "@/Components/Trip/TripActivities.vue"
@@ -15,6 +16,7 @@ const props = defineProps({
 
 const currentTab = ref('itineraire')
 const menuOpen = ref(false)
+const showEditModal = ref(false)
 
 function toggleMenu() {
     menuOpen.value = !menuOpen.value
@@ -26,12 +28,28 @@ function tabClass(tab) {
         : 'text-gray-500 hover:text-gray-700 border-b-2 border-transparent'
 }
 
-/** 🇫🇷 Convertit un code pays (FR, ES...) en emoji drapeau */
 function getFlagEmoji(code) {
     if (!code) return ''
     return code
         .toUpperCase()
         .replace(/./g, c => String.fromCodePoint(127397 + c.charCodeAt()))
+}
+
+/** --- Formulaire édition voyage --- **/
+const form = useForm({
+    title: props.trip.title || '',
+    description: props.trip.description || '',
+    budget: props.trip.budget || '',
+    image: props.trip.image || '',
+    is_public: props.trip.is_public ?? true,
+})
+
+function submit() {
+    form.put(route('trips.update', props.trip.id), {
+        onSuccess: () => {
+            showEditModal.value = false
+        }
+    })
 }
 </script>
 
@@ -43,10 +61,9 @@ function getFlagEmoji(code) {
         <section
             class="relative left-1/2 right-1/2 -mx-[50vw] w-screen
                    bg-gradient-to-r from-pink-600 via-red-500 to-orange-400 text-white
-                   shadow-md overflow-hidden"
+                   shadow-md overflow-visible"
         >
             <div class="max-w-screen-2xl mx-auto px-6 md:px-10 py-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-6">
-                <!-- Bloc gauche -->
                 <div class="flex-1">
                     <h1 class="text-3xl sm:text-4xl font-extrabold tracking-tight mb-1 flex items-center gap-2">
                         <span>{{ trip.title }}</span>
@@ -105,14 +122,14 @@ function getFlagEmoji(code) {
 
                         <div
                             v-if="menuOpen"
-                            class="absolute right-0 mt-2 w-40 bg-white text-gray-700 rounded-lg shadow-lg overflow-hidden z-50"
+                            class="absolute right-0 mt-2 w-44 bg-white text-gray-700 rounded-lg shadow-lg overflow-hidden z-50"
                         >
-                            <Link
-                                :href="route('trips.edit', trip.id)"
-                                class="block px-4 py-2 hover:bg-gray-100"
+                            <button
+                                @click="showEditModal = true; menuOpen = false"
+                                class="block w-full text-left px-4 py-2 hover:bg-gray-100"
                             >
-                                ✏️ Éditer
-                            </Link>
+                                ✏️ Modifier le voyage
+                            </button>
                             <Link
                                 :href="route('trips.destroy', trip.id)"
                                 method="delete"
@@ -148,6 +165,7 @@ function getFlagEmoji(code) {
                 >
                     ℹ️ Infos
                 </button>
+
                 <button
                     @click="currentTab = 'activities'"
                     class="py-3 text-sm transition-colors flex items-center"
@@ -202,15 +220,85 @@ function getFlagEmoji(code) {
                 />
             </div>
         </section>
+
+        <!-- =======================
+             MODAL ÉDITION
+        ======================= -->
+        <transition name="fade">
+            <div
+                v-if="showEditModal"
+                class="fixed inset-0 flex items-center justify-center bg-black/40 z-50"
+            >
+                <div class="bg-white rounded-2xl shadow-lg w-full max-w-lg p-6 relative">
+                    <h2 class="text-xl font-semibold mb-4">Modifier le voyage</h2>
+
+                    <form @submit.prevent="submit" class="space-y-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700">Titre</label>
+                            <input v-model="form.title" type="text" class="input w-full" />
+                            <div v-if="form.errors.title" class="text-sm text-red-500">{{ form.errors.title }}</div>
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700">Description</label>
+                            <textarea v-model="form.description" rows="3" class="input w-full"></textarea>
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700">Budget</label>
+                            <input v-model="form.budget" type="number" class="input w-full" />
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700">Image (URL)</label>
+                            <input v-model="form.image" type="text" class="input w-full" />
+                        </div>
+
+                        <div class="flex items-center gap-2">
+                            <input type="checkbox" v-model="form.is_public" id="is_public" />
+                            <label for="is_public">Voyage public</label>
+                        </div>
+
+                        <div class="flex justify-between items-center mt-6">
+                            <Link
+                                :href="route('steps.edit', { trip: trip.id })"
+                                class="text-sm font-medium text-pink-600 hover:underline"
+                            >
+                                ⚙️ Gérer les étapes
+                            </Link>
+
+                            <div class="flex gap-3">
+                                <button type="button" @click="showEditModal = false" class="btn-secondary">
+                                    Annuler
+                                </button>
+                                <button type="submit" class="btn-primary" :disabled="form.processing">
+                                    Enregistrer
+                                </button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </transition>
     </div>
 </template>
 
 <style scoped>
-.scrollbar-hide::-webkit-scrollbar {
-    display: none;
+.input {
+    @apply rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:ring-2 focus:ring-pink-500 focus:outline-none;
 }
-.scrollbar-hide {
-    -ms-overflow-style: none;
-    scrollbar-width: none;
+.btn-primary {
+    @apply px-4 py-2 bg-pink-600 text-white rounded-lg hover:bg-pink-700 transition;
+}
+.btn-secondary {
+    @apply px-4 py-2 bg-gray-200 rounded-lg hover:bg-gray-300 transition;
+}
+.fade-enter-active,
+.fade-leave-active {
+    transition: opacity 0.25s;
+}
+.fade-enter-from,
+.fade-leave-to {
+    opacity: 0;
 }
 </style>

@@ -17,7 +17,7 @@ use App\Http\Controllers\LanguageController;
 use App\Http\Controllers\TranslationController;
 
 Route::get('/', function () {
-    return Inertia::render('Welcome', [
+    return Inertia::render('public.dashboard', [
         'canLogin' => Route::has('login'),
         'canRegister' => Route::has('register'),
         'laravelVersion' => Application::VERSION,
