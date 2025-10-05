@@ -1,135 +1,159 @@
 <script setup>
-import { ref, computed } from 'vue'
-import { Head, Link } from '@inertiajs/vue3'
-import AppLayout from '@/Layouts/AppLayout.vue'
+import { ref } from 'vue'
 import TripShowView from '@/Components/Trip/TripShowView.vue'
-import StepsMap from '@/Components/StepsMap.vue'
-import GoogleMapsFullTripLink from '@/Components/GoogleMapsFullTripLink.vue'
+import TripChecklist from '@/Components/Trip/TripChecklist.vue'
+import TripActivities from '@/Components/Trip/TripActivities.vue'
 
 const props = defineProps({
-    trip: { type: Object, required: true },   // contient steps
-    isFavorite: { type: Boolean, default: false },
+    trip: Object,
+    activities: { type: Array, default: () => [] },
+    totalActivitiesCount: Number,
 })
 
-const currentTab = ref('resume')
+const currentTab = ref('itineraire')
 
-// Normalisation pour l’onglet Résumé (3 colonnes)
-const stepsSummary = computed(() => {
-    const raw = Array.isArray(props.trip?.steps) ? props.trip.steps : []
-    return [...raw]
-        .sort((a,b) => (a.order ?? 0) - (b.order ?? 0))
-        .map((s, idx) => {
-            const day = s.order ?? (idx + 1)
-            return {
-                id: s.id,
-                day,
-                short_title: `Jour ${day}`,
-                title: s.title || s.location || `Étape ${day}`,
-                photo_url: s.photo_url ?? null,
-                description: s.description ?? null,
-                coords: { lat: Number(s.latitude), lng: Number(s.longitude) },
-            }
-        })
-})
+function tabClass(tab) {
+    return currentTab.value === tab
+        ? 'text-pink-600 border-b-2 border-pink-600 font-semibold'
+        : 'text-gray-500 hover:text-gray-700 border-b-2 border-transparent'
+}
 
-const tripMeta = computed(() => ({
-    title: props.trip.title,
-    country: props.trip.location || props.trip.destination,
-    start_date: props.trip.start_date,
-    end_date: props.trip.end_date,
-    visibility: 'public',
-}))
-
-function tabClass(val) {
-    return currentTab.value === val
-        ? 'bg-white shadow ring-1 ring-gray-200 text-gray-900'
-        : 'text-gray-600 hover:text-gray-900'
+/** 🇫🇷 Convertit un code pays en emoji drapeau */
+function getFlagEmoji(code) {
+    if (!code) return ''
+    return code
+        .toUpperCase()
+        .replace(/./g, c => String.fromCodePoint(127397 + c.charCodeAt()))
 }
 </script>
 
 <template>
-    <Head :title="trip.title" />
+    <div class="min-h-screen bg-gray-50">
+        <!-- =======================
+             HERO public
+        ======================= -->
+        <section
+            class="relative left-1/2 right-1/2 -mx-[50vw] w-screen
+                   bg-gradient-to-r from-pink-600 via-red-500 to-orange-400 text-white
+                   shadow-md overflow-hidden"
+        >
+            <div
+                class="max-w-screen-2xl mx-auto px-6 md:px-10 py-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-6"
+            >
+                <div class="flex-1">
+                    <h1
+                        class="text-3xl sm:text-4xl font-extrabold tracking-tight mb-1 flex items-center gap-2"
+                    >
+                        <span>{{ trip.title }}</span>
+                        <span
+                            v-if="trip.destination_country_code"
+                            class="text-2xl leading-none"
+                        >
+                            {{ getFlagEmoji(trip.destination_country_code) }}
+                        </span>
+                    </h1>
+                    <p class="text-sm sm:text-base opacity-90">
+                        {{ trip.steps.length }} étapes
+                    </p>
+                </div>
 
-    <div class="max-w-5xl mx-auto py-10 px-4 space-y-6">
-        <!-- Header -->
-        <div class="flex items-start justify-between">
-            <div>
-                <h1 class="text-2xl font-bold tracking-tight">{{ trip.title }}</h1>
-                <p class="text-sm text-gray-500 mt-1">Aperçu, infos et carte du voyage public.</p>
+                <!-- Statistiques -->
+                <div class="grid grid-cols-3 gap-4 text-center">
+                    <div class="bg-white/10 backdrop-blur rounded-lg px-3 py-2">
+                        <p class="text-xl font-bold">{{ trip.days_count || 0 }}</p>
+                        <p class="text-xs opacity-80">Jours</p>
+                    </div>
+                    <div class="bg-white/10 backdrop-blur rounded-lg px-3 py-2">
+                        <p class="text-xl font-bold">{{ trip.steps.length }}</p>
+                        <p class="text-xs opacity-80">Étapes</p>
+                    </div>
+                    <div class="bg-white/10 backdrop-blur rounded-lg px-3 py-2">
+                        <p class="text-xl font-bold">🌍</p>
+                        <p class="text-xs opacity-80">Public</p>
+                    </div>
+                </div>
             </div>
-            <span class="inline-flex items-center rounded-full px-3 py-1 text-xs font-medium bg-emerald-50 text-emerald-700">
-      Public
-    </span>
-        </div>
+        </section>
 
-        <!-- Tabs -->
-        <div class="mb-2">
-            <nav class="bg-gray-50 rounded-xl p-1 flex flex-wrap gap-1">
-                <button @click="currentTab = 'resume'" class="px-3 py-2 rounded-lg text-sm font-medium" :class="tabClass('resume')">🧾 Résumé</button>
-                <button @click="currentTab = 'infos'" class="px-3 py-2 rounded-lg text-sm font-medium" :class="tabClass('infos')">ℹ️ Infos</button>
-                <button @click="currentTab = 'map'" class="px-3 py-2 rounded-lg text-sm font-medium" :class="tabClass('map')">🗺️ Carte</button>
+        <!-- =======================
+             Onglets
+        ======================= -->
+        <section class="bg-white border-b border-gray-200">
+            <nav class="max-w-screen-2xl mx-auto px-6 flex gap-6 overflow-x-auto scrollbar-hide">
+                <button
+                    @click="currentTab = 'itineraire'"
+                    class="py-3 text-sm transition-colors"
+                    :class="tabClass('itineraire')"
+                >
+                    🗺️ Itinéraire
+                </button>
+
+                <button
+                    @click="currentTab = 'infos'"
+                    class="py-3 text-sm transition-colors"
+                    :class="tabClass('infos')"
+                >
+                    ℹ️ Infos
+                </button>
+
+                <button
+                    @click="currentTab = 'activities'"
+                    class="py-3 text-sm transition-colors flex items-center"
+                    :class="tabClass('activities')"
+                >
+                    🧭 Activités
+                    <span
+                        v-if="totalActivitiesCount"
+                        class="ml-1 text-xs text-gray-400"
+                    >({{ totalActivitiesCount }})</span>
+                </button>
+
             </nav>
-        </div>
+        </section>
 
-        <!-- Onglet: Résumé (3 colonnes) -->
-        <div v-if="currentTab === 'resume'">
-            <div class="mb-6 flex items-center justify-between gap-4">
-                <p class="text-sm text-gray-500">
-                    {{ tripMeta.country }}
-                    <span v-if="tripMeta.start_date && tripMeta.end_date"> · {{ tripMeta.start_date }} → {{ tripMeta.end_date }}</span>
-                </p>
+        <!-- =======================
+             Contenu des onglets
+        ======================= -->
+        <section class="max-w-screen-2xl mx-auto px-6 py-8">
+            <div v-if="currentTab === 'itineraire'">
+                <TripShowView :steps="trip.steps" />
             </div>
-            <TripShowView
-                :trip-meta="tripMeta"
-                :steps="stepsSummary"
-                center-mode="description"
-                :trip-description="trip.description"
-                :trip-description-is-html="false"
-            />
 
-        </div>
+            <div v-else-if="currentTab === 'infos'">
+                <div class="max-w-3xl mx-auto bg-white rounded-xl shadow p-6 space-y-4">
+                    <h2 class="text-2xl font-semibold text-gray-800 mb-3">Informations générales</h2>
 
-        <!-- Onglet: Infos -->
-        <div v-else-if="currentTab === 'infos'" class="space-y-6">
-            <section class="bg-white rounded-2xl shadow p-6 ring-1 ring-gray-100 space-y-4">
-                <p class="text-gray-700">{{ trip.description || 'Aucune description.' }}</p>
+                    <p v-if="trip.description" class="text-gray-700 leading-relaxed">
+                        {{ trip.description }}
+                    </p>
 
-                <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 text-sm text-gray-600">
-                    <div class="rounded-xl p-3 text-center ring-1 ring-gray-100">
-                        <div class="font-semibold text-gray-800">Destination</div>
-                        <div>{{ trip.destination || trip.location || '—' }}</div>
-                    </div>
-                    <div class="rounded-xl p-3 text-center ring-1 ring-gray-100">
-                        <div class="font-semibold text-gray-800">Dates</div>
-                        <div>{{ trip.start_date }} → {{ trip.end_date }}</div>
-                    </div>
-                    <div class="rounded-xl p-3 text-center ring-1 ring-gray-100">
-                        <div class="font-semibold text-gray-800">Étapes</div>
-                        <div>{{ (trip.steps || []).length }}</div>
-                    </div>
-                    <div class="rounded-xl p-3 text-center ring-1 ring-gray-100">
-                        <div class="font-semibold text-gray-800">Visibilité</div>
-                        <div>Public</div>
+                    <p v-else class="text-gray-400 italic">
+                        Aucune description disponible pour ce voyage.
+                    </p>
+
+                    <div v-if="trip.image" class="mt-4">
+                        <img
+                            :src="trip.image"
+                            alt="Image du voyage"
+                            class="w-full rounded-lg shadow-sm object-cover"
+                        />
                     </div>
                 </div>
+            </div>
 
-                <div v-if="trip.image" class="mt-2">
-                    <img :src="trip.image" alt="Image du voyage" class="rounded-xl shadow w-full max-h-96 object-cover">
-                </div>
-            </section>
-        </div>
-
-        <!-- Onglet: Carte -->
-        <div v-else-if="currentTab === 'map'">
-            <section class="bg-white rounded-2xl shadow p-6 ring-1 ring-gray-100">
-                <header class="flex items-center justify-between mb-4">
-                    <h2 class="text-lg font-semibold">🗺️ Carte du voyage</h2>
-                    <GoogleMapsFullTripLink :steps="trip.steps" />
-                </header>
-                <div class="rounded-xl overflow-hidden ring-1 ring-gray-100">
-                    <StepsMap :steps="trip.steps" />
-                </div>
-            </section>
-        </div>
+            <div v-else-if="currentTab === 'activities'">
+                <TripActivities :days="trip.days" :activities="activities" />
+            </div>
+        </section>
     </div>
 </template>
+
+<style scoped>
+.scrollbar-hide::-webkit-scrollbar {
+    display: none;
+}
+.scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+}
+</style>

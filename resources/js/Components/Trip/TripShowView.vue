@@ -17,15 +17,25 @@ const activeStep = computed(() =>
     props.steps.find((s) => s.id === activeId.value) || null
 )
 
-// 🟢 informe le parent quand l’étape change
+// 🟢 Informe le parent quand l’étape change
 watch(activeStep, (s) => emit('update:activeStep', s))
 
-/** Format dates : du xx/xx/xxxx au xx/xx/xxxx */
+/** 🗓️ Format dates : du xx/xx/xxxx au xx/xx/xxxx */
 function formatDates(step) {
     if (!step?.start_date || !step?.end_date) return ''
     const start = new Date(step.start_date).toLocaleDateString('fr-FR')
     const end = new Date(step.end_date).toLocaleDateString('fr-FR')
     return `du ${start} au ${end}`
+}
+
+/** 🇫🇷 Convertit le code pays (FR, IT, ES...) en emoji drapeau */
+function getFlagEmoji(code) {
+    if (!code) return ''
+    return code
+        .toUpperCase()
+        .replace(/./g, char =>
+            String.fromCodePoint(127397 + char.charCodeAt())
+        )
 }
 </script>
 
@@ -51,22 +61,19 @@ function formatDates(step) {
                         class="w-full text-left rounded-xl px-4 py-3 transition flex items-center gap-3 border border-transparent"
                         :class="s.id === activeId
                 ? 'bg-emerald-50 border-emerald-200 ring-1 ring-emerald-300'
-                : 'hover:bg-gray-50 border-gray-100'"
-                    >
-                        <!-- Badge ordre -->
+                : 'hover:bg-gray-50 border-gray-100'">
                         <div
                             class="flex h-8 w-8 items-center justify-center rounded-full border text-sm font-medium"
                             :class="s.id === activeId
                   ? 'border-emerald-400 text-emerald-700 bg-white shadow-sm'
-                  : 'border-gray-300 text-gray-600 bg-gray-50'"
-                        >
+                  : 'border-gray-300 text-gray-600 bg-gray-50'">
                             {{ s.order ?? '?' }}
                         </div>
 
-                        <!-- Infos -->
                         <div class="min-w-0">
-                            <p class="truncate text-sm font-semibold text-gray-900">
+                            <p class="truncate text-sm font-semibold text-gray-900 flex items-center gap-1">
                                 {{ s.title || s.location }}
+                                <span v-if="s.country_code" class="ml-1">{{ getFlagEmoji(s.country_code) }}</span>
                             </p>
                             <p class="truncate text-xs text-gray-500">
                                 {{ s.start_date }} → {{ s.end_date }}
@@ -81,7 +88,6 @@ function formatDates(step) {
              Carte + Détails étape
         ============================ -->
         <section class="lg:h-[calc(100vh-220px)] flex flex-col gap-4">
-            <!-- Carte -->
             <div class="rounded-2xl border border-gray-200 overflow-hidden shadow-sm flex-1">
                 <TripMap
                     :steps="steps"
@@ -90,13 +96,15 @@ function formatDates(step) {
                 />
             </div>
 
-            <!-- Détails -->
             <div
                 v-if="activeStep"
                 class="bg-white rounded-xl shadow border border-gray-200 p-6 animate-fade-in"
             >
-                <h3 class="text-lg font-semibold text-gray-900 mb-1">
+                <h3 class="text-lg font-semibold text-gray-900 mb-1 flex items-center gap-1">
                     {{ activeStep.title || activeStep.location }}
+                    <span v-if="activeStep.country_code" class="ml-1">
+                        {{ getFlagEmoji(activeStep.country_code) }}
+                    </span>
                 </h3>
 
                 <p class="text-sm text-gray-500 mb-3">
@@ -107,13 +115,12 @@ function formatDates(step) {
                     {{ activeStep.description }}
                 </p>
 
-                <!-- Distance + durée -->
-                <div v-if="activeStep.distance_to_next || activeStep.duration_to_next" class="flex flex-wrap gap-3 text-sm text-gray-700 mb-3">
+                <div v-if="activeStep.distance_to_next || activeStep.duration_to_next"
+                     class="flex flex-wrap gap-3 text-sm text-gray-700 mb-3">
                     <span v-if="activeStep.distance_to_next">📏 {{ activeStep.distance_to_next.toFixed(1) }} km</span>
                     <span v-if="activeStep.duration_to_next">⏱️ {{ Math.round(activeStep.duration_to_next / 60) }} h</span>
                 </div>
 
-                <!-- Itinéraire -->
                 <a
                     v-if="activeStep.latitude && activeStep.longitude"
                     :href="`https://www.google.com/maps/dir/?api=1&destination=${activeStep.latitude},${activeStep.longitude}`"
@@ -124,7 +131,6 @@ function formatDates(step) {
                     🗺️ Itinéraire
                 </a>
 
-                <!-- Activités -->
                 <div v-if="activeStep.activities?.length" class="border-t pt-4 mt-4">
                     <p class="text-sm font-semibold text-gray-800 mb-2">
                         🎟️ {{ activeStep.activities.length }} activité<span v-if="activeStep.activities.length>1">s</span>
