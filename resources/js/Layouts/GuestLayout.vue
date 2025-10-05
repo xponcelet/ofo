@@ -27,7 +27,7 @@ const showingNavigationDropdown = ref(false)
                 :href="route('public.trips.index')"
                 :active="route().current('public.trips.*')"
             >
-                Voyages publics
+                Inspirations
             </NavLink>
 
             <!-- Dashboard visible si connecté -->

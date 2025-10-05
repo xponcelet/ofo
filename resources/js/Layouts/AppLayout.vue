@@ -30,7 +30,7 @@ const logout = () => router.post(route('logout'))
                 Dashboard
             </NavLink>
             <NavLink :href="route('public.trips.index')" :active="route().current('public.trips.*')">
-                Voyages publics
+                Inspirations
             </NavLink>
             <NavLink v-if="$page.props.auth?.user" :href="route('trips.index')" :active="route().current('trips.*')">
                 Mes voyages
