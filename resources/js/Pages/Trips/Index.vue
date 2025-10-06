@@ -119,18 +119,6 @@ function getFlagEmoji(code) {
 
                 <!-- Actions -->
                 <div class="flex justify-end gap-2 px-6 pb-4">
-                    <Link
-                        :href="route('trips.edit', trip.id)"
-                        class="text-xs px-2 py-1 rounded bg-white/20 hover:bg-white/30"
-                    >
-                        Modifier
-                    </Link>
-                    <button
-                        @click.stop="destroyTrip(trip.id)"
-                        class="text-xs px-2 py-1 rounded bg-red-600 hover:bg-red-700"
-                    >
-                        Supprimer
-                    </button>
                 </div>
             </article>
         </div>

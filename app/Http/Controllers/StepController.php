@@ -15,6 +15,33 @@ class StepController extends Controller
 {
     use AuthorizesRequests;
 
+    /** Liste des étapes d’un voyage */
+    /** Liste des étapes d’un voyage */
+    public function index(Trip $trip)
+    {
+        $this->authorize('view', $trip);
+
+        // Charger les étapes liées au voyage
+        $steps = $trip->steps()
+            ->orderBy('order')
+            ->get([
+                'id',
+                'trip_id',
+                'title',
+                'location',
+                'start_date',
+                'end_date',
+                'nights',
+                'is_destination'
+            ]);
+
+        return Inertia::render('Steps/Index', [
+            'trip' => $trip,
+            'steps' => $steps,
+        ]);
+    }
+
+
     /** Formulaire de création d’une étape */
     public function create(\Illuminate\Http\Request $request, Trip $trip)
     {
