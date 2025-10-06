@@ -8,10 +8,12 @@ const props = defineProps({
     can:    { type: Object, default: () => ({ create_trip: true }) },
 })
 
-const items = computed(() => Array.isArray(props.trips?.data) ? props.trips.data : [])
+const items = computed(() =>
+    Array.isArray(props.trips?.data) ? props.trips.data : []
+)
 
-// ✅ Ne peut créer un voyage que si on est en dessous de la limite
-const canCreate = computed(() => props.can?.create_trip && props.limits.count < props.limits.max)
+// ✅ Empêche la création si la limite est atteinte
+const canCreate = computed(() => props.limits.count < props.limits.max)
 
 /** Supprimer un voyage */
 function destroyTrip(id) {
@@ -20,7 +22,11 @@ function destroyTrip(id) {
     router.delete(route('trips.destroy', id), {
         preserveScroll: true,
         onSuccess: () => {
-            router.visit(route('trips.index'), { replace: true, preserveScroll: true, preserveState: false })
+            router.visit(route('trips.index'), {
+                replace: true,
+                preserveScroll: true,
+                preserveState: false,
+            })
         },
     })
 }
@@ -37,12 +43,14 @@ function computeStatus(trip) {
     return 'Terminé'
 }
 
-/** 🇫🇷 Convertit le code pays (FR, IT, ES...) en emoji drapeau */
+/** 🇫🇷 Convertit le code pays en emoji drapeau */
 function getFlagEmoji(code) {
     if (!code) return ''
     return code
         .toUpperCase()
-        .replace(/./g, char => String.fromCodePoint(127397 + char.charCodeAt()))
+        .replace(/./g, char =>
+            String.fromCodePoint(127397 + char.charCodeAt())
+        )
 }
 </script>
 
@@ -54,7 +62,7 @@ function getFlagEmoji(code) {
         <div class="flex items-center justify-between mb-6">
             <h1 class="text-3xl font-bold text-gray-800">Mes Voyages</h1>
 
-            <!-- ✅ Bouton conditionnel -->
+            <!-- ✅ Bouton "Nouveau voyage" bloqué à 4 -->
             <Link
                 v-if="canCreate"
                 :href="route('trips.destination')"
@@ -75,25 +83,42 @@ function getFlagEmoji(code) {
         </div>
 
         <!-- Grille de voyages -->
-        <div v-if="items.length" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div
+            v-if="items.length"
+            class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6"
+        >
             <article
                 v-for="trip in items"
                 :key="trip.id"
                 class="relative rounded-2xl text-white overflow-hidden shadow-lg"
                 :class="[
                     'bg-gradient-to-br',
-                    computeStatus(trip) === 'Terminé' ? 'from-indigo-700 to-blue-500' :
-                    computeStatus(trip) === 'En cours' ? 'from-purple-700 to-pink-500' :
-                    'from-slate-700 to-purple-500'
+                    computeStatus(trip) === 'Terminé'
+                        ? 'from-indigo-700 to-blue-500'
+                        : computeStatus(trip) === 'En cours'
+                        ? 'from-purple-700 to-pink-500'
+                        : 'from-slate-700 to-purple-500',
                 ]"
             >
-                <Link :href="route('trips.show', trip.id)" class="block p-6 space-y-3">
+                <Link
+                    :href="route('trips.show', trip.id)"
+                    class="block p-6 space-y-3"
+                >
                     <header class="flex justify-between items-start">
-                        <h2 class="text-xl font-semibold line-clamp-1 flex items-center gap-2">
-                            <span v-if="trip.destination_country_code" class="mr-2">{{ getFlagEmoji(trip.destination_country_code) }}</span>
+                        <h2
+                            class="text-xl font-semibold line-clamp-1 flex items-center gap-2"
+                        >
+                            <span
+                                v-if="trip.destination_country_code"
+                                class="mr-2"
+                            >
+                                {{ getFlagEmoji(trip.destination_country_code) }}
+                            </span>
                             <span>{{ trip.title || 'Sans titre' }}</span>
                         </h2>
-                        <span class="text-xs font-semibold px-2 py-1 rounded-full bg-white/20">
+                        <span
+                            class="text-xs font-semibold px-2 py-1 rounded-full bg-white/20"
+                        >
                             {{ computeStatus(trip) }}
                         </span>
                     </header>
@@ -103,14 +128,19 @@ function getFlagEmoji(code) {
                             {{ trip.start_date }} → {{ trip.end_date }}
                         </p>
                         <p>
-                            {{ trip.days_count }} jours · {{ trip.steps_count }} étapes
+                            {{ trip.days_count }} jours ·
+                            {{ trip.steps_count }} étapes
                         </p>
                     </div>
 
                     <div class="w-full bg-white/20 h-1 rounded-full mt-3">
                         <div
                             class="h-1 rounded-full bg-white"
-                            :style="{ width: trip.steps_count ? Math.min(trip.steps_count * 10, 100) + '%' : '0%' }"
+                            :style="{
+                                width: trip.steps_count
+                                    ? Math.min(trip.steps_count * 10, 100) + '%'
+                                    : '0%',
+                            }"
                         />
                     </div>
                 </Link>
@@ -118,7 +148,10 @@ function getFlagEmoji(code) {
         </div>
 
         <!-- Vide -->
-        <div v-else class="text-gray-500 border rounded-xl p-6 mt-6 text-center">
+        <div
+            v-else
+            class="text-gray-500 border rounded-xl p-6 mt-6 text-center"
+        >
             🚀 Aucun voyage encore créé.
         </div>
     </div>

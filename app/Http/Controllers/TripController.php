@@ -16,23 +16,24 @@ use Carbon\Carbon;
 use DatePeriod;
 use DateInterval;
 use DateTime;
+
 class TripController extends Controller
 {
     use \Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 
-    public function index(Request $request): \Inertia\Response
+    /** Liste des voyages de l’utilisateur */
+    public function index(Request $request): InertiaResponse
     {
         // 🧩 Si l’utilisateur n’est pas connecté → page d’invitation
         if (!auth()->check()) {
-            return \Inertia\Inertia::render('Trips/GuestPlaceholder');
+            return Inertia::render('Trips/GuestPlaceholder');
         }
 
-        // 🧍‍♂️ Récupération de l’utilisateur connecté
         $user = auth()->user();
         $perPage = (int) $request->integer('per_page', 12);
 
-        // 🌍 Récupération des voyages de l’utilisateur
-        $trips = \App\Models\Trip::query()
+        // 🌍 Récupération des voyages
+        $trips = Trip::query()
             ->where('user_id', $user->id)
             ->withCount(['steps', 'favoredBy as favs'])
             ->with([
@@ -60,11 +61,11 @@ class TripController extends Controller
                 ];
             });
 
-        // 🔢 Infos sur la limite de voyages
-        $count = \App\Models\Trip::where('user_id', $user->id)->count();
+        // 🔢 Limite de voyages
+        $count = $user->trips()->count();
         $max   = $user->tripLimit();
 
-        return \Inertia\Inertia::render('Trips/Index', [
+        return Inertia::render('Trips/Index', [
             'trips' => $trips,
             'limits' => [
                 'max'   => $max,
@@ -76,34 +77,50 @@ class TripController extends Controller
         ]);
     }
 
+    /** Formulaire de création */
     public function create(): InertiaResponse
     {
-        $response = Gate::inspect('create', Trip::class);
+        $user  = auth()->user();
+        $count = $user->trips()->count();
+        $max   = $user->tripLimit();
 
-        if (! $response->allowed()) {
+        // 🚫 Bloque la création si la limite est atteinte
+        if ($count >= $max) {
             return Inertia::render('Trips/Index', [
-                'trips' => Trip::where('user_id', auth()->id())
+                'trips' => Trip::where('user_id', $user->id)
                     ->select(['id','title','description','image'])
                     ->withCount(['steps','favoredBy as favs'])
                     ->latest()->paginate(12),
                 'limits' => [
-                    'max'   => auth()->user()->tripLimit(),
-                    'count' => auth()->user()->trips()->count(),
+                    'max'   => $max,
+                    'count' => $count,
                 ],
                 'errors' => [
-                    'base' => __('trip.limit_reached', [
-                        'max' => auth()->user()->tripLimit(),
-                    ]),
+                    'base' => __('Vous avez atteint la limite de :max voyages.', ['max' => $max]),
                 ],
             ]);
+        }
+
+        $response = Gate::inspect('create', Trip::class);
+        if (! $response->allowed()) {
+            abort(403);
         }
 
         return Inertia::render('Trips/Create');
     }
 
+    /** Enregistrement du voyage */
     public function store(StoreTripRequest $request)
     {
         $user = auth()->user();
+
+        // 🚫 Bloque côté backend si la limite est atteinte
+        if ($user->trips()->count() >= $user->tripLimit()) {
+            return redirect()
+                ->route('trips.index')
+                ->with('error', __('Vous avez atteint la limite maximale de voyages.'));
+        }
+
         $lock = Cache::lock("user:{$user->id}:create-trip", 5);
 
         return $lock->block(5, function () use ($request, $user) {
@@ -116,10 +133,10 @@ class TripController extends Controller
             $nights    = $validated['nights'] ?? null;
 
             if ($startDate && $endDate) {
-                $nights = \Carbon\Carbon::parse($startDate)
-                    ->diffInDays(\Carbon\Carbon::parse($endDate));
+                $nights = Carbon::parse($startDate)
+                    ->diffInDays(Carbon::parse($endDate));
             } elseif ($startDate && $nights !== null) {
-                $endDate = \Carbon\Carbon::parse($startDate)
+                $endDate = Carbon::parse($startDate)
                     ->addDays((int) $nights)
                     ->toDateString();
             } elseif ($startDate && !$nights && !$endDate) {
@@ -168,6 +185,7 @@ class TripController extends Controller
         });
     }
 
+    /** Affichage d’un voyage */
     public function show(Trip $trip): InertiaResponse
     {
         $this->authorize('view', $trip);
@@ -266,7 +284,6 @@ class TripController extends Controller
             }
         }
 
-        // 🎒 Données du voyage
         $tripData = [
             'id'             => $trip->id,
             'title'          => $trip->title,
@@ -281,7 +298,7 @@ class TripController extends Controller
             'steps_count'    => $trip->steps_count,
             'steps'          => $trip->steps,
             'checklist_items'=> $trip->checklistItems,
-            'days'           => $days, // ✅ ajout ici
+            'days'           => $days,
         ];
 
         return Inertia::render('Trips/Show', [
@@ -321,6 +338,7 @@ class TripController extends Controller
         return redirect()->route('trips.index')->with('success', __('trip.deleted'));
     }
 
+    /** Étape 3 : Détails du voyage */
     public function details(Request $request): InertiaResponse
     {
         $this->authorize('create', Trip::class);
