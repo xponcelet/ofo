@@ -1,5 +1,5 @@
 <script setup>
-import { Link, router } from '@inertiajs/vue3'
+import { Link } from '@inertiajs/vue3'
 import { ref, computed } from 'vue'
 import MapboxAutocomplete from '@/Components/MapboxAutocomplete.vue'
 import StepMapPreview from '@/Components/StepMapPreview.vue'
@@ -27,10 +27,6 @@ const previewSteps = computed(() => {
     const [lng, lat] = selected.value.center
     return [{ id: 'preview', title: query.value, latitude: lat, longitude: lng }]
 })
-
-function searchTrips() {
-    router.get(route('public.trips.index'), { q: query.value || undefined }, { preserveScroll: true, replace: true })
-}
 </script>
 
 <template>
@@ -64,31 +60,25 @@ function searchTrips() {
             </div>
         </div>
 
-        <!-- CTA -->
-        <div class="mt-auto p-6 pt-0 flex items-center justify-center gap-4">
+        <!-- Bouton principal -->
+        <div class="mt-auto p-6 pt-0 flex items-center justify-center">
             <Link
+                v-if="canCreate"
                 :href="route('trips.start')"
-                class="inline-flex items-center justify-center rounded-full px-5 py-2.5
-                       bg-surface-variant text-on-surface-variant font-medium shadow-sm
-                       hover:bg-surface-variant/70 hover:shadow transition"
-                :class="{ 'pointer-events-none opacity-50': !props.canCreate }"
+                class="inline-flex items-center justify-center rounded-full px-6 py-3
+                       bg-primary text-white font-medium shadow-sm
+                       hover:bg-primary/90 hover:shadow-md transition"
             >
                 {{ t('dashboardSearch.createTrip') }}
             </Link>
 
-            <button
-                type="button"
-                @click="searchTrips"
-                class="inline-flex items-center justify-center rounded-full px-5 py-2.5
-                       bg-primary text-white font-medium shadow-sm
-                       hover:bg-primary/90 hover:shadow-md transition"
+            <Link
+                v-else
+                :href="route('register')"
+                class="inline-flex items-center justify-center rounded-full px-6 py-3
+                       bg-surface-variant text-on-surface-variant font-medium shadow-sm
+                       hover:bg-surface-variant/70 hover:shadow transition"
             >
-                {{ t('dashboardSearch.searchTrip') }}
-            </button>
-        </div>
-
-        <div v-if="!props.canCreate" class="px-6 pb-6 -mt-2 text-center">
-            <Link :href="route('register')" class="text-sm text-primary hover:underline">
                 {{ t('dashboardSearch.createAccount') }}
             </Link>
         </div>

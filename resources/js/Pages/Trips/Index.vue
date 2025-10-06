@@ -4,12 +4,14 @@ import { computed } from 'vue'
 
 const props = defineProps({
     trips:  { type: Object, required: true },
-    limits: { type: Object, default: () => ({ max: 5, count: 0 }) },
+    limits: { type: Object, default: () => ({ max: 4, count: 0 }) },
     can:    { type: Object, default: () => ({ create_trip: true }) },
 })
 
 const items = computed(() => Array.isArray(props.trips?.data) ? props.trips.data : [])
-const canCreate = computed(() => !!props.can?.create_trip)
+
+// ✅ Ne peut créer un voyage que si on est en dessous de la limite
+const canCreate = computed(() => props.can?.create_trip && props.limits.count < props.limits.max)
 
 /** Supprimer un voyage */
 function destroyTrip(id) {
@@ -23,7 +25,7 @@ function destroyTrip(id) {
     })
 }
 
-/**  Statut du voyage */
+/** Statut du voyage */
 function computeStatus(trip) {
     const start = trip.start_date ? new Date(trip.start_date) : null
     const end   = trip.end_date ? new Date(trip.end_date) : null
@@ -40,9 +42,7 @@ function getFlagEmoji(code) {
     if (!code) return ''
     return code
         .toUpperCase()
-        .replace(/./g, char =>
-            String.fromCodePoint(127397 + char.charCodeAt())
-        )
+        .replace(/./g, char => String.fromCodePoint(127397 + char.charCodeAt()))
 }
 </script>
 
@@ -54,6 +54,7 @@ function getFlagEmoji(code) {
         <div class="flex items-center justify-between mb-6">
             <h1 class="text-3xl font-bold text-gray-800">Mes Voyages</h1>
 
+            <!-- ✅ Bouton conditionnel -->
             <Link
                 v-if="canCreate"
                 :href="route('trips.destination')"
@@ -86,7 +87,6 @@ function getFlagEmoji(code) {
                     'from-slate-700 to-purple-500'
                 ]"
             >
-                <!-- Contenu -->
                 <Link :href="route('trips.show', trip.id)" class="block p-6 space-y-3">
                     <header class="flex justify-between items-start">
                         <h2 class="text-xl font-semibold line-clamp-1 flex items-center gap-2">
@@ -98,7 +98,6 @@ function getFlagEmoji(code) {
                         </span>
                     </header>
 
-                    <!-- Dates + étapes -->
                     <div class="text-sm">
                         <p v-if="trip.start_date && trip.end_date">
                             {{ trip.start_date }} → {{ trip.end_date }}
@@ -108,7 +107,6 @@ function getFlagEmoji(code) {
                         </p>
                     </div>
 
-                    <!-- Barre de progression -->
                     <div class="w-full bg-white/20 h-1 rounded-full mt-3">
                         <div
                             class="h-1 rounded-full bg-white"
@@ -116,10 +114,6 @@ function getFlagEmoji(code) {
                         />
                     </div>
                 </Link>
-
-                <!-- Actions -->
-                <div class="flex justify-end gap-2 px-6 pb-4">
-                </div>
             </article>
         </div>
 
