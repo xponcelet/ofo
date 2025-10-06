@@ -13,8 +13,17 @@ use App\Services\ItineraryService;
 class TripCreationController extends Controller
 {
     /** Étape 1 : Choix de la destination */
-    public function destination(): Response
+    public function destination(): Response|RedirectResponse
     {
+        $user = auth()->user();
+
+        // 🚫 Bloque si la limite est atteinte
+        if ($user && $user->trips()->count() >= $user->tripLimit()) {
+            return redirect()
+                ->route('trips.index')
+                ->with('error', __('Vous avez atteint la limite maximale de voyages.'));
+        }
+
         return Inertia::render('Trips/Destination');
     }
 
@@ -37,12 +46,23 @@ class TripCreationController extends Controller
             'country_code'       => strtoupper($validated['country_code'] ?? ''),
         ]);
 
-        return redirect()->route('trips.start')->with('success', __('trip_creation.destination_saved'));
+        return redirect()
+            ->route('trips.start')
+            ->with('success', __('trip_creation.destination_saved'));
     }
 
     /** Étape 2 : Choix du point de départ */
-    public function start(): Response
+    public function start(): Response|RedirectResponse
     {
+        $user = auth()->user();
+
+        // 🚫 Bloque si la limite est atteinte
+        if ($user && $user->trips()->count() >= $user->tripLimit()) {
+            return redirect()
+                ->route('trips.index')
+                ->with('error', __('Vous avez atteint la limite maximale de voyages.'));
+        }
+
         return Inertia::render('Trips/Start');
     }
 
@@ -65,14 +85,27 @@ class TripCreationController extends Controller
             'departure_code'      => strtoupper($validated['country_code'] ?? ''),
         ]);
 
-        return redirect()->route('trips.details')->with('success', __('trip_creation.departure_saved'));
+        return redirect()
+            ->route('trips.details')
+            ->with('success', __('trip_creation.departure_saved'));
     }
 
     /** Étape 3 : Détails du voyage */
-    public function details(): Response
+    public function details(): Response|RedirectResponse
     {
+        $user = auth()->user();
+
+        // 🚫 Bloque si la limite est atteinte
+        if ($user && $user->trips()->count() >= $user->tripLimit()) {
+            return redirect()
+                ->route('trips.index')
+                ->with('error', __('Vous avez atteint la limite maximale de voyages.'));
+        }
+
         if (!session()->has('destination') || !session()->has('departure')) {
-            return redirect()->route('trips.destination')->with('error', __('trip_creation.previous_steps_required'));
+            return redirect()
+                ->route('trips.destination')
+                ->with('error', __('trip_creation.previous_steps_required'));
         }
 
         return Inertia::render('Trips/Details');
@@ -81,6 +114,15 @@ class TripCreationController extends Controller
     /** Création finale du voyage */
     public function finalize(StoreTripRequest $request, ItineraryService $itinerary): RedirectResponse
     {
+        $user = auth()->user();
+
+        // 🚫 Double sécurité backend
+        if ($user && $user->trips()->count() >= $user->tripLimit()) {
+            return redirect()
+                ->route('trips.index')
+                ->with('error', __('Vous avez atteint la limite maximale de voyages.'));
+        }
+
         // 🔹 Récupération des infos stockées
         $destination         = session('destination');
         $destinationLat      = session('latitude');
@@ -95,7 +137,9 @@ class TripCreationController extends Controller
         $departureCode       = session('departure_code');
 
         if (!$destination || !$departure) {
-            return redirect()->route('trips.destination')->with('error', __('trip_creation.incomplete_information'));
+            return redirect()
+                ->route('trips.destination')
+                ->with('error', __('trip_creation.incomplete_information'));
         }
 
         $validated = $request->validated();
@@ -106,9 +150,12 @@ class TripCreationController extends Controller
         $nights    = $validated['nights'] ?? null;
 
         if ($startDate && $endDate) {
-            $nights = \Carbon\Carbon::parse($startDate)->diffInDays(\Carbon\Carbon::parse($endDate));
+            $nights = \Carbon\Carbon::parse($startDate)
+                ->diffInDays(\Carbon\Carbon::parse($endDate));
         } elseif ($startDate && $nights !== null) {
-            $endDate = \Carbon\Carbon::parse($startDate)->addDays((int) $nights)->toDateString();
+            $endDate = \Carbon\Carbon::parse($startDate)
+                ->addDays((int) $nights)
+                ->toDateString();
         } elseif ($startDate && !$nights && !$endDate) {
             $endDate = $startDate;
             $nights  = 0;
@@ -117,7 +164,7 @@ class TripCreationController extends Controller
         // 🔹 Création du voyage
         $trip = Trip::create([
             ...$validated,
-            'user_id'     => auth()->id(),
+            'user_id'     => $user->id,
             'destination' => $destination,
             'currency'    => $validated['currency'] ?? 'EUR',
             'is_public'   => $request->boolean('is_public', false),
@@ -163,6 +210,8 @@ class TripCreationController extends Controller
             'departure_country', 'departure_code',
         ]);
 
-        return redirect()->route('trips.show', $trip)->with('success', __('trip_creation.created'));
+        return redirect()
+            ->route('trips.show', $trip)
+            ->with('success', __('trip_creation.created'));
     }
 }
