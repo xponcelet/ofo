@@ -1,8 +1,8 @@
 <script setup>
-import AppLayout from '@/Layouts/AppLayout.vue'
+import RootLayout from "@/Layouts/RootLayout.vue";
 import { Link } from '@inertiajs/vue3'
 
-defineOptions({ layout: AppLayout })
+defineOptions({ layout: RootLayout })
 
 const props = defineProps({
     trip: Object,
