@@ -89,14 +89,6 @@ function getFlagEmoji(code) {
                 </button>
 
                 <button
-                    @click="currentTab = 'infos'"
-                    class="py-3 text-sm transition-colors"
-                    :class="tabClass('infos')"
-                >
-                    ℹ️ Infos
-                </button>
-
-                <button
                     @click="currentTab = 'activities'"
                     class="py-3 text-sm transition-colors flex items-center"
                     :class="tabClass('activities')"
@@ -125,10 +117,6 @@ function getFlagEmoji(code) {
 
                     <p v-if="trip.description" class="text-gray-700 leading-relaxed">
                         {{ trip.description }}
-                    </p>
-
-                    <p v-else class="text-gray-400 italic">
-                        Aucune description disponible pour ce voyage.
                     </p>
 
                     <div v-if="trip.image" class="mt-4">

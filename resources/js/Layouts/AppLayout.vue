@@ -1,5 +1,5 @@
 <script setup>
-import { Link, router } from '@inertiajs/vue3'
+import { Link, router, usePage } from '@inertiajs/vue3'
 import { ref } from 'vue'
 import ApplicationMark from '@/Components/ApplicationMark.vue'
 import Dropdown from '@/Components/Dropdown.vue'
@@ -10,29 +10,49 @@ defineProps({ title: String })
 
 const showingNavigationDropdown = ref(false)
 const logout = () => router.post(route('logout'))
+
+const page = usePage()
+const isCurrentUrl = (path) => page.url.startsWith(path)
 </script>
 
 <template>
     <header class="bg-white shadow-sm border-b border-outline">
         <nav class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
-            <!-- ✅ 1. Logo à gauche -->
+            <!-- ✅ 1. Logo -->
             <div class="flex items-center gap-2">
                 <Link :href="route('dashboard')" class="flex items-center gap-2 group">
                     <ApplicationMark class="h-9 w-auto" />
                     <span class="text-primary-dark font-bold text-xl tracking-tight group-hover:text-accent transition-colors">
-            My<span class="text-accent">Roadbook</span>
-          </span>
+                        My<span class="text-accent">Roadbook</span>
+                    </span>
                 </Link>
             </div>
 
-            <!-- ✅ 2. Navigation centrée -->
+            <!-- ✅ 2. Navigation -->
             <div class="hidden sm:flex justify-center items-center space-x-8">
-                <NavLink :href="route('dashboard')" :active="route().current('dashboard')">Dashboard</NavLink>
-                <NavLink :href="route('public.trips.index')" :active="route().current('public.trips.*')">Inspirations</NavLink>
-                <NavLink :href="route('trips.index')" :active="route().current('trips.*')">Mes voyages</NavLink>
+                <NavLink
+                    :href="route('dashboard')"
+                    :active="isCurrentUrl('/dashboard')"
+                >
+                    Dashboard
+                </NavLink>
+
+                <NavLink
+                    :href="route('public.trips.index')"
+                    :active="isCurrentUrl('/voyages') && !isCurrentUrl('/trips')"
+                >
+                    Inspirations
+                </NavLink>
+
+                <NavLink
+                    :href="route('trips.index')"
+                    :active="isCurrentUrl('/trips')"
+                >
+                    Mes voyages
+                </NavLink>
             </div>
 
-            <!-- ✅ 3. Profil à droite -->
+            <!-- ✅ 3. Profil -->
             <div class="hidden sm:flex items-center space-x-4">
                 <Dropdown align="right" width="48">
                     <template #trigger>
@@ -70,5 +90,4 @@ const logout = () => router.post(route('logout'))
             </div>
         </nav>
     </header>
-
 </template>
