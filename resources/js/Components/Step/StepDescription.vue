@@ -1,5 +1,5 @@
 <script setup>
-import { t } from '@/composables/useTranslations'
+import { t } from '@/Composables/useTranslations'
 
 const props = defineProps({
     step: { type: Object, required: false },

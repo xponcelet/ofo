@@ -158,13 +158,6 @@ function submit() {
                     🗺️ Itinéraire
                 </button>
 
-                <button
-                    @click="currentTab = 'infos'"
-                    class="py-3 text-sm transition-colors"
-                    :class="tabClass('infos')"
-                >
-                    ℹ️ Infos
-                </button>
 
                 <button
                     @click="currentTab = 'activities'"
@@ -201,10 +194,6 @@ function submit() {
                     :steps="trip.steps"
                     @go-to-activities="currentTab = 'activities'"
                 />
-            </div>
-
-            <div v-else-if="currentTab === 'infos'">
-                <p class="text-gray-600">📄 Infos générales du voyage à venir...</p>
             </div>
 
             <div v-else-if="currentTab === 'activities'">
@@ -261,12 +250,11 @@ function submit() {
 
                         <div class="flex justify-between items-center mt-6">
                             <Link
-                                :href="route('steps.edit', { trip: trip.id })"
+                                :href="route('trips.steps.index', trip.id)"
                                 class="text-sm font-medium text-pink-600 hover:underline"
                             >
                                 ⚙️ Gérer les étapes
                             </Link>
-
                             <div class="flex gap-3">
                                 <button type="button" @click="showEditModal = false" class="btn-secondary">
                                     Annuler

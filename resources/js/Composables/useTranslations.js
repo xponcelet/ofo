@@ -5,7 +5,7 @@ import { usePage } from '@inertiajs/vue3'
  * par Laravel via Inertia (HandleInertiaRequests).
  *
  * Usage :
- *   import { t } from '@/composables/useTranslations'
+ *   import { t } from '@/Composables/useTranslations'
  *   t('dashboard.title')
  */
 export function useTranslations() {

@@ -1,6 +1,6 @@
 <script setup>
 import { Link } from '@inertiajs/vue3'
-import { t } from '@/composables/useTranslations'
+import { t } from '@/Composables/useTranslations'
 </script>
 
 <template>
