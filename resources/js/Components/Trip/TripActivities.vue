@@ -5,14 +5,17 @@ import ActivityModal from "@/Components/ActivityModal.vue"
 import ActivityMapPreview from "@/Components/ActivityMapPreview.vue"
 
 const props = defineProps({
-    days: { type: Array, required: true }, // ✅ maintenant "days"
+    days: { type: Array, required: true },
     activities: { type: Array, default: () => [] },
 })
 
 const activeDay = ref(0)
 const showModal = ref(false)
+const editActivity = ref(null)
 
-// 🧮 Regroupe les activités par jour
+// ====================
+// Groupement par jour
+// ====================
 const activitiesByDay = computed(() => {
     return props.days.map((day) => {
         const dayStr = new Date(day.date).toISOString().split("T")[0]
@@ -20,7 +23,9 @@ const activitiesByDay = computed(() => {
     })
 })
 
-// 🕓 Helpers d’affichage
+// ====================
+// Helpers d’affichage
+// ====================
 function formatDate(date) {
     if (!date) return ""
     return new Date(date).toLocaleDateString("fr-FR", {
@@ -38,13 +43,34 @@ function formatTime(dateStr) {
     })
 }
 
-function openModal(dayIndex) {
+// ====================
+// Gestion modals
+// ====================
+function openCreateModal(dayIndex) {
     activeDay.value = dayIndex
+    editActivity.value = null
     showModal.value = true
 }
 
+function openEditModal(activity) {
+    editActivity.value = activity
+    showModal.value = true
+}
+
+// ====================
+// Rechargement / Suppression
+// ====================
 function reloadActivities() {
     router.reload({ only: ["activities"] })
+}
+
+function deleteActivity(activityId) {
+    if (!confirm("Voulez-vous vraiment supprimer cette activité ?")) return
+
+    router.delete(route("activities.destroy", activityId), {
+        preserveScroll: true,
+        onSuccess: () => reloadActivities(),
+    })
 }
 </script>
 
@@ -65,8 +91,7 @@ function reloadActivities() {
                     class="w-full text-left rounded-xl px-4 py-3 transition font-medium"
                     :class="activeDay === index
                         ? 'bg-emerald-50 border border-emerald-300 text-emerald-800 shadow-sm'
-                        : 'bg-white border border-gray-200 hover:bg-gray-50 text-gray-800'"
-                >
+                        : 'bg-white border border-gray-200 hover:bg-gray-50 text-gray-800'">
                     <div class="flex justify-between items-center">
                         <span>Jour {{ index + 1 }}</span>
                         <span class="text-xs text-gray-500">{{ formatDate(day.date) }}</span>
@@ -93,9 +118,8 @@ function reloadActivities() {
                     </p>
                 </div>
                 <button
-                    @click="openModal(activeDay)"
-                    class="px-5 py-2.5 bg-pink-600 text-white rounded-lg shadow hover:bg-pink-700 transition"
-                >
+                    @click="openCreateModal(activeDay)"
+                    class="px-5 py-2.5 bg-pink-600 text-white rounded-lg shadow hover:bg-pink-700 transition">
                     ➕ Ajouter une activité
                 </button>
             </div>
@@ -104,8 +128,7 @@ function reloadActivities() {
             <div v-if="days[activeDay]?.step" class="rounded-xl overflow-hidden">
                 <ActivityMapPreview
                     :step="days[activeDay].step"
-                    :activities="activitiesByDay[activeDay]"
-                />
+                    :activities="activitiesByDay[activeDay]" />
             </div>
 
             <!-- 🏷️ Liste des activités -->
@@ -113,8 +136,9 @@ function reloadActivities() {
                 <div
                     v-for="activity in activitiesByDay[activeDay]"
                     :key="activity.id"
-                    class="bg-white rounded-xl border border-gray-200 shadow-sm p-5 transition hover:shadow-md"
-                >
+                    class="bg-white rounded-xl border border-gray-200 shadow-sm p-5 transition hover:shadow-md">
+
+                    <!-- Titre + boutons -->
                     <div class="flex justify-between items-start mb-2">
                         <div>
                             <h3 class="text-lg font-semibold text-gray-800">
@@ -127,21 +151,36 @@ function reloadActivities() {
                                 </span>
                             </p>
                         </div>
-                        <span
-                            v-if="activity.category"
-                            class="text-xs bg-pink-100 text-pink-700 font-medium px-2 py-1 rounded-full"
-                        >
-                            {{ activity.category }}
-                        </span>
+
+                        <div class="flex items-center gap-2">
+                            <button
+                                @click="openEditModal(activity)"
+                                class="text-gray-500 hover:text-pink-600 transition"
+                                title="Éditer">
+                                ✏️
+                            </button>
+                            <button
+                                @click="deleteActivity(activity.id)"
+                                class="text-gray-400 hover:text-red-600 transition"
+                                title="Supprimer">
+                                🗑️
+                            </button>
+                        </div>
                     </div>
 
-                    <p
-                        v-if="activity.description"
-                        class="text-gray-700 text-sm mb-3"
-                    >
+                    <!-- Catégorie -->
+                    <span
+                        v-if="activity.category"
+                        class="text-xs bg-pink-100 text-pink-700 font-medium px-2 py-1 rounded-full inline-block mb-2">
+                        {{ activity.category }}
+                    </span>
+
+                    <!-- Description -->
+                    <p v-if="activity.description" class="text-gray-700 text-sm mb-3">
                         {{ activity.description }}
                     </p>
 
+                    <!-- Détails -->
                     <div class="flex flex-wrap gap-3 text-sm text-gray-500">
                         <span>📍 {{ activity.location || activity.step_location }}</span>
                         <a
@@ -149,8 +188,7 @@ function reloadActivities() {
                             :href="activity.external_link"
                             target="_blank"
                             rel="noopener noreferrer"
-                            class="text-pink-600 hover:underline"
-                        >
+                            class="text-pink-600 hover:underline">
                             🔗 Lien
                         </a>
                     </div>
@@ -163,14 +201,15 @@ function reloadActivities() {
             </div>
         </section>
 
-        <!-- 🔹 Modal ajout -->
+        <!-- 🔹 Modal ajout / édition -->
         <ActivityModal
             v-if="showModal"
             :show="showModal"
             :step-id="days[activeDay]?.step_id"
             :day-date="days[activeDay]?.date"
+            :activity="editActivity"
             @close="showModal = false"
             @created="reloadActivities"
-        />
+            @updated="reloadActivities" />
     </div>
 </template>

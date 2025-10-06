@@ -1,156 +1,223 @@
 <template>
-    <!-- Overlay -->
-    <div v-if="show" class="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-        <!-- Modal -->
-        <div class="bg-white rounded-xl shadow-lg w-full max-w-lg p-6">
-            <h2 class="text-xl font-bold mb-4">Ajouter une activité</h2>
+    <div
+        v-if="show"
+        class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 backdrop-blur-sm"
+    >
+        <div class="bg-white rounded-2xl shadow-xl w-full max-w-lg p-6 relative">
+            <h2 class="text-xl font-semibold text-gray-800 mb-4">
+                {{ isEdit ? 'Modifier une activité' : 'Nouvelle activité' }}
+            </h2>
 
-            <form @submit.prevent="submit" class="space-y-4">
-                <!-- Titre -->
-                <div>
-                    <label class="block text-sm font-medium text-gray-700">Titre *</label>
-                    <input v-model="form.title" type="text" required
-                           class="mt-1 block w-full border-gray-300 rounded-md shadow-sm" />
-                    <span v-if="form.errors.title" class="text-red-600 text-sm">{{ form.errors.title }}</span>
-                </div>
-
-                <!-- Description -->
-                <div>
-                    <label class="block text-sm font-medium text-gray-700">Description</label>
-                    <textarea v-model="form.description" rows="2"
-                              class="mt-1 block w-full border-gray-300 rounded-md shadow-sm" />
-                </div>
-
-                <!-- Localisation via Mapbox -->
-                <div>
-                    <label class="block text-sm font-medium text-gray-700">Localisation</label>
-                    <MapboxAutocomplete v-model="form.location" placeholder="Chercher un lieu..." />
-                    <span v-if="form.errors.location" class="text-red-600 text-sm">{{ form.errors.location }}</span>
-                </div>
-
-                <!-- Date fixe -->
-                <div>
-                    <label class="block text-sm font-medium text-gray-700">Date</label>
-                    <input type="text" :value="formatDate(props.dayDate)" disabled
-                           class="mt-1 block w-full border-gray-300 rounded-md shadow-sm bg-gray-100" />
-                </div>
-
-                <!-- Heures -->
-                <div class="grid grid-cols-2 gap-4">
+            <form @submit.prevent="submit">
+                <div class="space-y-4">
+                    <!-- 🏷️ Titre -->
                     <div>
-                        <label class="block text-sm font-medium text-gray-700">Heure de début</label>
-                        <input v-model="startTime" type="time"
-                               class="mt-1 block w-full border-gray-300 rounded-md shadow-sm" />
+                        <label class="block text-sm font-medium text-gray-700">Titre</label>
+                        <input
+                            v-model="form.title"
+                            type="text"
+                            class="w-full mt-1 rounded-lg border-gray-300 focus:border-pink-500 focus:ring-pink-500"
+                            required
+                        />
                     </div>
+
+                    <!-- 📝 Description -->
                     <div>
-                        <label class="block text-sm font-medium text-gray-700">Heure de fin</label>
-                        <input v-model="endTime" type="time"
-                               class="mt-1 block w-full border-gray-300 rounded-md shadow-sm" />
+                        <label class="block text-sm font-medium text-gray-700">Description</label>
+                        <textarea
+                            v-model="form.description"
+                            rows="3"
+                            class="w-full mt-1 rounded-lg border-gray-300 focus:border-pink-500 focus:ring-pink-500"
+                        ></textarea>
                     </div>
-                </div>
 
-
-                <!-- Lien externe -->
-                <div>
-                    <label class="block text-sm font-medium text-gray-700">Lien externe</label>
-                    <input v-model="form.external_link" type="url" placeholder="https://exemple.com"
-                           class="mt-1 block w-full border-gray-300 rounded-md shadow-sm" />
-                </div>
-
-                <!-- Coût + devise -->
-                <div class="grid grid-cols-2 gap-4">
+                    <!-- 📍 Lieu -->
                     <div>
-                        <label class="block text-sm font-medium text-gray-700">Coût</label>
-                        <input v-model="form.cost" type="number" step="0.01"
-                               class="mt-1 block w-full border-gray-300 rounded-md shadow-sm" />
+                        <label class="block text-sm font-medium text-gray-700">Lieu</label>
+                        <MapboxAutocomplete
+                            v-model="form.location"
+                            @update:coords="updateCoords"
+                            class="mt-1"
+                        />
                     </div>
+
+                    <!-- 🔗 Lien externe -->
                     <div>
-                        <label class="block text-sm font-medium text-gray-700">Devise</label>
-                        <input v-model="form.currency" type="text" maxlength="3" placeholder="EUR"
-                               class="mt-1 block w-full border-gray-300 rounded-md shadow-sm uppercase" />
+                        <label class="block text-sm font-medium text-gray-700">Lien externe</label>
+                        <input
+                            v-model="form.external_link"
+                            type="url"
+                            placeholder="https://..."
+                            class="w-full mt-1 rounded-lg border-gray-300 focus:border-pink-500 focus:ring-pink-500"
+                        />
+                    </div>
+
+                    <!-- 📅 Date + heure -->
+                    <div class="flex gap-4">
+                        <div class="flex-1">
+                            <label class="block text-sm font-medium text-gray-700">Date</label>
+                            <input
+                                v-model="form.date"
+                                type="date"
+                                class="w-full mt-1 rounded-lg border-gray-300 focus:border-pink-500 focus:ring-pink-500"
+                                required
+                            />
+                        </div>
+                        <div class="flex-1">
+                            <label class="block text-sm font-medium text-gray-700">Heure</label>
+                            <input
+                                v-model="form.start_at"
+                                type="time"
+                                class="w-full mt-1 rounded-lg border-gray-300 focus:border-pink-500 focus:ring-pink-500"
+                            />
+                        </div>
+                    </div>
+
+                    <!-- 💰 Coût -->
+                    <div class="flex gap-4">
+                        <div class="flex-1">
+                            <label class="block text-sm font-medium text-gray-700">Coût</label>
+                            <input
+                                v-model="form.cost"
+                                type="number"
+                                min="0"
+                                step="0.01"
+                                class="w-full mt-1 rounded-lg border-gray-300 focus:border-pink-500 focus:ring-pink-500"
+                            />
+                        </div>
+                        <div class="flex-1">
+                            <label class="block text-sm font-medium text-gray-700">Devise</label>
+                            <input
+                                v-model="form.currency"
+                                type="text"
+                                placeholder="EUR"
+                                class="w-full mt-1 rounded-lg border-gray-300 focus:border-pink-500 focus:ring-pink-500"
+                            />
+                        </div>
+                    </div>
+
+                    <!-- 🗂️ Catégorie -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">Catégorie</label>
+                        <input
+                            v-model="form.category"
+                            type="text"
+                            placeholder="Ex: Visite, Restaurant..."
+                            class="w-full mt-1 rounded-lg border-gray-300 focus:border-pink-500 focus:ring-pink-500"
+                        />
                     </div>
                 </div>
 
-                <!-- Catégorie -->
-                <div>
-                    <label class="block text-sm font-medium text-gray-700">Catégorie</label>
-                    <input v-model="form.category" type="text"
-                           placeholder="Culture, Gastronomie, Nature"
-                           class="mt-1 block w-full border-gray-300 rounded-md shadow-sm" />
-                </div>
-
-                <!-- Boutons -->
-                <div class="flex justify-between items-center pt-4">
-                    <button type="button" @click="close"
-                            class="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300">
+                <!-- 🔘 Boutons -->
+                <div class="flex justify-end gap-3 mt-6">
+                    <button
+                        type="button"
+                        @click="$emit('close')"
+                        class="px-4 py-2 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-100"
+                    >
                         Annuler
                     </button>
-                    <button type="submit" :disabled="form.processing"
-                            class="px-6 py-2 bg-blue-600 text-white rounded-lg shadow hover:bg-blue-700 transition">
-                        Créer
+
+                    <button
+                        type="submit"
+                        class="px-5 py-2 rounded-lg bg-pink-600 text-white hover:bg-pink-700 transition"
+                        :disabled="form.processing"
+                    >
+                        {{ isEdit ? 'Enregistrer' : 'Créer' }}
                     </button>
                 </div>
             </form>
+
+            <!-- ❌ Bouton de fermeture -->
+            <button
+                @click="$emit('close')"
+                class="absolute top-3 right-3 text-gray-400 hover:text-gray-600"
+            >
+                ✖
+            </button>
         </div>
     </div>
 </template>
 
 <script setup>
-import { useForm } from '@inertiajs/vue3'
-import { ref } from 'vue'
-import MapboxAutocomplete from '@/Components/MapboxAutocomplete.vue'
+import { useForm } from "@inertiajs/vue3"
+import { computed, watch, onMounted } from "vue"
+import MapboxAutocomplete from "@/Components/MapboxAutocomplete.vue"
 
 const props = defineProps({
-    stepId: { type: Number, required: true },
-    dayDate: { type: String, required: true }, // ex: "2025-10-17"
-    show: { type: Boolean, default: false }
+    show: { type: Boolean, default: false },
+    stepId: { type: Number, required: false },
+    dayDate: { type: String, required: false },
+    activity: { type: Object, default: null },
 })
-const emit = defineEmits(['close', 'created'])
+
+const emit = defineEmits(["close", "created", "updated"])
+
+const isEdit = computed(() => !!props.activity)
 
 const form = useForm({
-    title: '',
-    description: '',
-    location: '',
-    start_at: '', // ✅ les vrais champs de la DB
-    end_at: '',
-    external_link: '',
-    cost: '',
-    currency: 'EUR',
-    category: ''
+    title: "",
+    description: "",
+    location: "",
+    external_link: "",
+    date: props.dayDate || "",
+    start_at: "09:00", // 🕘 heure par défaut
+    cost: "",
+    currency: "EUR",
+    category: "",
+    step_id: props.stepId,
+    latitude: null,
+    longitude: null,
 })
 
-// Pour l’UI, on gère juste des heures
-const startTime = ref('09:00')
-const endTime   = ref('18:00')
+// 📍 coordonnées depuis Mapbox
+function updateCoords(coords) {
+    form.latitude = coords?.lat || null
+    form.longitude = coords?.lng || null
+}
 
-function submit() {
-    // ⚡ On combine date + heure pour remplir les champs DB
-    form.start_at = `${props.dayDate} ${startTime.value}:00`
-    form.end_at   = `${props.dayDate} ${endTime.value}:00`
-
-    form.post(route('steps.activities.store', props.stepId), {
-        preserveScroll: true,
-        onSuccess: () => {
-            form.reset()
-            startTime.value = '09:00'
-            endTime.value = '18:00'
-            emit('created')
-            close()
+// 🧩 Remplit si édition
+watch(
+    () => props.activity,
+    (a) => {
+        if (a) {
+            form.title = a.title || ""
+            form.description = a.description || ""
+            form.location = a.location || ""
+            form.external_link = a.external_link || ""
+            form.date = a.date || props.dayDate || ""
+            form.start_at = a.start_at ? a.start_at.slice(11, 16) : "09:00" // 🕘 garde 9h par défaut si vide
+            form.cost = a.cost || ""
+            form.currency = a.currency || "EUR"
+            form.category = a.category || ""
+            form.step_id = a.step_id || props.stepId
+            form.latitude = a.latitude || null
+            form.longitude = a.longitude || null
         }
-    })
-}
+    },
+    { immediate: true }
+)
 
-function close() {
-    emit('close')
-}
-
-function formatDate(dateStr) {
-    if (!dateStr) return ''
-    return new Date(dateStr).toLocaleDateString('fr-FR', {
-        weekday: 'long',
-        day: 'numeric',
-        month: 'long',
-        year: 'numeric'
-    })
+// 💾 Soumission
+function submit() {
+    if (isEdit.value) {
+        form.put(route("activities.update", props.activity.id), {
+            preserveScroll: true,
+            onSuccess: () => {
+                emit("updated")
+                emit("close")
+            },
+        })
+    } else {
+        form.post(route("steps.activities.store", props.stepId), {
+            preserveScroll: true,
+            onSuccess: () => {
+                emit("created")
+                emit("close")
+                form.reset()
+                form.start_at = "09:00" // 🕘 réinitialise à 9h après création
+            },
+        })
+    }
 }
 </script>

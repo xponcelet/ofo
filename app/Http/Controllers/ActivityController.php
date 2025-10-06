@@ -2,86 +2,42 @@
 
 namespace App\Http\Controllers;
 
-use App\Http\Requests\StoreActivityRequest;
-use App\Http\Requests\UpdateActivityRequest;
 use App\Models\Activity;
 use App\Models\Step;
-use Illuminate\Http\RedirectResponse;
-use Inertia\Inertia;
-use Illuminate\Support\Arr;
+use App\Http\Requests\StoreActivityRequest;
 
 class ActivityController extends Controller
 {
-    public function store(StoreActivityRequest $request, Step $step): RedirectResponse
+    /**
+     * Créer une nouvelle activité liée à une étape.
+     */
+    public function store(StoreActivityRequest $request, Step $step)
     {
-        abort_unless($step->trip->user_id === auth()->id(), 403);
+        $data = $request->validated();
+        $data['step_id'] = $step->id;
 
-        Activity::create(array_merge($request->validated(), [
-            'step_id' => $step->id,
-        ]));
+        Activity::create($data);
 
-        return back()->with('success', __('activity.created'));
+        return back()->with('success', 'Activité créée avec succès.');
     }
 
-    public function edit(Activity $activity)
+    /**
+     * Mettre à jour une activité existante.
+     */
+    public function update(StoreActivityRequest $request, Activity $activity)
     {
-        abort_unless($activity->step->trip->user_id === auth()->id(), 403);
-
-        $step = $activity->step()
-            ->select('id','trip_id','order','location','title')
-            ->with('trip:id,title,user_id')
-            ->firstOrFail();
-
-        $steps = $step->trip->steps()
-            ->orderBy('order')
-            ->get(['id','order','location']);
-
-        return Inertia::render('Activities/Edit', [
-            'activity' => Arr::only($activity->toArray(), [
-                'id','step_id','title','description','location','start_at','end_at','external_link','cost','currency','category',
-            ]),
-            'step' => Arr::only($step->toArray(), ['id','order','location','title']),
-            'steps' => $steps,
-            'trip' => Arr::only($step->trip->toArray(), ['id','title']),
-        ]);
-    }
-
-    public function update(UpdateActivityRequest $request, Activity $activity): RedirectResponse
-    {
-        abort_unless($activity->step->trip->user_id === auth()->id(), 403);
-
         $activity->update($request->validated());
 
-        return back()->with('success', __('activity.updated'));
+        return back()->with('success', 'Activité mise à jour.');
     }
 
-    public function destroy(Activity $activity): RedirectResponse
+    /**
+     * Supprimer une activité.
+     */
+    public function destroy(Activity $activity)
     {
-        abort_unless($activity->step->trip->user_id === auth()->id(), 403);
-
         $activity->delete();
 
-        return back()->with('success', __('activity.deleted'));
-    }
-
-    public function index(Step $step) {
-        abort_unless($step->trip->user_id === auth()->id(), 403);
-        return redirect()->to(route('steps.edit', $step).'?tab=activities');
-    }
-
-    public function create(Step $step)
-    {
-        abort_unless($step->trip->user_id === auth()->id(), 403);
-
-        return Inertia::render('Activities/Create', [
-            'step' => $step->only(['id','title','location']),
-            'trip' => $step->trip->only(['id','title']),
-            'date' => request('date'),
-        ]);
-    }
-
-    public function show(Activity $activity) {
-        abort_unless($activity->step->trip->user_id === auth()->id(), 403);
-        return redirect()->route('activities.edit', $activity);
+        return back()->with('success', 'Activité supprimée.');
     }
 }

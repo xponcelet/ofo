@@ -13,18 +13,22 @@ class Activity extends Model
         'step_id',
         'title',
         'description',
-        'location',   // ✅ ajouté
+        'location',
+        'date',          // ✅ important
         'start_at',
         'end_at',
         'external_link',
         'cost',
         'currency',
         'category',
+        'latitude',      // ✅ pour Mapbox
+        'longitude',     // ✅ pour Mapbox
     ];
 
     protected $casts = [
         'start_at' => 'datetime',
         'end_at'   => 'datetime',
+        'date'     => 'date',   // ✅ pour le champ date
         'cost'     => 'decimal:2',
     ];
 
