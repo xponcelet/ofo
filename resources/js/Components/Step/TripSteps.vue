@@ -2,13 +2,14 @@
 import { ref } from 'vue'
 import { Link, router } from '@inertiajs/vue3'
 import AddStepButton from '@/Components/AddStepButton.vue'
+import { t } from '@/Composables/useTranslations'
 
 const props = defineProps({
     trip: Object,
 })
 
 function deleteStep(step) {
-    if (confirm(`Supprimer l'étape "${step.title}" ?`)) {
+    if (confirm(t('steps.confirm_delete', { title: step.title }))) {
         router.delete(route('steps.destroy', step.id))
     }
 }
@@ -31,7 +32,7 @@ function flagFromCode(code) {
     if (!code) return ''
     const cc = String(code).toUpperCase()
     if (cc.length !== 2) return ''
-    const A = 0x1F1E6 // base unicode indicators
+    const A = 0x1F1E6
     const first = cc.codePointAt(0) - 65 + A
     const second = cc.codePointAt(1) - 65 + A
     if (first < A || second < A) return ''
@@ -41,19 +42,19 @@ function flagFromCode(code) {
 
 <template>
     <div class="space-y-8 max-w-5xl mx-auto">
-        <h2 class="text-2xl font-semibold text-gray-800">Itinéraire</h2>
+        <h2 class="text-2xl font-semibold text-gray-800">{{ t('steps.title') }}</h2>
 
         <!-- Ajouter avant la première -->
-        <AddStepButton :trip-id="trip.id" :at-start="true" label="➕ Ajouter avant la première" />
+        <AddStepButton :trip-id="trip.id" :at-start="true" :label="t('steps.add_before_first')" />
 
-        <!-- Liste des étapes (dates à gauche, carte/contenu à droite) -->
+        <!-- Liste des étapes -->
         <div v-if="trip.steps.length" class="space-y-8">
             <div
                 v-for="step in trip.steps"
                 :key="step.id"
                 class="grid grid-cols-[110px_1fr] gap-4 items-start"
             >
-                <!-- Colonne gauche : ordre + dates -->
+                <!-- Colonne gauche -->
                 <div class="flex flex-col items-start pt-1">
                     <div class="flex items-center gap-3">
                         <div class="h-8 w-8 rounded-full bg-pink-600 text-white flex items-center justify-center text-sm font-semibold shadow">
@@ -63,7 +64,9 @@ function flagFromCode(code) {
                             <div v-if="step.start_date && step.end_date">
                                 {{ step.start_date }} → {{ step.end_date }}
                             </div>
-                            <div v-else class="italic text-gray-400">Dates à préciser</div>
+                            <div v-else class="italic text-gray-400">
+                                {{ t('steps.no_dates') }}
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -72,7 +75,7 @@ function flagFromCode(code) {
                 <div class="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
                     <!-- Contenu -->
                     <div class="p-6 relative">
-                        <!-- Menu contextuel -->
+                        <!-- Menu -->
                         <button
                             @click="toggleMenu(step.id)"
                             class="absolute top-4 right-4 p-2 rounded-full hover:bg-gray-100"
@@ -87,7 +90,7 @@ function flagFromCode(code) {
                             <ul class="py-1 text-sm text-gray-700">
                                 <li>
                                     <Link :href="route('steps.edit', step.id)" class="block px-4 py-2 hover:bg-gray-50">
-                                        ✏️ Modifier
+                                        ✏️ {{ t('steps.edit') }}
                                     </Link>
                                 </li>
                                 <li>
@@ -95,7 +98,7 @@ function flagFromCode(code) {
                                         @click="deleteStep(step)"
                                         class="w-full text-left px-4 py-2 text-red-600 hover:bg-red-50"
                                     >
-                                        🗑️ Supprimer
+                                        🗑️ {{ t('steps.delete') }}
                                     </button>
                                 </li>
                                 <li class="border-t my-1"></li>
@@ -106,7 +109,7 @@ function flagFromCode(code) {
                                         as="button"
                                         class="block w-full text-left px-4 py-2 hover:bg-gray-50"
                                     >
-                                        ⬆️ Monter
+                                        ⬆️ {{ t('steps.move_up') }}
                                     </Link>
                                 </li>
                                 <li>
@@ -116,7 +119,7 @@ function flagFromCode(code) {
                                         as="button"
                                         class="block w-full text-left px-4 py-2 hover:bg-gray-50"
                                     >
-                                        ⬇️ Descendre
+                                        ⬇️ {{ t('steps.move_down') }}
                                     </Link>
                                 </li>
                             </ul>
@@ -125,12 +128,11 @@ function flagFromCode(code) {
                         <!-- Titre + lieu -->
                         <div class="mb-3">
                             <h3 class="text-xl font-bold text-gray-800 leading-tight">
-                                {{ step.title || 'Étape' }}
+                                {{ step.title || t('steps.untitled') }}
                             </h3>
 
                             <p class="mt-1 text-pink-700 font-medium flex items-center gap-2">
-                                <span>📍 {{ step.location || 'Lieu non précisé' }}</span>
-                                <!-- Drapeau si country_code, sinon nom du pays en grisé -->
+                                <span>📍 {{ step.location || t('steps.no_location') }}</span>
                                 <span v-if="step.country_code" class="text-lg" :title="step.country">{{ flagFromCode(step.country_code) }}</span>
                                 <span v-else-if="step.country" class="text-xs text-gray-500">({{ step.country }})</span>
                             </p>
@@ -138,10 +140,16 @@ function flagFromCode(code) {
 
                         <!-- Infos -->
                         <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm text-gray-700">
-                            <p v-if="step.transport_mode">🚗 Transport : {{ step.transport_mode }}</p>
-                            <p v-if="step.nights > 0">🌙 {{ step.nights }} nuit<span v-if="step.nights > 1">s</span></p>
-                            <p v-if="step.distance_to_next">📏 Distance → {{ step.distance_to_next.toFixed(1) }} km</p>
-                            <p v-if="step.duration_to_next">⏱️ Durée estimée → {{ formatDuration(step.duration_to_next) }}</p>
+                            <p v-if="step.transport_mode">🚗 {{ t('steps.transport') }}: {{ step.transport_mode }}</p>
+                            <p v-if="step.nights > 0">
+                                🌙 {{ step.nights }} {{ t('steps.night', { count: step.nights }) }}
+                            </p>
+                            <p v-if="step.distance_to_next">
+                                📏 {{ t('steps.distance') }} → {{ step.distance_to_next.toFixed(1) }} km
+                            </p>
+                            <p v-if="step.duration_to_next">
+                                ⏱️ {{ t('steps.duration') }} → {{ formatDuration(step.duration_to_next) }}
+                            </p>
                         </div>
 
                         <!-- Itinéraire -->
@@ -153,14 +161,14 @@ function flagFromCode(code) {
                                 rel="noopener noreferrer"
                                 class="inline-flex items-center text-sm text-pink-600 hover:underline"
                             >
-                                Itinéraire
+                                {{ t('steps.itinerary') }}
                             </a>
                         </div>
                     </div>
 
                     <!-- Ajouter après -->
                     <div class="bg-gray-50 p-3 border-t text-center">
-                        <AddStepButton :trip-id="trip.id" :after-id="step.id" label="➕ Ajouter une étape" />
+                        <AddStepButton :trip-id="trip.id" :after-id="step.id" :label="t('steps.add_after')" />
                     </div>
                 </div>
             </div>
@@ -168,8 +176,8 @@ function flagFromCode(code) {
 
         <!-- Vide -->
         <div v-else class="flex flex-col items-center justify-center py-12 text-gray-500">
-            <p class="text-lg mb-4">🚀 Aucune étape enregistrée pour ce voyage.</p>
-            <AddStepButton :trip-id="trip.id" label="➕ Créer la première étape" />
+            <p class="text-lg mb-4">🚀 {{ t('steps.empty') }}</p>
+            <AddStepButton :trip-id="trip.id" :label="t('steps.create_first')" />
         </div>
     </div>
 </template>
