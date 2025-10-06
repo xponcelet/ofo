@@ -35,9 +35,11 @@ const props = defineProps({
                 class="flex items-center justify-between px-5 py-4 hover:bg-gray-50 transition"
             >
                 <div>
-                    <h2 class="font-medium">{{ i + 1 }}. {{ step.location }}</h2>
+                    <h2 class="font-medium">
+                        {{ i + 1 }}. {{ step.title || step.location || 'Étape sans nom' }}
+                    </h2>
                     <p class="text-sm text-gray-500">
-                        {{ step.start_date }} → {{ step.end_date }}
+                        {{ step.start_date || '—' }} → {{ step.end_date || '—' }}
                     </p>
                 </div>
 

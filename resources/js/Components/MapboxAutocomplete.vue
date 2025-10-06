@@ -35,21 +35,15 @@ async function attachGeocoder() {
 
 function cleanLocationName(name, context = []) {
     if (!name) return ''
-    // Supprime les parties après la première virgule
     let short = name.split(',')[0].trim()
-
-    // Supprime les répétitions comme "Paris Paris"
     short = short
         .split(' ')
         .filter((v, i, arr) => i === 0 || v.toLowerCase() !== arr[i - 1].toLowerCase())
         .join(' ')
-
-    // Si le lieu correspond aussi à une région/pays du contexte, on garde seulement la 1re partie
     const allContextTexts = context.map(c => c.text.toLowerCase())
     if (allContextTexts.includes(short.toLowerCase())) {
         short = context[0]?.text ?? short
     }
-
     return short
 }
 
@@ -57,7 +51,7 @@ onMounted(async () => {
     geocoder = new MapboxGeocoder({
         accessToken: mapboxgl.accessToken,
         mapboxgl,
-        placeholder: 'Cherche un lieu ou un pays...',
+        placeholder: 'Rechercher une destination...', // 🔹 Placeholder corrigé
         types: 'country,region,place,locality,address',
         marker: false,
         language: 'fr',
@@ -66,11 +60,8 @@ onMounted(async () => {
 
     geocoder.on('result', (e) => {
         const { place_name, center, context = [], place_type = [] } = e.result
-
-        // 🔹 Nettoyage du nom
         let cleanName = cleanLocationName(e.result.text, context)
 
-        // 🔹 Cas particulier : adresse → tenter de récupérer la localité
         if (place_type.includes('address')) {
             const locality = context.find(c =>
                 c.id.startsWith('place') || c.id.startsWith('locality')
@@ -79,24 +70,19 @@ onMounted(async () => {
         }
 
         emit('update:modelValue', cleanName)
-
-        // 🔹 Coordonnées
         emit('update:coords', {
             latitude: center?.[1] ?? null,
             longitude: center?.[0] ?? null,
         })
 
-        // 🔹 Pays + code ISO
         let country = null
         let countryCode = null
-
         const countryContext = context.find(c => c.id.startsWith('country'))
         if (countryContext) {
             country = countryContext.text
             countryCode = countryContext.short_code?.toUpperCase() ?? null
         }
 
-        // Fallback si le lieu est lui-même un pays
         if (!country && place_type.includes('country')) {
             country = e.result.text
             countryCode = e.result.properties?.short_code?.toUpperCase() ?? null
@@ -145,7 +131,34 @@ watch(
 </template>
 
 <style scoped>
-.mapboxgl-ctrl-geocoder {
-    min-width: 100%;
+:deep(.mapboxgl-ctrl-geocoder--input) {
+    border-radius: 12px;
+    padding: 8px 12px 8px 36px; /* 👈 espace à gauche ajusté pour la loupe */
+    font-size: 15px;
+    background-color: #fff;
+    color: #1f1f1f;
+    border: 1px solid #ccc;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
+    transition: all 0.2s ease;
+    height: 42px; /* 👈 alignement vertical propre */
+    line-height: 1.4;
 }
+
+:deep(.mapboxgl-ctrl-geocoder--input:focus) {
+    outline: none;
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
+}
+
+/* ✅ Corrige la position de la loupe */
+:deep(.mapboxgl-ctrl-geocoder--icon) {
+    fill: #3b82f6;
+    width: 18px;
+    height: 18px;
+    top: 50%;
+    transform: translateY(-50%);
+    left: 10px;
+    position: absolute;
+}
+
 </style>

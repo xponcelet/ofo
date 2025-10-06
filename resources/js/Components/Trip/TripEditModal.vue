@@ -68,11 +68,12 @@ function submit() {
 
                         <div class="flex justify-between items-center mt-6">
                             <Link
-                                :href="route('steps.edit', { trip: trip.id })"
+                                :href="route('trips.steps.index', trip.id)"
                                 class="text-sm font-medium text-primary hover:underline"
                             >
                                 ⚙️ Gérer les étapes
                             </Link>
+
 
                             <div class="flex gap-3">
                                 <button type="button" @click="emit('close')" class="btn-secondary">
