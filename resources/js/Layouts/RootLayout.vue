@@ -28,7 +28,7 @@ const isAuth = computed(() => !!page.props?.auth?.user)
         </header>
 
         <!-- ✅ Contenu principal -->
-        <main class="flex-grow w-full px-6 lg:px-12 py-8">
+        <main class="flex-grow w-full">
             <slot />
         </main>
 

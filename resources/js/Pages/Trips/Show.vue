@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed } from 'vue'
+import { ref } from 'vue'
 import { Link, useForm } from '@inertiajs/vue3'
 
 import TripShowView from '@/Components/Trip/TripShowView.vue'
@@ -15,7 +15,6 @@ const props = defineProps({
     days: { type: Array, default: () => [] },
 })
 
-// État local
 const currentTab = ref('itineraire')
 const menuOpen = ref(false)
 const showEditModal = ref(false)
@@ -27,8 +26,8 @@ function toggleMenu() {
 
 function tabClass(tab) {
     return currentTab.value === tab
-        ? 'text-pink-600 border-b-2 border-pink-600 font-semibold'
-        : 'text-gray-500 hover:text-gray-700 border-b-2 border-transparent'
+        ? 'text-primary border-b-2 border-primary font-semibold'
+        : 'text-on-surface-variant hover:text-primary border-b-2 border-transparent'
 }
 
 function getFlagEmoji(code) {
@@ -38,7 +37,6 @@ function getFlagEmoji(code) {
         .replace(/./g, c => String.fromCodePoint(127397 + c.charCodeAt()))
 }
 
-/** --- Formulaire d’édition du voyage --- **/
 const form = useForm({
     title: props.trip.title || '',
     description: props.trip.description || '',
@@ -55,45 +53,38 @@ function submit() {
 </script>
 
 <template>
-    <div class="min-h-screen bg-gray-50">
+    <div class="min-h-screen bg-white text-on-surface">
         <!-- =======================
-             HERO
+             HEADER clair et sobre
         ======================= -->
-        <section
-            class="relative left-1/2 right-1/2 -mx-[50vw] w-screen
-                   bg-gradient-to-r from-pink-600 via-red-500 to-orange-400 text-white
-                   shadow-md overflow-visible"
-        >
-            <div
-                class="max-w-screen-2xl mx-auto px-6 md:px-10 py-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-6"
-            >
+        <section class="border-b border-outline">
+            <div class="max-w-screen-2xl mx-auto px-4 md:px-6 py-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-6">
+                <!-- Titre -->
                 <div class="flex-1">
-                    <h1
-                        class="text-3xl sm:text-4xl font-extrabold tracking-tight mb-1 flex items-center gap-2"
-                    >
+                    <h1 class="text-3xl sm:text-4xl font-bold text-primary-dark flex items-center gap-2">
                         <span>{{ trip.title }}</span>
                         <span v-if="trip.destination_country_code" class="text-2xl leading-none">
                             {{ getFlagEmoji(trip.destination_country_code) }}
                         </span>
                     </h1>
-                    <p class="text-sm sm:text-base opacity-90">
+                    <p class="text-sm text-on-surface-variant mt-1">
                         {{ trip.start_date }} → {{ trip.end_date }} • {{ trip.steps.length }} étapes
                     </p>
                 </div>
 
                 <!-- Statistiques -->
-                <div class="grid grid-cols-3 gap-4 text-center">
-                    <div class="bg-white/10 backdrop-blur rounded-lg px-3 py-2">
-                        <p class="text-xl font-bold">{{ trip.days_count || 0 }}</p>
-                        <p class="text-xs opacity-80">Jours</p>
+                <div class="grid grid-cols-3 gap-3 text-center">
+                    <div class="bg-white rounded-lg border border-outline px-3 py-2 shadow-sm">
+                        <p class="text-lg font-semibold text-primary-dark">{{ trip.days_count || 0 }}</p>
+                        <p class="text-xs text-on-surface-variant">Jours</p>
                     </div>
-                    <div class="bg-white/10 backdrop-blur rounded-lg px-3 py-2">
-                        <p class="text-xl font-bold">{{ trip.steps.length }}</p>
-                        <p class="text-xs opacity-80">Étapes</p>
+                    <div class="bg-white rounded-lg border border-outline px-3 py-2 shadow-sm">
+                        <p class="text-lg font-semibold text-primary-dark">{{ trip.steps.length }}</p>
+                        <p class="text-xs text-on-surface-variant">Étapes</p>
                     </div>
-                    <div class="bg-white/10 backdrop-blur rounded-lg px-3 py-2">
-                        <p class="text-xl font-bold">100%</p>
-                        <p class="text-xs opacity-80">Terminé</p>
+                    <div class="bg-white rounded-lg border border-outline px-3 py-2 shadow-sm">
+                        <p class="text-lg">🌍</p>
+                        <p class="text-xs text-on-surface-variant">Public</p>
                     </div>
                 </div>
 
@@ -101,7 +92,7 @@ function submit() {
                 <div class="flex flex-wrap gap-3 justify-end">
                     <Link
                         :href="route('trips.steps.create', trip.id)"
-                        class="px-4 py-2 bg-white text-pink-600 font-semibold rounded-lg shadow hover:bg-gray-100 transition"
+                        class="px-4 py-2 bg-accent text-white font-semibold rounded-lg shadow hover:bg-primary transition"
                     >
                         ➕ Étape
                     </Link>
@@ -109,16 +100,15 @@ function submit() {
                     <button
                         type="button"
                         @click="showShareModal = true"
-                        class="px-4 py-2 bg-pink-700 hover:bg-pink-800 text-white font-semibold rounded-lg shadow transition"
+                        class="px-4 py-2 bg-primary text-white font-semibold rounded-lg shadow hover:bg-primary-dark transition"
                     >
                         🔗 Partager
                     </button>
 
-                    <!-- Menu 3 points -->
                     <div class="relative">
                         <button
                             @click="toggleMenu"
-                            class="p-2 rounded-full hover:bg-white/20 transition"
+                            class="p-2 rounded-full hover:bg-primary/10 transition"
                         >
                             ⋮
                         </button>
@@ -149,12 +139,10 @@ function submit() {
         </section>
 
         <!-- =======================
-             Onglets principaux
+             Onglets
         ======================= -->
-        <section class="bg-white border-b border-gray-200">
-            <nav
-                class="max-w-screen-2xl mx-auto px-6 flex gap-6 overflow-x-auto scrollbar-hide"
-            >
+        <section class="bg-white border-b border-outline">
+            <nav class="max-w-screen-2xl mx-auto px-4 flex gap-6 overflow-x-auto scrollbar-hide">
                 <button
                     @click="currentTab = 'itineraire'"
                     class="py-3 text-sm transition-colors"
@@ -171,7 +159,7 @@ function submit() {
                     🧭 Activités
                     <span
                         v-if="totalActivitiesCount"
-                        class="ml-1 text-xs text-gray-400"
+                        class="ml-1 text-xs text-on-surface-variant"
                     >
                         ({{ totalActivitiesCount }})
                     </span>
@@ -185,7 +173,7 @@ function submit() {
                     🧾 Checklist
                     <span
                         v-if="trip.checklist_items && trip.checklist_items.length"
-                        class="ml-1 text-xs text-gray-400"
+                        class="ml-1 text-xs text-on-surface-variant"
                     >
                         ({{ trip.checklist_items.length }})
                     </span>
@@ -196,7 +184,7 @@ function submit() {
         <!-- =======================
              Contenu des onglets
         ======================= -->
-        <section class="max-w-screen-2xl mx-auto px-6 py-8">
+        <section class="max-w-screen-2xl mx-auto px-4 py-6">
             <div v-if="currentTab === 'itineraire'">
                 <TripShowView
                     :steps="trip.steps"
@@ -229,76 +217,43 @@ function submit() {
                 <div
                     class="bg-white rounded-2xl shadow-lg w-full max-w-lg p-6 relative"
                 >
-                    <h2 class="text-xl font-semibold mb-4">Modifier le voyage</h2>
+                    <h2 class="text-xl font-semibold mb-4 text-primary-dark">
+                        Modifier le voyage
+                    </h2>
 
                     <form @submit.prevent="submit" class="space-y-4">
                         <div>
-                            <label
-                                class="block text-sm font-medium text-gray-700"
-                            >Titre</label
-                            >
-                            <input
-                                v-model="form.title"
-                                type="text"
-                                class="input w-full"
-                            />
-                            <div
-                                v-if="form.errors.title"
-                                class="text-sm text-red-500"
-                            >
+                            <label class="block text-sm font-medium text-gray-700">Titre</label>
+                            <input v-model="form.title" type="text" class="input w-full" />
+                            <div v-if="form.errors.title" class="text-sm text-red-500">
                                 {{ form.errors.title }}
                             </div>
                         </div>
 
                         <div>
-                            <label
-                                class="block text-sm font-medium text-gray-700"
-                            >Description</label
-                            >
-                            <textarea
-                                v-model="form.description"
-                                rows="3"
-                                class="input w-full"
-                            ></textarea>
+                            <label class="block text-sm font-medium text-gray-700">Description</label>
+                            <textarea v-model="form.description" rows="3" class="input w-full"></textarea>
                         </div>
 
                         <div>
-                            <label
-                                class="block text-sm font-medium text-gray-700"
-                            >Budget</label
-                            >
-                            <input
-                                v-model="form.budget"
-                                type="number"
-                                class="input w-full"
-                            />
+                            <label class="block text-sm font-medium text-gray-700">Budget</label>
+                            <input v-model="form.budget" type="number" class="input w-full" />
                         </div>
 
                         <div>
-                            <label
-                                class="block text-sm font-medium text-gray-700"
-                            >Image (URL)</label
-                            >
-                            <input
-                                v-model="form.image"
-                                type="text"
-                                class="input w-full"
-                            />
+                            <label class="block text-sm font-medium text-gray-700">Image (URL)</label>
+                            <input v-model="form.image" type="text" class="input w-full" />
                         </div>
 
                         <div class="flex items-center gap-2">
-                            <input
-                                type="checkbox"
-                                v-model="form.is_public"
-                                id="is_public"
-                            />
+                            <input type="checkbox" v-model="form.is_public" id="is_public" />
                             <label for="is_public">Voyage public</label>
                         </div>
 
                         <div class="flex justify-between items-center mt-6">
                             <Link
                                 :href="route('trips.steps.index', trip.id)"
-                                class="text-sm font-medium text-pink-600 hover:underline"
+                                class="text-sm font-medium text-primary hover:underline"
                             >
                                 ⚙️ Gérer les étapes
                             </Link>
@@ -324,9 +279,6 @@ function submit() {
             </div>
         </transition>
 
-        <!-- =======================
-             MODAL PARTAGE (externe)
-        ======================= -->
         <ShowShareModal
             :show="showShareModal"
             :trip="trip"
@@ -337,13 +289,20 @@ function submit() {
 
 <style scoped>
 .input {
-    @apply rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:ring-2 focus:ring-pink-500 focus:outline-none;
+    @apply rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:ring-2 focus:ring-primary focus:outline-none;
 }
 .btn-primary {
-    @apply px-4 py-2 bg-pink-600 text-white rounded-lg hover:bg-pink-700 transition;
+    @apply px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-dark transition;
 }
 .btn-secondary {
     @apply px-4 py-2 bg-gray-200 rounded-lg hover:bg-gray-300 transition;
+}
+.scrollbar-hide::-webkit-scrollbar {
+    display: none;
+}
+.scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
 }
 .fade-enter-active,
 .fade-leave-active {
