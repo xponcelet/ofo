@@ -118,7 +118,6 @@ function getFlagEmoji(code) {
                     <p v-if="trip.description" class="text-gray-700 leading-relaxed">
                         {{ trip.description }}
                     </p>
-
                     <div v-if="trip.image" class="mt-4">
                         <img
                             :src="trip.image"

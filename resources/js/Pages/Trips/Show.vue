@@ -1,10 +1,11 @@
 <script setup>
-import { ref } from 'vue'
-import { Link } from '@inertiajs/vue3'
-import { useForm } from '@inertiajs/vue3'
-import TripShowView from "@/Components/Trip/TripShowView.vue"
+import { ref, computed } from 'vue'
+import { Link, useForm } from '@inertiajs/vue3'
+
+import TripShowView from '@/Components/Trip/TripShowView.vue'
 import TripChecklist from '@/Components/Trip/TripChecklist.vue'
-import TripActivities from "@/Components/Trip/TripActivities.vue"
+import TripActivities from '@/Components/Trip/TripActivities.vue'
+import ShowShareModal from '@/Components/Trip/ShowShareModal.vue'
 
 const props = defineProps({
     trip: Object,
@@ -14,9 +15,11 @@ const props = defineProps({
     days: { type: Array, default: () => [] },
 })
 
+// État local
 const currentTab = ref('itineraire')
 const menuOpen = ref(false)
 const showEditModal = ref(false)
+const showShareModal = ref(false)
 
 function toggleMenu() {
     menuOpen.value = !menuOpen.value
@@ -35,7 +38,7 @@ function getFlagEmoji(code) {
         .replace(/./g, c => String.fromCodePoint(127397 + c.charCodeAt()))
 }
 
-/** --- Formulaire édition voyage --- **/
+/** --- Formulaire d’édition du voyage --- **/
 const form = useForm({
     title: props.trip.title || '',
     description: props.trip.description || '',
@@ -46,9 +49,7 @@ const form = useForm({
 
 function submit() {
     form.put(route('trips.update', props.trip.id), {
-        onSuccess: () => {
-            showEditModal.value = false
-        }
+        onSuccess: () => (showEditModal.value = false),
     })
 }
 </script>
@@ -56,21 +57,22 @@ function submit() {
 <template>
     <div class="min-h-screen bg-gray-50">
         <!-- =======================
-             HERO compact + drapeau
+             HERO
         ======================= -->
         <section
             class="relative left-1/2 right-1/2 -mx-[50vw] w-screen
                    bg-gradient-to-r from-pink-600 via-red-500 to-orange-400 text-white
                    shadow-md overflow-visible"
         >
-            <div class="max-w-screen-2xl mx-auto px-6 md:px-10 py-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-6">
+            <div
+                class="max-w-screen-2xl mx-auto px-6 md:px-10 py-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-6"
+            >
                 <div class="flex-1">
-                    <h1 class="text-3xl sm:text-4xl font-extrabold tracking-tight mb-1 flex items-center gap-2">
+                    <h1
+                        class="text-3xl sm:text-4xl font-extrabold tracking-tight mb-1 flex items-center gap-2"
+                    >
                         <span>{{ trip.title }}</span>
-                        <span
-                            v-if="trip.destination_country_code"
-                            class="text-2xl leading-none"
-                        >
+                        <span v-if="trip.destination_country_code" class="text-2xl leading-none">
                             {{ getFlagEmoji(trip.destination_country_code) }}
                         </span>
                     </h1>
@@ -106,9 +108,10 @@ function submit() {
 
                     <button
                         type="button"
+                        @click="showShareModal = true"
                         class="px-4 py-2 bg-pink-700 hover:bg-pink-800 text-white font-semibold rounded-lg shadow transition"
                     >
-                        Partager
+                        🔗 Partager
                     </button>
 
                     <!-- Menu 3 points -->
@@ -149,7 +152,9 @@ function submit() {
              Onglets principaux
         ======================= -->
         <section class="bg-white border-b border-gray-200">
-            <nav class="max-w-screen-2xl mx-auto px-6 flex gap-6 overflow-x-auto scrollbar-hide">
+            <nav
+                class="max-w-screen-2xl mx-auto px-6 flex gap-6 overflow-x-auto scrollbar-hide"
+            >
                 <button
                     @click="currentTab = 'itineraire'"
                     class="py-3 text-sm transition-colors"
@@ -157,7 +162,6 @@ function submit() {
                 >
                     🗺️ Itinéraire
                 </button>
-
 
                 <button
                     @click="currentTab = 'activities'"
@@ -168,7 +172,9 @@ function submit() {
                     <span
                         v-if="totalActivitiesCount"
                         class="ml-1 text-xs text-gray-400"
-                    >({{ totalActivitiesCount }})</span>
+                    >
+                        ({{ totalActivitiesCount }})
+                    </span>
                 </button>
 
                 <button
@@ -180,7 +186,9 @@ function submit() {
                     <span
                         v-if="trip.checklist_items && trip.checklist_items.length"
                         class="ml-1 text-xs text-gray-400"
-                    >({{ trip.checklist_items.length }})</span>
+                    >
+                        ({{ trip.checklist_items.length }})
+                    </span>
                 </button>
             </nav>
         </section>
@@ -218,33 +226,72 @@ function submit() {
                 v-if="showEditModal"
                 class="fixed inset-0 flex items-center justify-center bg-black/40 z-50"
             >
-                <div class="bg-white rounded-2xl shadow-lg w-full max-w-lg p-6 relative">
+                <div
+                    class="bg-white rounded-2xl shadow-lg w-full max-w-lg p-6 relative"
+                >
                     <h2 class="text-xl font-semibold mb-4">Modifier le voyage</h2>
 
                     <form @submit.prevent="submit" class="space-y-4">
                         <div>
-                            <label class="block text-sm font-medium text-gray-700">Titre</label>
-                            <input v-model="form.title" type="text" class="input w-full" />
-                            <div v-if="form.errors.title" class="text-sm text-red-500">{{ form.errors.title }}</div>
+                            <label
+                                class="block text-sm font-medium text-gray-700"
+                            >Titre</label
+                            >
+                            <input
+                                v-model="form.title"
+                                type="text"
+                                class="input w-full"
+                            />
+                            <div
+                                v-if="form.errors.title"
+                                class="text-sm text-red-500"
+                            >
+                                {{ form.errors.title }}
+                            </div>
                         </div>
 
                         <div>
-                            <label class="block text-sm font-medium text-gray-700">Description</label>
-                            <textarea v-model="form.description" rows="3" class="input w-full"></textarea>
+                            <label
+                                class="block text-sm font-medium text-gray-700"
+                            >Description</label
+                            >
+                            <textarea
+                                v-model="form.description"
+                                rows="3"
+                                class="input w-full"
+                            ></textarea>
                         </div>
 
                         <div>
-                            <label class="block text-sm font-medium text-gray-700">Budget</label>
-                            <input v-model="form.budget" type="number" class="input w-full" />
+                            <label
+                                class="block text-sm font-medium text-gray-700"
+                            >Budget</label
+                            >
+                            <input
+                                v-model="form.budget"
+                                type="number"
+                                class="input w-full"
+                            />
                         </div>
 
                         <div>
-                            <label class="block text-sm font-medium text-gray-700">Image (URL)</label>
-                            <input v-model="form.image" type="text" class="input w-full" />
+                            <label
+                                class="block text-sm font-medium text-gray-700"
+                            >Image (URL)</label
+                            >
+                            <input
+                                v-model="form.image"
+                                type="text"
+                                class="input w-full"
+                            />
                         </div>
 
                         <div class="flex items-center gap-2">
-                            <input type="checkbox" v-model="form.is_public" id="is_public" />
+                            <input
+                                type="checkbox"
+                                v-model="form.is_public"
+                                id="is_public"
+                            />
                             <label for="is_public">Voyage public</label>
                         </div>
 
@@ -256,10 +303,18 @@ function submit() {
                                 ⚙️ Gérer les étapes
                             </Link>
                             <div class="flex gap-3">
-                                <button type="button" @click="showEditModal = false" class="btn-secondary">
+                                <button
+                                    type="button"
+                                    @click="showEditModal = false"
+                                    class="btn-secondary"
+                                >
                                     Annuler
                                 </button>
-                                <button type="submit" class="btn-primary" :disabled="form.processing">
+                                <button
+                                    type="submit"
+                                    class="btn-primary"
+                                    :disabled="form.processing"
+                                >
                                     Enregistrer
                                 </button>
                             </div>
@@ -268,6 +323,15 @@ function submit() {
                 </div>
             </div>
         </transition>
+
+        <!-- =======================
+             MODAL PARTAGE (externe)
+        ======================= -->
+        <ShowShareModal
+            :show="showShareModal"
+            :trip="trip"
+            @close="showShareModal = false"
+        />
     </div>
 </template>
 

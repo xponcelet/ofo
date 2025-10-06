@@ -200,12 +200,28 @@ watch(
 
 // 💾 Soumission
 function submit() {
+    // 👇 Transforme les données juste avant l’envoi
+    form.transform((data) => {
+        const start = data.start_at
+            ? `${data.date} ${data.start_at}` // ex: "2025-10-06 09:00"
+            : null
+
+        return {
+            ...data,
+            start_at: start,
+        }
+    })
+
     if (isEdit.value) {
         form.put(route("activities.update", props.activity.id), {
             preserveScroll: true,
             onSuccess: () => {
                 emit("updated")
                 emit("close")
+            },
+            onError: () => {
+                // (optionnel) ouvrir un petit bloc d'erreurs
+                console.warn('Validation errors:', form.errors)
             },
         })
     } else {
@@ -215,9 +231,13 @@ function submit() {
                 emit("created")
                 emit("close")
                 form.reset()
-                form.start_at = "09:00" // 🕘 réinitialise à 9h après création
+                form.start_at = "09:00" // remettre 9h par défaut
+            },
+            onError: () => {
+                console.warn('Validation errors:', form.errors)
             },
         })
     }
 }
+
 </script>
