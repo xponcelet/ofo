@@ -3,6 +3,7 @@ import { Link, router } from '@inertiajs/vue3'
 import { ref, computed } from 'vue'
 import MapboxAutocomplete from '@/Components/MapboxAutocomplete.vue'
 import StepMapPreview from '@/Components/StepMapPreview.vue'
+import { t } from '@/composables/useTranslations'
 
 const props = defineProps({
     canCreate: { type: Boolean, default: false },
@@ -35,16 +36,22 @@ function searchTrips() {
 <template>
     <section class="flex flex-col h-full rounded-2xl border border-outline/20 bg-surface shadow-md overflow-hidden">
         <div class="p-6">
-            <h2 class="text-xl font-semibold text-on-surface text-center">Créer</h2>
-            <p class="text-on-surface-variant text-center mt-1">Je sais où je veux aller</p>
+            <h2 class="text-xl font-semibold text-on-surface text-center">
+                {{ t('dashboardSearch.title') }}
+            </h2>
+            <p class="text-on-surface-variant text-center mt-1">
+                {{ t('dashboardSearch.subtitle') }}
+            </p>
 
-            <label class="block text-sm text-on-surface mt-5 mb-2">Pays, région ou ville</label>
+            <label class="block text-sm text-on-surface mt-5 mb-2">
+                {{ t('dashboardSearch.label') }}
+            </label>
 
             <MapboxAutocomplete
                 v-model="query"
                 @select="onSelect"
                 @place-selected="onSelect"
-                :placeholder="'Espagne, Italie, Bretagne…'"
+                :placeholder="t('dashboardSearch.placeholder')"
                 class="w-full rounded-xl border border-outline/30 bg-surface-variant px-4 py-2.5 shadow-sm
                        focus:outline-none focus:ring-2 focus:ring-primary/50"
             />
@@ -66,7 +73,7 @@ function searchTrips() {
                        hover:bg-surface-variant/70 hover:shadow transition"
                 :class="{ 'pointer-events-none opacity-50': !props.canCreate }"
             >
-                Créer un voyage
+                {{ t('dashboardSearch.createTrip') }}
             </Link>
 
             <button
@@ -76,12 +83,14 @@ function searchTrips() {
                        bg-primary text-white font-medium shadow-sm
                        hover:bg-primary/90 hover:shadow-md transition"
             >
-                Chercher un voyage
+                {{ t('dashboardSearch.searchTrip') }}
             </button>
         </div>
 
         <div v-if="!props.canCreate" class="px-6 pb-6 -mt-2 text-center">
-            <Link :href="route('register')" class="text-sm text-primary hover:underline">Créer un compte</Link>
+            <Link :href="route('register')" class="text-sm text-primary hover:underline">
+                {{ t('dashboardSearch.createAccount') }}
+            </Link>
         </div>
     </section>
 </template>

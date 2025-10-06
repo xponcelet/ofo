@@ -1,6 +1,6 @@
-import defaultTheme from 'tailwindcss/defaultTheme';
-import forms from '@tailwindcss/forms';
-import typography from '@tailwindcss/typography';
+import defaultTheme from 'tailwindcss/defaultTheme'
+import forms from '@tailwindcss/forms'
+import typography from '@tailwindcss/typography'
 
 /** @type {import('tailwindcss').Config} */
 export default {
@@ -9,33 +9,53 @@ export default {
         './vendor/laravel/jetstream/**/*.blade.php',
         './storage/framework/views/*.php',
         './resources/views/**/*.blade.php',
-        "./resources/**/*.js",
+        './resources/**/*.js',
         './resources/js/**/*.vue',
     ],
 
     theme: {
         extend: {
             colors: {
+                // 💙 Palette principale
                 primary: {
-                    DEFAULT: '#6750A4', // violet Material 3
+                    light: '#9498F2',   // lavande douce
+                    DEFAULT: '#115D8C', // bleu moyen
+                    dark: '#0B3B59',    // bleu profond
                     foreground: '#FFFFFF',
                 },
-                secondary: {
-                    DEFAULT: '#625B71',
-                    foreground: '#FFFFFF',
+
+                // 💎 Accent cyan pour CTA
+                accent: {
+                    DEFAULT: '#05DBF2',
+                    foreground: '#0B3B59',
                 },
-                background: '#FFFBFE',
-                surface: '#FFFBFE',
-                'surface-variant': '#E7E0EC',
-                'on-surface': '#1C1B1F',
-                'on-surface-variant': '#49454F',
-                outline: '#79747E',
+
+                // ☁️ Arrière-plan et surfaces
+                background: '#F0F1F2',
+                surface: '#FFFFFF',
+
+                // 🖋️ Texte et variantes
+                'on-surface': '#0B3B59',
+                'on-surface-variant': '#115D8C',
+
+                // 🔲 Bordures et outline
+                outline: '#D3D6DA',
             },
+
             fontFamily: {
-                sans: ['Inter', 'ui-sans-serif', 'system-ui'],
+                sans: ['Inter', ...defaultTheme.fontFamily.sans],
+            },
+
+            boxShadow: {
+                soft: '0 4px 12px rgba(11, 59, 89, 0.08)',
+            },
+
+            borderRadius: {
+                xl: '1rem',
+                '2xl': '1.25rem',
             },
         },
     },
 
     plugins: [forms, typography],
-};
+}

@@ -1,6 +1,8 @@
 <script setup>
+import { t } from '@/composables/useTranslations'
+
 const props = defineProps({
-    step: { type: Object, required: false }
+    step: { type: Object, required: false },
 })
 </script>
 
@@ -9,15 +11,20 @@ const props = defineProps({
         <div class="flex items-center justify-between mb-3">
             <h3 class="text-lg font-semibold">{{ step.title }}</h3>
             <span class="rounded-full bg-gray-100 px-3 py-1 text-xs text-gray-700">
-                Jour {{ step.day }}
+                {{ t('step.day') }} {{ step.day }}
             </span>
         </div>
 
         <div v-if="step.description" class="prose prose-sm max-w-none">
             <p class="whitespace-pre-line text-gray-700">{{ step.description }}</p>
         </div>
-        <p v-else class="text-sm text-gray-500">Pas encore de description pour cette étape.</p>
+
+        <p v-else class="text-sm text-gray-500">
+            {{ t('step.no_description') }}
+        </p>
     </section>
 
-    <p v-else class="text-sm text-gray-500">Aucune étape sélectionnée.</p>
+    <p v-else class="text-sm text-gray-500">
+        {{ t('step.no_step') }}
+    </p>
 </template>

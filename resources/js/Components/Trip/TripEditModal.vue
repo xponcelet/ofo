@@ -61,11 +61,6 @@ function submit() {
                             <input v-model="form.budget" type="number" class="input w-full" />
                         </div>
 
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700">Image (URL)</label>
-                            <input v-model="form.image" type="text" class="input w-full" />
-                        </div>
-
                         <div class="flex items-center gap-2">
                             <input type="checkbox" v-model="form.is_public" id="is_public" />
                             <label for="is_public">Voyage public</label>

@@ -79,14 +79,6 @@ watch(
                     :error="form.errors.description"
                 />
 
-                <Input
-                    v-model="form.image"
-                    label="Image (URL)"
-                    type="url"
-                    placeholder="https://exemple.com/photo.jpg"
-                    :error="form.errors.image"
-                />
-
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <Input
                         v-model="form.budget"

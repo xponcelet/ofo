@@ -22,28 +22,21 @@ const isAuth = computed(() => !!page.props?.auth?.user)
         <!-- Bannière éventuelle -->
         <Banner />
 
-        <!-- Header -->
+        <!-- ✅ En-tête : on laisse AppLayout/GuestLayout gérer sa propre structure -->
         <header class="bg-surface shadow-sm border-b border-outline">
-            <div class="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8">
-                <div class="flex justify-between items-center h-16">
-                    <!-- Logo / titre appli -->
-                    <h1 class="text-xl font-bold text-primary">MyRoadbook</h1>
-
-                    <!-- Layout invité / connecté -->
-                    <component :is="isAuth ? AppLayout : GuestLayout" :title="title" />
-                </div>
-            </div>
+            <component :is="isAuth ? AppLayout : GuestLayout" :title="title" />
         </header>
 
-        <!-- Contenu -->
+        <!-- ✅ Contenu principal -->
         <main class="flex-grow w-full px-6 lg:px-12 py-8">
             <slot />
         </main>
 
-        <!-- Footer -->
+        <!-- ✅ Footer -->
         <footer class="bg-surface-variant text-on-surface-variant border-t border-outline mt-8">
-            <div class="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex flex-col sm:flex-row justify-between items-center gap-4">
-
+            <div
+                class="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex flex-col sm:flex-row justify-between items-center gap-4"
+            >
                 <!-- Lien RGPD (ouvre modal plus tard) -->
                 <button type="button" class="text-sm hover:underline">
                     Politique de confidentialité
@@ -54,7 +47,7 @@ const isAuth = computed(() => !!page.props?.auth?.user)
                     &copy; 2025 MyRoadbook | Xavier Poncelet
                 </p>
 
-                <!-- Sélecteur de langue (dropdown vers le haut) -->
+                <!-- Sélecteur de langue -->
                 <LanguageSwitcher placement="top" />
             </div>
         </footer>

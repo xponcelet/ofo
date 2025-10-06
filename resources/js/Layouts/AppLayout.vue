@@ -2,10 +2,9 @@
 import { Link, router } from '@inertiajs/vue3'
 import { ref } from 'vue'
 import ApplicationMark from '@/Components/ApplicationMark.vue'
-import NavLink from '@/Components/NavLink.vue'
 import Dropdown from '@/Components/Dropdown.vue'
 import DropdownLink from '@/Components/DropdownLink.vue'
-import ResponsiveNavLink from '@/Components/ResponsiveNavLink.vue'
+import NavLink from '@/Components/NavLink.vue'
 
 defineProps({ title: String })
 
@@ -14,71 +13,62 @@ const logout = () => router.post(route('logout'))
 </script>
 
 <template>
-    <!-- Code inchangé de AppLayout entre <div class="flex"> ... </div> -->
-    <!-- ✅ ici tu gardes le logo, les liens, le profil utilisateur, le hamburger, etc. -->
-    <div class="flex">
-        <!-- Logo -->
-        <div class="shrink-0 flex items-center">
-            <Link :href="route('dashboard')">
-                <ApplicationMark class="block h-9 w-auto" />
-            </Link>
-        </div>
+    <header class="bg-white shadow-sm border-b border-outline">
+        <nav class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+            <!-- ✅ 1. Logo à gauche -->
+            <div class="flex items-center gap-2">
+                <Link :href="route('dashboard')" class="flex items-center gap-2 group">
+                    <ApplicationMark class="h-9 w-auto" />
+                    <span class="text-primary-dark font-bold text-xl tracking-tight group-hover:text-accent transition-colors">
+            My<span class="text-accent">Roadbook</span>
+          </span>
+                </Link>
+            </div>
 
-        <!-- Navigation Links -->
-        <div class="hidden space-x-8 sm:-my-px sm:ms-10 sm:flex">
-            <NavLink :href="route('dashboard')" :active="route().current('dashboard')">
-                Dashboard
-            </NavLink>
-            <NavLink :href="route('public.trips.index')" :active="route().current('public.trips.*')">
-                Inspirations
-            </NavLink>
-            <NavLink v-if="$page.props.auth?.user" :href="route('trips.index')" :active="route().current('trips.*')">
-                Mes voyages
-            </NavLink>
-        </div>
-    </div>
+            <!-- ✅ 2. Navigation centrée -->
+            <div class="hidden sm:flex justify-center items-center space-x-8">
+                <NavLink :href="route('dashboard')" :active="route().current('dashboard')">Dashboard</NavLink>
+                <NavLink :href="route('public.trips.index')" :active="route().current('public.trips.*')">Inspirations</NavLink>
+                <NavLink :href="route('trips.index')" :active="route().current('trips.*')">Mes voyages</NavLink>
+            </div>
 
-    <!-- User Dropdown (inchangé) -->
-    <div v-if="$page.props.auth?.user" class="hidden sm:flex sm:items-center sm:ms-6">
-        <Dropdown align="right" width="48">
-            <template #trigger>
-                <button v-if="$page.props.jetstream.managesProfilePhotos" class="flex text-sm border-2 border-transparent rounded-full">
-                    <img class="size-8 rounded-full object-cover"
-                         :src="$page.props.auth.user.profile_photo_url"
-                         :alt="$page.props.auth.user.name" />
-                </button>
-                <span v-else class="inline-flex rounded-md">
-          <button type="button" class="inline-flex items-center px-3 py-2 text-sm leading-4 font-medium text-gray-500 bg-white hover:text-gray-700">
-            {{ $page.props.auth.user.name }}
-            <svg class="ms-2 -me-0.5 size-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5" />
-            </svg>
-          </button>
-        </span>
-            </template>
+            <!-- ✅ 3. Profil à droite -->
+            <div class="hidden sm:flex items-center space-x-4">
+                <Dropdown align="right" width="48">
+                    <template #trigger>
+                        <button
+                            v-if="$page.props.jetstream.managesProfilePhotos"
+                            class="flex border-2 border-transparent rounded-full focus:outline-none focus:border-accent"
+                        >
+                            <img
+                                class="h-9 w-9 rounded-full object-cover"
+                                :src="$page.props.auth.user.profile_photo_url"
+                                :alt="$page.props.auth.user.name"
+                            />
+                        </button>
+                        <button
+                            v-else
+                            type="button"
+                            class="text-sm font-medium text-primary-dark hover:text-accent flex items-center gap-1"
+                        >
+                            {{ $page.props.auth.user.name }}
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.5 8.25l-7.5 7.5-7.5-7.5" />
+                            </svg>
+                        </button>
+                    </template>
 
-            <template #content>
-                <DropdownLink :href="route('favorites.index')">Mes favoris</DropdownLink>
-                <div class="block px-4 py-2 text-xs text-gray-400">Manage Account</div>
-                <DropdownLink :href="route('profile.show')">Profile</DropdownLink>
-                <div class="border-t border-gray-200" />
-                <form @submit.prevent="logout">
-                    <DropdownLink as="button">Log Out</DropdownLink>
-                </form>
-            </template>
-        </Dropdown>
-    </div>
+                    <template #content>
+                        <DropdownLink :href="route('favorites.index')">Mes favoris</DropdownLink>
+                        <DropdownLink :href="route('profile.show')">Profil</DropdownLink>
+                        <div class="border-t border-outline" />
+                        <form @submit.prevent="logout">
+                            <DropdownLink as="button">Se déconnecter</DropdownLink>
+                        </form>
+                    </template>
+                </Dropdown>
+            </div>
+        </nav>
+    </header>
 
-    <!-- Hamburger menu (inchangé aussi) -->
-    <div class="-me-2 flex items-center sm:hidden">
-        <button @click="showingNavigationDropdown = !showingNavigationDropdown"
-                class="inline-flex items-center justify-center p-2 rounded-md text-gray-400 hover:text-gray-500">
-            <!-- ... tes icônes hamburger ... -->
-        </button>
-    </div>
-
-    <!-- Menu responsive (inchangé) -->
-    <div :class="{ 'block': showingNavigationDropdown, 'hidden': !showingNavigationDropdown }" class="sm:hidden">
-        <!-- ... ton code responsive ... -->
-    </div>
 </template>
