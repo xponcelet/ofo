@@ -27,7 +27,7 @@ const showingNavigationDropdown = ref(false)
                 :href="route('public.trips.index')"
                 :active="route().current('public.trips.*')"
             >
-                Inspirations
+                Voyages publics
             </NavLink>
 
             <!-- Dashboard visible si connecté -->
@@ -97,21 +97,23 @@ const showingNavigationDropdown = ref(false)
     <!-- Menu responsive -->
     <div :class="{ 'block': showingNavigationDropdown, 'hidden': !showingNavigationDropdown }" class="sm:hidden">
         <div class="pt-2 pb-3 space-y-1">
-            <ResponsiveNavLink
-                v-if="route().has('public.trips.index')"
-                :href="route('public.trips.index')"
-                :active="route().current('public.trips.*')"
-            >
-                Voyages publics
-            </ResponsiveNavLink>
-
-            <ResponsiveNavLink
+            <NavLink
                 v-if="$page.props?.auth?.user && route().has('dashboard')"
                 :href="route('dashboard')"
                 :active="route().current('dashboard')"
             >
                 Dashboard
-            </ResponsiveNavLink>
+            </NavLink>
+            <NavLink
+                v-if="route().has('public.trips.index')"
+                :href="route('public.trips.index')"
+                :active="route().current('public.trips.*')"
+            >
+                Inspirations
+            </NavLink>
+            <NavLink v-if="route('trips.index')" :href="route('trips.index')" :active="route().current('trips.*')">
+                Mes voyages
+            </NavLink>
         </div>
 
         <!-- Login/register dans le menu mobile -->

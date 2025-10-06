@@ -22,10 +22,17 @@ class TripController extends Controller
 
     public function index(Request $request): \Inertia\Response
     {
+        // 🧩 Si l’utilisateur n’est pas connecté → page d’invitation
+        if (!auth()->check()) {
+            return \Inertia\Inertia::render('Trips/GuestPlaceholder');
+        }
+
+        // 🧍‍♂️ Récupération de l’utilisateur connecté
         $user = auth()->user();
         $perPage = (int) $request->integer('per_page', 12);
 
-        $trips = Trip::query()
+        // 🌍 Récupération des voyages de l’utilisateur
+        $trips = \App\Models\Trip::query()
             ->where('user_id', $user->id)
             ->withCount(['steps', 'favoredBy as favs'])
             ->with([
@@ -34,7 +41,6 @@ class TripController extends Controller
             ->latest()
             ->paginate($perPage)
             ->through(function ($trip) {
-                // Trouver l’étape marquée comme destination
                 $destinationStep = $trip->steps->firstWhere('is_destination', true);
 
                 return [
@@ -49,14 +55,13 @@ class TripController extends Controller
                     'total_nights' => $trip->total_nights,
                     'days_count'   => $trip->days_count,
                     'steps_count'  => $trip->steps_count,
-
-                    // 🏳️ Ajout du pays de destination
                     'destination_country'      => $destinationStep?->country,
                     'destination_country_code' => $destinationStep?->country_code,
                 ];
             });
 
-        $count = Trip::where('user_id', $user->id)->count();
+        // 🔢 Infos sur la limite de voyages
+        $count = \App\Models\Trip::where('user_id', $user->id)->count();
         $max   = $user->tripLimit();
 
         return \Inertia\Inertia::render('Trips/Index', [

@@ -1,4 +1,3 @@
-<!-- resources/js/Pages/Dashboard.vue -->
 <script setup>
 import { Head, usePage } from '@inertiajs/vue3'
 import DashboardSearch from '@/Components/Public/DashboardSearch.vue'
