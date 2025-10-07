@@ -1,19 +1,18 @@
 <script setup>
-import { Head, Link, router } from '@inertiajs/vue3'
+import { Head, Link, router, usePage } from '@inertiajs/vue3'
 import { computed } from 'vue'
 
 const props = defineProps({
     trips:  { type: Object, required: true },
-    limits: { type: Object, default: () => ({ max: 4, count: 0 }) },
+    limits: { type: Object, default: () => ({ max: 5, count: 0 }) },
     can:    { type: Object, default: () => ({ create_trip: true }) },
 })
 
-const items = computed(() =>
-    Array.isArray(props.trips?.data) ? props.trips.data : []
-)
+const { props: pageProps } = usePage()
+const user = computed(() => pageProps.auth?.user)
 
-// ✅ Empêche la création si la limite est atteinte
-const canCreate = computed(() => props.limits.count < props.limits.max)
+const items = computed(() => Array.isArray(props.trips?.data) ? props.trips.data : [])
+const canCreate = computed(() => !!props.can?.create_trip)
 
 /** Supprimer un voyage */
 function destroyTrip(id) {
@@ -34,7 +33,7 @@ function destroyTrip(id) {
 /** Statut du voyage */
 function computeStatus(trip) {
     const start = trip.start_date ? new Date(trip.start_date) : null
-    const end   = trip.end_date ? new Date(trip.end_date) : null
+    const end = trip.end_date ? new Date(trip.end_date) : null
     const today = new Date()
 
     if (!start || !end) return 'À venir'
@@ -43,7 +42,7 @@ function computeStatus(trip) {
     return 'Terminé'
 }
 
-/** 🇫🇷 Convertit le code pays en emoji drapeau */
+/** 🇫🇷 Convertit le code pays (FR, IT, ES...) en emoji drapeau */
 function getFlagEmoji(code) {
     if (!code) return ''
     return code
@@ -62,98 +61,102 @@ function getFlagEmoji(code) {
         <div class="flex items-center justify-between mb-6">
             <h1 class="text-3xl font-bold text-gray-800">Mes Voyages</h1>
 
-            <!-- ✅ Bouton "Nouveau voyage" bloqué à 4 -->
-            <Link
-                v-if="canCreate"
-                :href="route('trips.destination')"
-                class="inline-flex items-center gap-2 bg-pink-600 text-white px-4 py-2 rounded-xl shadow hover:bg-pink-700"
-            >
-                <span class="text-lg leading-none">＋</span>
-                Nouveau voyage
-            </Link>
-
-            <button
-                v-else
-                class="inline-flex items-center gap-2 bg-gray-300 text-gray-600 px-4 py-2 rounded-xl cursor-not-allowed"
-                :title="`Vous avez atteint la limite de ${limits.max} voyages`"
-            >
-                <span class="text-lg leading-none">＋</span>
-                Nouveau voyage
-            </button>
-        </div>
-
-        <!-- Grille de voyages -->
-        <div
-            v-if="items.length"
-            class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6"
-        >
-            <article
-                v-for="trip in items"
-                :key="trip.id"
-                class="relative rounded-2xl text-white overflow-hidden shadow-lg"
-                :class="[
-                    'bg-gradient-to-br',
-                    computeStatus(trip) === 'Terminé'
-                        ? 'from-indigo-700 to-blue-500'
-                        : computeStatus(trip) === 'En cours'
-                        ? 'from-purple-700 to-pink-500'
-                        : 'from-slate-700 to-purple-500',
-                ]"
-            >
+            <!-- Bouton création -->
+            <template v-if="user">
                 <Link
-                    :href="route('trips.show', trip.id)"
-                    class="block p-6 space-y-3"
+                    v-if="canCreate"
+                    :href="route('trips.destination')"
+                    class="inline-flex items-center gap-2 bg-pink-600 text-white px-4 py-2 rounded-xl shadow hover:bg-pink-700"
                 >
-                    <header class="flex justify-between items-start">
-                        <h2
-                            class="text-xl font-semibold line-clamp-1 flex items-center gap-2"
-                        >
-                            <span
-                                v-if="trip.destination_country_code"
-                                class="mr-2"
-                            >
-                                {{ getFlagEmoji(trip.destination_country_code) }}
-                            </span>
-                            <span>{{ trip.title || 'Sans titre' }}</span>
-                        </h2>
-                        <span
-                            class="text-xs font-semibold px-2 py-1 rounded-full bg-white/20"
-                        >
-                            {{ computeStatus(trip) }}
-                        </span>
-                    </header>
-
-                    <div class="text-sm">
-                        <p v-if="trip.start_date && trip.end_date">
-                            {{ trip.start_date }} → {{ trip.end_date }}
-                        </p>
-                        <p>
-                            {{ trip.days_count }} jours ·
-                            {{ trip.steps_count }} étapes
-                        </p>
-                    </div>
-
-                    <div class="w-full bg-white/20 h-1 rounded-full mt-3">
-                        <div
-                            class="h-1 rounded-full bg-white"
-                            :style="{
-                                width: trip.steps_count
-                                    ? Math.min(trip.steps_count * 10, 100) + '%'
-                                    : '0%',
-                            }"
-                        />
-                    </div>
+                    <span class="text-lg leading-none">＋</span>
+                    Nouveau voyage
                 </Link>
-            </article>
+
+                <button
+                    v-else
+                    class="inline-flex items-center gap-2 bg-gray-300 text-gray-600 px-4 py-2 rounded-xl cursor-not-allowed"
+                    :title="`Vous avez atteint la limite de ${limits.max} voyages`"
+                >
+                    <span class="text-lg leading-none">＋</span>
+                    Nouveau voyage
+                </button>
+            </template>
         </div>
 
-        <!-- Vide -->
-        <div
-            v-else
-            class="text-gray-500 border rounded-xl p-6 mt-6 text-center"
-        >
-            🚀 Aucun voyage encore créé.
+        <!-- Si non connecté -->
+        <div v-if="!user" class="bg-white rounded-2xl shadow-sm p-10 text-center border border-gray-100">
+            <p class="text-lg text-gray-700 mb-6">
+                Créez-vous un compte pour commencer à organiser votre prochain voyage ✈️
+            </p>
+            <Link
+                :href="route('register')"
+                class="inline-flex items-center justify-center gap-2 bg-pink-600 text-white font-semibold px-6 py-3 rounded-xl hover:bg-pink-700 transition"
+            >
+                <span class="text-lg leading-none">＋</span>
+                Créer un compte
+            </Link>
         </div>
+
+        <!-- Si connecté -->
+        <template v-else>
+            <!-- Grille de voyages -->
+            <div v-if="items.length" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                <article
+                    v-for="trip in items"
+                    :key="trip.id"
+                    class="relative rounded-2xl text-white overflow-hidden shadow-lg"
+                    :class="[
+                        'bg-gradient-to-br',
+                        computeStatus(trip) === 'Terminé' ? 'from-indigo-700 to-blue-500' :
+                        computeStatus(trip) === 'En cours' ? 'from-purple-700 to-pink-500' :
+                        'from-slate-700 to-purple-500'
+                    ]"
+                >
+                    <Link :href="route('trips.show', trip.id)" class="block p-6 space-y-3">
+                        <header class="flex justify-between items-start">
+                            <h2 class="text-xl font-semibold line-clamp-1 flex items-center gap-2">
+                                <span v-if="trip.destination_country_code" class="mr-2">{{ getFlagEmoji(trip.destination_country_code) }}</span>
+                                <span>{{ trip.title || 'Sans titre' }}</span>
+                            </h2>
+                            <span class="text-xs font-semibold px-2 py-1 rounded-full bg-white/20">
+                                {{ computeStatus(trip) }}
+                            </span>
+                        </header>
+
+                        <div class="text-sm">
+                            <p v-if="trip.start_date && trip.end_date">
+                                {{ trip.start_date }} → {{ trip.end_date }}
+                            </p>
+                            <p>
+                                {{ trip.days_count }} jours · {{ trip.steps_count }} étapes
+                            </p>
+                        </div>
+
+                        <div class="w-full bg-white/20 h-1 rounded-full mt-3">
+                            <div
+                                class="h-1 rounded-full bg-white"
+                                :style="{ width: trip.steps_count ? Math.min(trip.steps_count * 10, 100) + '%' : '0%' }"
+                            />
+                        </div>
+                    </Link>
+
+                    <!-- Actions -->
+                    <div class="flex justify-end gap-2 px-6 pb-4">
+                        <button
+                            @click.stop="destroyTrip(trip.id)"
+                            class="text-xs px-2 py-1 rounded bg-red-600 hover:bg-red-700"
+                        >
+                            Supprimer
+                        </button>
+                    </div>
+                </article>
+            </div>
+
+            <!-- Vide -->
+            <div v-else class="text-gray-500 border rounded-xl p-6 mt-6 text-center">
+                🚀 Aucun voyage encore créé.
+            </div>
+        </template>
     </div>
 </template>
 
