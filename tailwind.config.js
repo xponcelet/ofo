@@ -31,7 +31,7 @@ export default {
                 },
 
                 // ☁️ Arrière-plan et surfaces
-                background: '#F0F1F2',
+                background: '#FFFFFF',
                 surface: '#FFFFFF',
 
                 // 🖋️ Texte et variantes

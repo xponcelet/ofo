@@ -31,16 +31,26 @@ class TripController extends Controller
 
         $user = auth()->user();
         $perPage = (int) $request->integer('per_page', 12);
+        $search = $request->input('search');
 
         // 🌍 Récupération des voyages
         $trips = Trip::query()
             ->where('user_id', $user->id)
+            ->when($search, function ($query, $search) {
+                $query->where(function ($q) use ($search) {
+                    $q->where('title', 'like', "%{$search}%")
+                        ->orWhereHas('steps', function ($stepQuery) use ($search) {
+                            $stepQuery->where('country', 'like', "%{$search}%");
+                        });
+                });
+            })
             ->withCount(['steps', 'favoredBy as favs'])
             ->with([
                 'steps:id,trip_id,start_date,end_date,nights,is_destination,country,country_code'
             ])
             ->latest()
             ->paginate($perPage)
+            ->withQueryString()
             ->through(function ($trip) {
                 $destinationStep = $trip->steps->firstWhere('is_destination', true);
 
@@ -67,6 +77,9 @@ class TripController extends Controller
 
         return Inertia::render('Trips/Index', [
             'trips' => $trips,
+            'filters' => [
+                'search' => $search,
+            ],
             'limits' => [
                 'max'   => $max,
                 'count' => $count,

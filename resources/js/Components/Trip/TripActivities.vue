@@ -19,7 +19,9 @@ const editActivity = ref(null)
 const activitiesByDay = computed(() => {
     return props.days.map((day) => {
         const dayStr = new Date(day.date).toISOString().split("T")[0]
-        return props.activities.filter((a) => a.date === dayStr)
+        return props.activities
+            .filter((a) => a.date === dayStr)
+            .sort((a, b) => new Date(a.start_at) - new Date(b.start_at))
     })
 })
 
@@ -132,63 +134,69 @@ function deleteActivity(activityId) {
             </div>
 
             <!-- 🏷️ Liste des activités -->
-            <div v-if="activitiesByDay[activeDay]?.length" class="space-y-4">
+            <div v-if="activitiesByDay[activeDay]?.length" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
                 <div
                     v-for="activity in activitiesByDay[activeDay]"
                     :key="activity.id"
-                    class="bg-white rounded-xl border border-gray-200 shadow-sm p-5 transition hover:shadow-md">
+                    class="bg-white rounded-xl border border-gray-200 shadow-sm p-5 transition hover:shadow-md flex flex-col justify-between"
+                >
+                    <!-- Haut : titre et actions -->
+                    <div>
+                        <div class="flex justify-between items-start mb-2">
+                            <div>
+                                <h3 class="text-lg font-semibold text-gray-800">
+                                    {{ activity.title }}
+                                </h3>
+                                <p class="text-sm text-gray-500">
+                                    {{ formatTime(activity.start_at) }}
+                                    <span v-if="activity.cost" class="ml-2">
+                                        • 💰 {{ activity.cost }} {{ activity.currency }}
+                                    </span>
+                                </p>
+                            </div>
 
-                    <!-- Titre + boutons -->
-                    <div class="flex justify-between items-start mb-2">
-                        <div>
-                            <h3 class="text-lg font-semibold text-gray-800">
-                                {{ activity.title }}
-                            </h3>
-                            <p class="text-sm text-gray-500">
-                                {{ formatTime(activity.start_at) }}
-                                <span v-if="activity.cost" class="ml-2">
-                                    • 💰 {{ activity.cost }} {{ activity.currency }}
-                                </span>
-                            </p>
+                            <div class="flex items-center gap-2">
+                                <button
+                                    @click="openEditModal(activity)"
+                                    class="text-gray-500 hover:text-pink-600 transition"
+                                    title="Éditer"
+                                >
+                                    ✏️
+                                </button>
+                                <button
+                                    @click="deleteActivity(activity.id)"
+                                    class="text-gray-400 hover:text-red-600 transition"
+                                    title="Supprimer"
+                                >
+                                    🗑️
+                                </button>
+                            </div>
                         </div>
 
-                        <div class="flex items-center gap-2">
-                            <button
-                                @click="openEditModal(activity)"
-                                class="text-gray-500 hover:text-pink-600 transition"
-                                title="Éditer">
-                                ✏️
-                            </button>
-                            <button
-                                @click="deleteActivity(activity.id)"
-                                class="text-gray-400 hover:text-red-600 transition"
-                                title="Supprimer">
-                                🗑️
-                            </button>
-                        </div>
+                        <!-- Catégorie -->
+                        <span
+                            v-if="activity.category"
+                            class="text-xs bg-pink-100 text-pink-700 font-medium px-2 py-1 rounded-full inline-block mb-2"
+                        >
+                            {{ activity.category }}
+                        </span>
+
+                        <!-- Description -->
+                        <p v-if="activity.description" class="text-gray-700 text-sm mb-3 line-clamp-3">
+                            {{ activity.description }}
+                        </p>
                     </div>
 
-                    <!-- Catégorie -->
-                    <span
-                        v-if="activity.category"
-                        class="text-xs bg-pink-100 text-pink-700 font-medium px-2 py-1 rounded-full inline-block mb-2">
-                        {{ activity.category }}
-                    </span>
-
-                    <!-- Description -->
-                    <p v-if="activity.description" class="text-gray-700 text-sm mb-3">
-                        {{ activity.description }}
-                    </p>
-
-                    <!-- Détails -->
-                    <div class="flex flex-wrap gap-3 text-sm text-gray-500">
+                    <!-- Bas : Détails -->
+                    <div class="flex flex-wrap gap-2 text-sm text-gray-500 mt-3">
                         <span>📍 {{ activity.location || activity.step_location }}</span>
                         <a
                             v-if="activity.external_link"
                             :href="activity.external_link"
                             target="_blank"
                             rel="noopener noreferrer"
-                            class="text-pink-600 hover:underline">
+                            class="text-pink-600 hover:underline"
+                        >
                             🔗 Lien
                         </a>
                     </div>
@@ -199,6 +207,7 @@ function deleteActivity(activityId) {
             <div v-else class="text-gray-500 italic">
                 Aucune activité prévue pour ce jour.
             </div>
+
         </section>
 
         <!-- 🔹 Modal ajout / édition -->
