@@ -126,11 +126,11 @@ class PublicTripController extends Controller
                 'days_count'     => $trip->days_count,
                 'steps_count'    => $trip->steps_count,
                 'steps'          => $trip->steps,
-                'days'           => $days, // ✅ tous les jours, même vides
                 'destination_country_code' => $trip->steps->firstWhere('is_destination', true)?->country_code,
             ],
             'activities' => $activities,
             'totalActivitiesCount' => $activities->count(),
+            'days' => $days,
         ]);
     }
 
