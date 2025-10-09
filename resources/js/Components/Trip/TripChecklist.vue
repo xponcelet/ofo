@@ -81,6 +81,17 @@ const onDrop = async (e, targetItem) => {
     }
 }
 
+// Suppression d'un element
+const confirmAndDelete = async (item) => {
+    if (deleting.value) return
+    const msg = `Supprimer « ${item.label} » ?`
+    if (!window.confirm(msg)) return
+    await deleteItem(item)
+}
+
+
+
+
 /* Indicators */
 const remaining   = computed(() => list.value.filter(i => !i.is_checked).length)
 const progressPct = computed(() => {
@@ -103,7 +114,7 @@ const textSize = computed(() => props.dense ? 'text-sm' : 'text-base')
             <div class="flex items-end justify-between gap-2 mb-3">
                 <div>
                     <h2 class="text-base sm:text-lg font-semibold leading-tight">{{ title }}</h2>
-                    <p class="text-xs text-gray-600">Coche, renomme (double-clic) et réorganise par glisser-déposer.</p>
+                    <p class="text-xs text-gray-600">Coche, renomme et réorganise ta checklist.</p>
                 </div>
                 <div class="text-xs sm:text-sm text-gray-600">
                     <span class="font-medium">{{ remaining }}</span> restant{{ remaining > 1 ? 's' : '' }}
@@ -191,7 +202,7 @@ const textSize = computed(() => props.dense ? 'text-sm' : 'text-base')
 
                         <!-- delete -->
                         <button type="button"
-                                @click="deleteItem(item)"
+                                @click="confirmAndDelete(item)"
                                 :disabled="deleting === item.id"
                                 :class="['rounded-md px-2', props.dense ? 'py-1' : 'py-1.5', 'text-xs sm:text-sm text-red-600 hover:bg-red-50 disabled:opacity-50']">
                             Supprimer
