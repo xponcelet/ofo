@@ -3,6 +3,7 @@ import { Head, usePage } from '@inertiajs/vue3'
 import DashboardSearch from '@/Components/Public/DashboardSearch.vue'
 import RandomTripCard from '@/Components/Public/RandomTripCard.vue'
 import { t } from '@/Composables/useTranslations.js'
+import Features from "@/Components/Features.vue";
 
 const props = defineProps({
     canCreate: { type: Boolean, default: false }
@@ -30,6 +31,10 @@ const page = usePage()
             <div class="grid gap-8 md:grid-cols-2">
                 <DashboardSearch :can-create="props.canCreate" />
                 <RandomTripCard />
+            </div>
+            <!-- Cards -->
+            <div>
+                <Features />
             </div>
         </section>
     </main>
