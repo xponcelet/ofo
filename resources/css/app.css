@@ -1,6 +1,12 @@
+/* Import de material symbols*/
+@import url('https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@24,400,0,0');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+
+
 
 
 [x-cloak] {
@@ -37,4 +43,20 @@
 * {
     scrollbar-width: thin;
     scrollbar-color: rgba(59, 130, 246, 0.8) rgba(229, 231, 235, 0.8);
+}
+
+.material-symbol {
+    font-family: 'Material Symbols Rounded';
+    font-weight: normal;
+    font-style: normal;
+    font-size: 24px; /* taille standard */
+    line-height: 1;
+    letter-spacing: normal;
+    text-transform: none;
+    display: inline-block;
+    white-space: nowrap;
+    word-wrap: normal;
+    direction: ltr;
+    -webkit-font-feature-settings: 'liga';
+    -webkit-font-smoothing: antialiased;
 }
