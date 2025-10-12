@@ -222,12 +222,17 @@ class TripController extends Controller
                     'trip_id',
                     'order',
                     'title',
+                    'description',
                     'location',
+                    'country_code',
+                    'country',
                     'start_date',
                     'end_date',
                     'latitude',
                     'longitude',
-                    'nights'
+                    'nights',
+                    'distance_to_next',
+                    'duration_to_next'
                 );
             },
             'steps.activities' => function ($q) {

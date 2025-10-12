@@ -33,6 +33,8 @@ class Step extends Model
         'is_destination' => 'boolean',
         'latitude' => 'float',   // pour avoir le bon format avec Google maps et MapBox
         'longitude' => 'float',  // pour avoir le bon format avec Google maps et MapBox
+        'distance_to_next' => 'float',
+        'duration_to_next' => 'float',
     ];
 
     public function trip()

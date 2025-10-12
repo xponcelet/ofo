@@ -260,4 +260,17 @@ class StepController extends Controller
 
         return $validated;
     }
+
+    public function reorder(Trip $trip)
+    {
+        $this->authorize('update', $trip);
+
+        $order = request('order', []);
+        foreach ($order as $index => $id) {
+            \App\Models\Step::where('id', $id)->update(['order' => $index + 1]);
+        }
+
+        return back();
+    }
+
 }

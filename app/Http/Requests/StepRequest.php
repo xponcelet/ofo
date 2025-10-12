@@ -14,6 +14,8 @@ class StepRequest extends FormRequest
     public function rules(): array
     {
         return [
+            'title'          => ['nullable', 'string', 'max:255'],
+            'description'    => ['nullable', 'string'],
             'location' => ['required', 'string', 'max:100'],
             'latitude' => ['nullable', 'numeric', 'between:-90,90'],
             'longitude' => ['nullable', 'numeric', 'between:-180,180'],

@@ -32,6 +32,8 @@ const computedEndDate = computed(() => {
 
 onMounted(() => {
     Object.assign(props.form, {
+        title: props.form.title ?? '',
+        description: props.form.description ?? '',
         location: props.form.location ?? '',
         latitude: props.form.latitude ?? null,
         longitude: props.form.longitude ?? null,

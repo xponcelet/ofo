@@ -41,6 +41,14 @@
                         />
                     </div>
 
+                    <!-- 🗺️ Mini carte -->
+                    <div v-if="form.latitude && form.longitude" class="h-32 rounded-xl overflow-hidden border border-gray-200 mt-2">
+                        <div
+                            ref="mapRef"
+                            class="w-full h-full"
+                        ></div>
+                    </div>
+
                     <!-- 🔗 Lien externe -->
                     <div>
                         <label class="block text-sm font-medium text-gray-700">Lien externe</label>
@@ -141,8 +149,11 @@
 
 <script setup>
 import { useForm } from "@inertiajs/vue3"
-import { computed, watch, onMounted } from "vue"
+import { ref, computed, watch, onMounted, nextTick } from "vue"
 import MapboxAutocomplete from "@/Components/MapboxAutocomplete.vue"
+import mapboxgl from "mapbox-gl"
+
+mapboxgl.accessToken = import.meta.env.VITE_MAPBOX_TOKEN
 
 const props = defineProps({
     show: { type: Boolean, default: false },
@@ -152,6 +163,9 @@ const props = defineProps({
 })
 
 const emit = defineEmits(["close", "created", "updated"])
+const mapRef = ref(null)
+let mapInstance = null
+let marker = null
 
 const isEdit = computed(() => !!props.activity)
 
@@ -161,7 +175,7 @@ const form = useForm({
     location: "",
     external_link: "",
     date: props.dayDate || "",
-    start_at: "09:00", // 🕘 heure par défaut
+    start_at: "09:00",
     cost: "",
     currency: "EUR",
     category: "",
@@ -170,13 +184,37 @@ const form = useForm({
     longitude: null,
 })
 
-// 📍 coordonnées depuis Mapbox
+// 📍 Mise à jour des coordonnées depuis MapboxAutocomplete
 function updateCoords(coords) {
     form.latitude = coords?.lat || null
     form.longitude = coords?.lng || null
 }
 
-// 🧩 Remplit si édition
+// 🗺️ Initialise la mini-carte
+async function initMap() {
+    await nextTick()
+    if (!mapRef.value || !form.latitude || !form.longitude) return
+
+    if (mapInstance) {
+        mapInstance.setCenter([form.longitude, form.latitude])
+        marker?.setLngLat([form.longitude, form.latitude])
+        return
+    }
+
+    mapInstance = new mapboxgl.Map({
+        container: mapRef.value,
+        style: "mapbox://styles/mapbox/streets-v12",
+        center: [form.longitude, form.latitude],
+        zoom: 14,
+        interactive: false,
+    })
+
+    marker = new mapboxgl.Marker({ color: "#ec4899" })
+        .setLngLat([form.longitude, form.latitude])
+        .addTo(mapInstance)
+}
+
+// 🧩 Remplit si édition ou création depuis POI
 watch(
     () => props.activity,
     (a) => {
@@ -186,58 +224,49 @@ watch(
             form.location = a.location || ""
             form.external_link = a.external_link || ""
             form.date = a.date || props.dayDate || ""
-            form.start_at = a.start_at ? a.start_at.slice(11, 16) : "09:00" // 🕘 garde 9h par défaut si vide
+            form.start_at = a.start_at ? a.start_at.slice(11, 16) : "09:00"
             form.cost = a.cost || ""
             form.currency = a.currency || "EUR"
             form.category = a.category || ""
             form.step_id = a.step_id || props.stepId
             form.latitude = a.latitude || null
             form.longitude = a.longitude || null
+            nextTick(initMap)
         }
     },
     { immediate: true }
 )
 
+// 📍 Re-render mini carte dès qu’on a de nouvelles coords
+watch(() => [form.latitude, form.longitude], initMap)
+
 // 💾 Soumission
 function submit() {
-    // 👇 Transforme les données juste avant l’envoi
     form.transform((data) => {
-        const start = data.start_at
-            ? `${data.date} ${data.start_at}` // ex: "2025-10-06 09:00"
-            : null
-
-        return {
-            ...data,
-            start_at: start,
-        }
+        const start = data.start_at ? `${data.date} ${data.start_at}` : null
+        return { ...data, start_at: start }
     })
 
-    if (isEdit.value) {
+    if (isEdit.value && props.activity?.id) {
+        // ✅ Édition
         form.put(route("activities.update", props.activity.id), {
             preserveScroll: true,
             onSuccess: () => {
                 emit("updated")
                 emit("close")
             },
-            onError: () => {
-                // (optionnel) ouvrir un petit bloc d'erreurs
-                console.warn('Validation errors:', form.errors)
-            },
         })
     } else {
+        // ✅ Création (y compris depuis POI)
         form.post(route("steps.activities.store", props.stepId), {
             preserveScroll: true,
             onSuccess: () => {
                 emit("created")
                 emit("close")
                 form.reset()
-                form.start_at = "09:00" // remettre 9h par défaut
-            },
-            onError: () => {
-                console.warn('Validation errors:', form.errors)
+                form.start_at = "09:00"
             },
         })
     }
 }
-
 </script>

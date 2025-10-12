@@ -62,8 +62,21 @@ class PublicTripController extends Controller
         $trip->load([
             'steps' => function ($q) {
                 $q->orderBy('order')->select(
-                    'id','trip_id','order','title','location',
-                    'start_date','end_date','latitude','longitude','nights'
+                    'id',
+                    'trip_id',
+                    'order',
+                    'title',
+                    'description',
+                    'location',
+                    'country_code',
+                    'country',
+                    'start_date',
+                    'end_date',
+                    'latitude',
+                    'longitude',
+                    'nights',
+                    'distance_to_next',
+                    'duration_to_next'
                 );
             },
             'steps.activities:id,step_id,title,description,location,start_at,end_at,external_link,cost,currency,category',
