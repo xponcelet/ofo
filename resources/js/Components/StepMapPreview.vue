@@ -1,4 +1,3 @@
-<!-- resources/js/Components/StepMapPreview.vue -->
 <template>
     <div ref="mapEl" class="w-full h-64 rounded overflow-hidden border border-gray-200" />
 </template>
@@ -6,6 +5,7 @@
 <script setup>
 import { ref, onMounted, onBeforeUnmount, watch, computed, nextTick } from 'vue'
 import mapboxgl from 'mapbox-gl'
+
 
 const props = defineProps({
     // Cas 1 : un seul point
@@ -15,25 +15,30 @@ const props = defineProps({
     // Cas 2 : plusieurs étapes [{ title, latitude, longitude }, ...]
     steps: {
         type: Array,
-        default: () => [], // <— évite props.steps === undefined
+        default: () => [],
     },
 
     // Options
     zoom: { type: Number, default: 5 },
     style: { type: String, default: 'mapbox://styles/mapbox/streets-v12' },
+
+    // 🔹 Nouveaux props pour les POI
+    showPoi: { type: Boolean, default: false },     // afficher ou non les POI
+    poiQuery: { type: String, default: 'restaurant' }, // type de POI à chercher
+    poiLimit: { type: Number, default: 10 },        // nombre maximum de POI à afficher
 })
 
 // Centre par défaut : Europe
-const DEFAULT_CENTER = [10, 50] // [lng, lat]
+const DEFAULT_CENTER = [10, 50]
 
 const mapEl = ref(null)
 let map = null
 let markers = []
+let poiLayer = null // 🔹 référence pour la couche POI
 
 const hasSinglePoint = computed(() => props.latitude !== null && props.longitude !== null)
 
 const points = computed(() => {
-    // Si on a des coords directes, on les utilise
     if (hasSinglePoint.value) {
         return [{
             lng: props.longitude,
@@ -42,8 +47,6 @@ const points = computed(() => {
         }]
     }
 
-    // Sinon, on utilise steps (filtrées)
-    // props.steps est TOUJOURS un array grâce au default: () => []
     return props.steps
         .filter(s => s && s.latitude !== null && s.longitude !== null)
         .map(s => ({
@@ -75,7 +78,7 @@ function renderMarkers () {
         el.className = 'rounded-full shadow ring-2 ring-white'
         el.style.width = '14px'
         el.style.height = '14px'
-        el.style.background = '#1d4ed8' // bleu (tu peux styliser mieux si tu veux)
+        el.style.background = '#1d4ed8' // bleu
 
         const marker = new mapboxgl.Marker({ element: el })
             .setLngLat([p.lng, p.lat])
@@ -95,46 +98,66 @@ function renderMarkers () {
     } else {
         map.fitBounds(bounds, { padding: 40, maxZoom: 9 })
     }
+
+    // 🔹 Si POI activés, on (re)charge la couche
+    if (props.showPoi) {
+        renderPoiLayer()
+    }
+}
+
+async function renderPoiLayer() {
+    if (!map) return
+
+    // Supprime la couche précédente s’il y en a une
+    if (poiLayer) {
+        poiLayer.remove()
+        poiLayer = null
+    }
+
+    // Déterminer la position centrale (premier point ou coordonnées)
+    const center = hasSinglePoint.value
+        ? [props.longitude, props.latitude]
+        : (points.value.length ? [points.value[0].lng, points.value[0].lat] : DEFAULT_CENTER)
+
+    // Charger le composant PoiMapLayer dynamiquement
+    const { default: PoiMapLayerClass } = await import('./PoiMapLayer.js')
+    poiLayer = new PoiMapLayerClass(map, center, props.poiQuery, props.poiLimit)
+    poiLayer.load()
 }
 
 onMounted(async () => {
     await nextTick()
 
+    mapboxgl.accessToken = import.meta.env.VITE_MAPBOX_KEY
     map = new mapboxgl.Map({
         container: mapEl.value,
         style: props.style,
         center: DEFAULT_CENTER,
         zoom: 3.5,
-        accessToken: import.meta.env.VITE_MAPBOX_KEY,
     })
 
     map.addControl(new mapboxgl.NavigationControl(), 'top-right')
-
-    map.on('load', () => {
-        renderMarkers()
-    })
+    map.on('load', renderMarkers)
 })
 
-// Re-rendre si les points changent (coords ou steps)
+// Recharger marqueurs et POI si les étapes changent
 watch(points, () => {
     if (!map) return
-    // Si la map n’est pas encore prête, attendre le load
     if (!map.isStyleLoaded()) {
         map.once('load', renderMarkers)
     } else {
         renderMarkers()
     }
-}, { immediate: false, deep: true })
+}, { deep: true })
+
+// 🔹 Mettre à jour les POI si le type change (ex: restaurant → hotel)
+watch(() => props.poiQuery, () => {
+    if (props.showPoi) renderPoiLayer()
+})
 
 onBeforeUnmount(() => {
     clearMarkers()
-    if (map) {
-        map.remove()
-        map = null
-    }
+    if (poiLayer) poiLayer.remove()
+    if (map) map.remove()
 })
 </script>
-
-<style scoped>
-/* rien de spécial ici */
-</style>

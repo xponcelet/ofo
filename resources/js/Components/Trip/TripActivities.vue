@@ -3,6 +3,7 @@ import { ref, computed } from "vue"
 import { router } from "@inertiajs/vue3"
 import ActivityModal from "@/Components/ActivityModal.vue"
 import ActivityMapPreview from "@/Components/ActivityMapPreview.vue"
+import PoiExplorer from "@/Components/PoiExplorer.vue"
 
 const props = defineProps({
     days: { type: Array, required: true },
@@ -58,6 +59,39 @@ function openEditModal(activity) {
     editActivity.value = activity
     showModal.value = true
 }
+
+// ====================
+// Création depuis un POI
+// ====================
+function openPoiAsActivity(poi) {
+    // Récupération fiable des coordonnées selon le type
+    const lat = poi.lat || poi.center?.lat || poi.geometry?.lat
+    const lon = poi.lon || poi.center?.lon || poi.geometry?.lon
+
+    if (!lat || !lon) {
+        console.warn("⚠️ POI sans coordonnées valides :", poi)
+        return
+    }
+
+    // Préremplissage
+    editActivity.value = {
+        title: poi.name || 'Lieu sans nom',
+        location: poi.name || '',
+        description: poi.tags?.description || '',
+        latitude: lat,
+        longitude: lon,
+        start_at: null,
+        end_at: null,
+        external_link: '',
+        cost: null,
+        currency: 'EUR',
+        category: poi.category || poi.tags?.amenity || poi.tags?.tourism || 'Découverte',
+    }
+
+    showModal.value = true
+}
+
+
 
 // ====================
 // Rechargement / Suppression
@@ -131,6 +165,14 @@ function deleteActivity(activityId) {
                 <ActivityMapPreview
                     :step="days[activeDay].step"
                     :activities="activitiesByDay[activeDay]" />
+            </div>
+
+            <!-- 🏙️ Explorer les lieux à proximité -->
+            <div v-if="days[activeDay]?.step?.latitude && days[activeDay]?.step?.longitude" class="mt-2">
+                <PoiExplorer
+                    :latitude="days[activeDay].step.latitude"
+                    :longitude="days[activeDay].step.longitude"
+                    @select-poi="openPoiAsActivity" />
             </div>
 
             <!-- 🏷️ Liste des activités -->
@@ -207,7 +249,6 @@ function deleteActivity(activityId) {
             <div v-else class="text-gray-500 italic">
                 Aucune activité prévue pour ce jour.
             </div>
-
         </section>
 
         <!-- 🔹 Modal ajout / édition -->
