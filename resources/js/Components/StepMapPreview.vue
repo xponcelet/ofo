@@ -120,9 +120,9 @@ async function renderPoiLayer() {
         : (points.value.length ? [points.value[0].lng, points.value[0].lat] : DEFAULT_CENTER)
 
     // Charger le composant PoiMapLayer dynamiquement
-    const { default: PoiMapLayerClass } = await import('./PoiMapLayer.js')
-    poiLayer = new PoiMapLayerClass(map, center, props.poiQuery, props.poiLimit)
-    poiLayer.load()
+   // const { default: PoiMapLayerClass } = await import('./PoiMapLayer.js')
+   // poiLayer = new PoiMapLayerClass(map, center, props.poiQuery, props.poiLimit)
+   // poiLayer.load()
 }
 
 onMounted(async () => {
