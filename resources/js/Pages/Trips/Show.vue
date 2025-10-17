@@ -6,6 +6,7 @@ import TripShowView from '@/Components/Trip/TripShowView.vue'
 import TripChecklist from '@/Components/Trip/TripChecklist.vue'
 import TripActivities from '@/Components/Trip/TripActivities.vue'
 import ShowShareModal from '@/Components/Trip/ShowShareModal.vue'
+import TripSteps from "@/Components/Step/TripSteps.vue";
 
 const props = defineProps({
     trip: Object,
@@ -144,6 +145,13 @@ function submit() {
         <section class="bg-white border-b border-outline">
             <nav class="max-w-screen-2xl mx-auto px-4 flex gap-6 overflow-x-auto scrollbar-hide">
                 <button
+                    @click="currentTab = 'steps'"
+                    class="py-3 text-sm transition-colors flex items-center"
+                    :class="tabClass('steps')"
+                >
+                    🧳 Étapes & Activités
+                </button>
+                <button
                     @click="currentTab = 'itineraire'"
                     class="py-3 text-sm transition-colors"
                     :class="tabClass('itineraire')"
@@ -178,6 +186,8 @@ function submit() {
                         ({{ trip.checklist_items.length }})
                     </span>
                 </button>
+
+
             </nav>
         </section>
 
@@ -185,7 +195,13 @@ function submit() {
              Contenu des onglets
         ======================= -->
         <section class="max-w-screen-2xl mx-auto px-4 py-6">
-            <div v-if="currentTab === 'itineraire'">
+            <!-- D’abord le v-if principal -->
+            <div v-if="currentTab === 'steps'">
+                <TripSteps :trip="trip" />
+            </div>
+
+            <!-- Puis les autres -->
+            <div v-else-if="currentTab === 'itineraire'">
                 <TripShowView
                     :steps="trip.steps"
                     @go-to-activities="currentTab = 'activities'"
@@ -205,6 +221,7 @@ function submit() {
                 />
             </div>
         </section>
+
 
         <!-- =======================
              MODAL ÉDITION

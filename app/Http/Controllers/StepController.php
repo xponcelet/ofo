@@ -272,5 +272,31 @@ class StepController extends Controller
 
         return back();
     }
+    public function updateNights(Request $request, Step $step)
+    {
+        // Autorisation sur le trip parent (selon ta Policy)
+        $this->authorize('update', $step->trip);
+
+        // Validation simple et ciblée
+        $data = $request->validate([
+            'nights' => ['required', 'integer', 'min:0'],
+        ]);
+
+        // Calcul end_date : start_date + nights jours (si start_date existe)
+        $endDate = null;
+        if (!empty($step->start_date)) {
+            // Si tu stockes des dates en date ou datetime, adapte parse
+            $start = Carbon::parse($step->start_date)->startOfDay();
+            $endDate = $start->copy()->addDays($data['nights']); // 0 nuit => même jour
+        }
+
+        $step->update([
+            'nights'   => $data['nights'],
+            'end_date' => $endDate, // peut être null si pas de start_date
+        ]);
+
+        // Optionnel : renvoyer les nouvelles valeurs pour un refresh partiel
+        return back();
+    }
 
 }

@@ -125,4 +125,5 @@ Route::controller(GoogleAuthController::class)->group(function () {
 Route::patch('/steps/{step}/move-up', [StepController::class, 'moveUp'])->name('steps.move-up');
 Route::patch('/steps/{step}/move-down', [StepController::class, 'moveDown'])->name('steps.move-down');
 Route::put('/trips/{trip}/steps/reorder', [StepController::class, 'reorder'])->name('steps.reorder');
-
+// Mettre à jour uniquement les nuits (+ recalc end_date)
+Route::patch('/steps/{step}/nights', [StepController::class, 'updateNights'])->name('steps.update.nights');

@@ -35,6 +35,7 @@ class Step extends Model
         'longitude' => 'float',  // pour avoir le bon format avec Google maps et MapBox
         'distance_to_next' => 'float',
         'duration_to_next' => 'float',
+        'nights'     => 'integer',
     ];
 
     public function trip()
