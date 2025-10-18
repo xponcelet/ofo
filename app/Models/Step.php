@@ -53,4 +53,10 @@ class Step extends Model
         return $this->hasMany(Activity::class);
     }
 
+    public function note()
+    {
+        return $this->hasOne(StepNote::class)->where('user_id', auth()->id());
+    }
+
+
 }

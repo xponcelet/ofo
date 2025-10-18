@@ -217,44 +217,43 @@ class TripController extends Controller
 
         $trip->load([
             'steps' => function ($q) {
-                $q->orderBy('order')->select(
-                    'id',
-                    'trip_id',
-                    'order',
-                    'title',
-                    'description',
-                    'location',
-                    'country_code',
-                    'country',
-                    'start_date',
-                    'end_date',
-                    'latitude',
-                    'longitude',
-                    'nights',
-                    'distance_to_next',
-                    'duration_to_next'
-                );
+                $q->orderBy('order')
+                    ->with(['note' => fn($n) => $n->select('id', 'step_id', 'content', 'user_id')])
+                    ->select(
+                        'id',
+                        'trip_id',
+                        'order',
+                        'title',
+                        'description',
+                        'location',
+                        'country_code',
+                        'country',
+                        'start_date',
+                        'end_date',
+                        'latitude',
+                        'longitude',
+                        'nights',
+                        'distance_to_next',
+                        'duration_to_next'
+                    );
             },
-            'steps.activities' => function ($q) {
-                $q->orderBy('start_at')->select(
-                    'id',
-                    'step_id',
-                    'title',
-                    'description',
-                    'location',
-                    'start_at',
-                    'end_at',
-                    'external_link',
-                    'cost',
-                    'currency',
-                    'category'
-                );
-            },
-            'steps.accommodations' => function ($q) {
-                $q->select('id', 'step_id', 'title', 'location', 'start_date', 'end_date');
-            },
+            'steps.activities' => fn($q) => $q->orderBy('start_at')->select(
+                'id',
+                'step_id',
+                'title',
+                'description',
+                'location',
+                'start_at',
+                'end_at',
+                'external_link',
+                'cost',
+                'currency',
+                'category'
+            ),
+            'steps.accommodations' => fn($q) => $q->select('id', 'step_id', 'title', 'location', 'start_date', 'end_date'),
             'checklistItems' => fn($q) => $q->orderBy('order')->orderBy('id'),
         ]);
+
 
         // 🧭 Rassemble toutes les activités
         $activities = $trip->steps->flatMap(function ($step) {
