@@ -45,7 +45,7 @@ function formatTime(dateStr) {
         : ""
 }
 
-/** 🗺️ Lien Google Maps — mode itinéraire */
+/** 🗺️ Lien Google Maps — itinéraire ou recherche */
 function mapsLink(activity) {
     if (activity.latitude && activity.longitude) {
         return `https://www.google.com/maps/dir/?api=1&destination=${activity.latitude},${activity.longitude}`
@@ -166,7 +166,7 @@ function openPoiAsActivity(poi) {
                 </button>
             </div>
 
-            <!-- Carte du jour actif -->
+            <!-- Carte -->
             <div v-if="days[activeDay]?.step" class="rounded-xl overflow-hidden">
                 <ActivityMapPreview
                     :step="days[activeDay].step"
@@ -215,6 +215,7 @@ function openPoiAsActivity(poi) {
                             </div>
                         </div>
 
+                        <!-- Catégorie -->
                         <span
                             v-if="activity.category"
                             class="text-xs bg-pink-100 text-pink-700 font-medium px-2 py-1 rounded-full inline-block mb-2"
@@ -222,36 +223,38 @@ function openPoiAsActivity(poi) {
                             {{ activity.category }}
                         </span>
 
-                        <p
-                            v-if="activity.description"
-                            class="text-gray-700 text-sm mb-3 line-clamp-3"
-                        >
+                        <!-- Description -->
+                        <p v-if="activity.description" class="text-gray-700 text-sm mb-3 line-clamp-3">
                             {{ activity.description }}
                         </p>
                     </div>
 
+                    <!-- Liens et infos -->
                     <div class="flex flex-wrap items-center gap-2 text-sm text-gray-500 mt-3">
-                        <span>📍 {{ activity.location || activity.step_location }}</span>
+                        <span>📍 {{ activity.location || "Lieu non défini" }}</span>
+
+                        <!-- 🌍 Lien Google Maps (itinéraire ou recherche) -->
+                        <a
+                            v-if="mapsLink(activity)"
+                            :href="mapsLink(activity)"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            class="text-emerald-600 hover:underline flex items-center gap-1"
+                        >
+                            <span class="material-symbols-rounded text-sm">assistant_direction</span>
+                            Itinéraire
+                        </a>
 
                         <!-- 🔗 Lien externe -->
                         <a
                             v-if="activity.external_link"
                             :href="activity.external_link"
                             target="_blank"
-                            class="text-pink-600 hover:underline"
-                        >
-                            🔗 Lien
-                        </a>
-
-                        <!-- 🗺️ Lien Google Maps — itinéraire -->
-                        <a
-                            v-if="mapsLink(activity)"
-                            :href="mapsLink(activity)"
-                            target="_blank"
                             rel="noopener noreferrer"
-                            class="text-emerald-600 hover:underline"
+                            class="text-pink-600 hover:underline flex items-center gap-1"
                         >
-                            🗺️ Itinéraire
+                            <span class="material-symbols-rounded text-sm">link</span>
+                            Site
                         </a>
                     </div>
                 </div>

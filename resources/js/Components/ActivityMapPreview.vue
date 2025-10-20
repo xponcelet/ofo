@@ -13,10 +13,10 @@ const props = defineProps({
 const mapContainer = ref(null)
 let map = null
 let stepMarker = null
-let markers = []
+let activityMarkers = []
 let poiMarkers = []
 
-// 🎨 Couleurs d’activité
+// 🎨 Couleur selon la catégorie
 function markerColorForCategory(cat) {
     const c = (cat || "").toLowerCase()
     if (c.includes("restaurant") || c.includes("food")) return "#ec4899"
@@ -28,14 +28,14 @@ function markerColorForCategory(cat) {
     return "#6b7280"
 }
 
-// ✅ Vérifie que le conteneur est visible
+// ✅ Vérifie si le conteneur est visible (évite bug Mapbox sur onglet caché)
 function isContainerVisible(el) {
     if (!el) return false
     const rect = el.getBoundingClientRect()
     return rect.width > 0 && rect.height > 0
 }
 
-// 🗺️ Initialisation
+// 🗺️ Initialisation de la carte
 async function initMap() {
     await nextTick()
     const el = mapContainer.value
@@ -44,11 +44,12 @@ async function initMap() {
 
     const { latitude, longitude } = props.step
 
+    // Si la carte existe déjà, on la recentre
     if (map) {
         map.flyTo({ center: [longitude, latitude], zoom: 12 })
         stepMarker?.setLngLat([longitude, latitude])
         updateActivityMarkers()
-        fetchPOI() // 👈 met à jour les POI
+        fetchPOI()
         return
     }
 
@@ -61,7 +62,7 @@ async function initMap() {
             attributionControl: false,
         })
 
-        // Marqueur principal
+        // Marqueur principal de l’étape
         stepMarker = new mapboxgl.Marker({ color: "#059669" })
             .setLngLat([longitude, latitude])
             .setPopup(new mapboxgl.Popup().setText(props.step.title || "Étape"))
@@ -85,12 +86,12 @@ async function initMap() {
     }
 }
 
-// 🏷️ Met à jour les marqueurs d’activités
+// 📍 Affiche les activités de la journée
 function updateActivityMarkers() {
     if (!props.showActivities || !map) return
 
-    markers.forEach((m) => m.remove())
-    markers = []
+    activityMarkers.forEach((m) => m.remove())
+    activityMarkers = []
 
     props.activities.forEach((a) => {
         if (!a.latitude || !a.longitude) return
@@ -100,29 +101,33 @@ function updateActivityMarkers() {
         el.className = "w-4 h-4 rounded-full border border-white shadow"
         el.style.backgroundColor = color
 
+        const popupHtml = `
+            <div class='text-sm font-semibold text-gray-800 mb-1'>
+                ${a.title || "Activité"}
+            </div>
+            ${a.category ? `<div class='text-xs text-gray-500 mb-1'>${a.category}</div>` : ""}
+            ${
+            a.latitude && a.longitude
+                ? `<a href="https://www.google.com/maps/dir/?api=1&destination=${a.latitude},${a.longitude}"
+                        target="_blank"
+                        class="text-xs text-pink-600 hover:underline">📍 Itinéraire</a>`
+                : ""
+        }
+        `
+
         const marker = new mapboxgl.Marker({ element: el })
             .setLngLat([a.longitude, a.latitude])
-            .setPopup(
-                new mapboxgl.Popup({ offset: 12 }).setHTML(`
-                    <div class='text-sm font-medium text-gray-800'>
-                        ${a.title || "Activité"}
-                    </div>
-                    <div class='text-xs text-gray-500'>
-                        ${a.category || ""}
-                    </div>
-                `)
-            )
+            .setPopup(new mapboxgl.Popup({ offset: 12 }).setHTML(popupHtml))
             .addTo(map)
 
-        markers.push(marker)
+        activityMarkers.push(marker)
     })
 }
 
-// 🧭 Recherche des POI (Overpass)
+// 🧭 Recherche des POI avec Overpass
 async function fetchPOI() {
     if (!map || !props.step?.latitude || !props.step?.longitude) return
 
-    // Nettoyage des anciens POI
     poiMarkers.forEach((m) => m.remove())
     poiMarkers = []
 
@@ -145,7 +150,7 @@ async function fetchPOI() {
         try {
             data = JSON.parse(text)
         } catch {
-            console.warn("⚠️ Overpass a renvoyé une réponse non JSON :", text.slice(0, 120))
+            console.warn("⚠️ Overpass a renvoyé une réponse non JSON :", text.slice(0, 100))
             return
         }
 
@@ -156,7 +161,8 @@ async function fetchPOI() {
             if (!poi.lat || !poi.lon) return
 
             const el = document.createElement("div")
-            el.className = "w-2.5 h-2.5 rounded-full bg-gray-400 border border-white opacity-80"
+            el.className =
+                "w-2.5 h-2.5 rounded-full bg-gray-400 border border-white opacity-80 cursor-pointer"
             const marker = new mapboxgl.Marker({ element: el })
                 .setLngLat([poi.lon, poi.lat])
                 .setPopup(new mapboxgl.Popup().setText(poi.tags?.name || "Lieu"))
@@ -169,7 +175,7 @@ async function fetchPOI() {
     }
 }
 
-// 🧹 Watchers et cleanup
+// 🧹 Lifecycle
 watch(() => props.step, initMap, { deep: true })
 watch(() => props.activities, updateActivityMarkers, { deep: true })
 
