@@ -79,7 +79,7 @@ class PublicTripController extends Controller
                     'duration_to_next'
                 );
             },
-            'steps.activities:id,step_id,title,description,location,start_at,end_at,external_link,cost,currency,category',
+            'steps.activities:id,step_id,title,description,location,start_at,end_at,external_link,cost,currency,category,latitude,longitude',
         ]);
 
         // 🧭 Toutes les activités du voyage
@@ -96,6 +96,8 @@ class PublicTripController extends Controller
                     'date'          => optional($a->start_at)->toDateString(),
                     'step_location' => $step->location,
                     'step_title'    => $step->title,
+                    'latitude'  => $a->latitude,
+                    'longitude' => $a->longitude,
                 ];
             });
         })->values();
