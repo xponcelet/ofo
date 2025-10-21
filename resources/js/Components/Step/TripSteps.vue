@@ -1,5 +1,7 @@
 <script setup>
 import TripMap from '@/Components/Trip/TripMap.vue'
+import { ref } from 'vue'
+import { router, useForm } from '@inertiajs/vue3'
 
 const props = defineProps({
     trip: Object,
@@ -11,6 +13,56 @@ function flagFromCode(code) {
     const cc = code.toUpperCase()
     const base = 0x1f1e6
     return String.fromCodePoint(...[...cc].map(c => base + c.charCodeAt(0) - 65))
+}
+
+// === Notes ===
+const editingStepId = ref(null)
+const noteForm = useForm({ content: '' })
+
+function openEditor(step) {
+    editingStepId.value = step.id
+    noteForm.content = step.note?.content ?? ''
+}
+
+function cancelEdit() {
+    editingStepId.value = null
+    noteForm.reset()
+}
+
+function saveOrUpdate(step) {
+    if (!noteForm.content.trim()) return
+
+    // ✅ Si la note existe → update
+    if (step.note) {
+        noteForm.put(route('step-notes.update', step.note.id), {
+            preserveScroll: true,
+            onSuccess: () => {
+                step.note.content = noteForm.content
+                cancelEdit()
+            },
+        })
+    }
+    // ✅ Sinon → création
+    else {
+        noteForm.post(route('step-notes.store', step.id), {
+            preserveScroll: true,
+            onSuccess: () => {
+                step.note = { content: noteForm.content, id: Date.now(), step_id: step.id }
+                cancelEdit()
+            },
+        })
+    }
+}
+
+function deleteNote(step) {
+    if (!step.note || !confirm('Supprimer cette note ?')) return
+    router.delete(route('step-notes.destroy', step.note.id), {
+        preserveScroll: true,
+        onSuccess: () => {
+            step.note = null
+            cancelEdit()
+        },
+    })
 }
 </script>
 
@@ -50,33 +102,29 @@ function flagFromCode(code) {
                                 </h3>
                             </div>
                             <div class="text-right text-xs text-on-surface-variant">
-                                <p>
-                                    {{ step.start_date || '—' }} → {{ step.end_date || '—' }}
-                                </p>
+                                <p>{{ step.start_date || '—' }} → {{ step.end_date || '—' }}</p>
                                 <p v-if="step.nights" class="text-gray-500">
-                                    🌙 {{ step.nights }} nuit<span v-if="step.nights > 1">s</span>
+                                    <span class="material-symbols-rounded text-sm align-middle">nights_stay</span>
+                                    {{ step.nights }} nuit<span v-if="step.nights > 1">s</span>
                                 </p>
                             </div>
                         </div>
 
                         <!-- Lieu -->
                         <p class="flex items-center gap-2 text-sm text-gray-600">
-                            📍 {{ step.city || step.location || 'Localisation inconnue' }}
-                            <span v-if="step.country_code" class="text-lg">{{ flagFromCode(step.country_code) }}</span>
-                        </p>
-
-                        <!-- Description -->
-                        <p v-if="step.description" class="text-gray-700 leading-relaxed text-sm">
-                            {{ step.description }}
+                            <span class="material-symbols-rounded text-base text-gray-500">location_on</span>
+                            {{ step.city || step.location || 'Localisation inconnue' }}
+                            <span v-if="step.country_code" class="text-lg">
+                                {{ flagFromCode(step.country_code) }}
+                            </span>
                         </p>
 
                         <!-- Activités -->
                         <div v-if="step.activities?.length" class="pt-2">
                             <h4 class="text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2">
-                                🧭 Activités
-                                <span class="text-xs text-gray-400">
-                                    ({{ step.activities.length }})
-                                </span>
+                                <span class="material-symbols-rounded text-sm">explore</span>
+                                Activités
+                                <span class="text-xs text-gray-400">({{ step.activities.length }})</span>
                             </h4>
                             <ul class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                                 <li
@@ -85,9 +133,7 @@ function flagFromCode(code) {
                                     class="bg-gray-50 border border-gray-200 rounded-xl p-3 hover:bg-gray-100 transition"
                                 >
                                     <div class="flex justify-between items-start">
-                                        <div class="font-medium text-gray-800 truncate">
-                                            {{ a.title }}
-                                        </div>
+                                        <div class="font-medium text-gray-800 truncate">{{ a.title }}</div>
                                         <span v-if="a.start_at" class="text-xs text-gray-500 whitespace-nowrap">
                                             {{ new Date(a.start_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) }}
                                         </span>
@@ -99,40 +145,75 @@ function flagFromCode(code) {
                             </ul>
                         </div>
 
-                        <!-- ... le reste du composant inchangé -->
-
-                        <!-- Conseils -->
-                        <div
-                            v-if="step.tips"
-                            class="bg-amber-50 border-l-4 border-amber-400 text-amber-800 p-4 rounded-xl mt-3"
-                        >
-                            💡 {{ step.tips }}
-                        </div>
-
                         <!-- Notes personnelles -->
-                        <div
-                            class="mt-4 border border-dashed border-gray-300 rounded-xl p-4 bg-gray-50 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3"
-                        >
-                            <div>
+                        <div class="mt-4 border border-dashed border-gray-300 rounded-xl p-4 bg-gray-50">
+                            <div class="flex items-start justify-between mb-2">
                                 <p class="font-medium text-gray-800 flex items-center gap-2">
-                                    📝 Notes personnelles
+                                    <span class="material-symbols-rounded text-base text-blue-600">note</span>
+                                    Ma note personnelle
                                 </p>
-                                <p v-if="!step.note" class="text-sm italic text-gray-500">
-                                    Aucune note pour cette étape. Ajoutez vos impressions et souvenirs !
-                                </p>
-                                <p v-else class="text-sm text-gray-700 mt-1 whitespace-pre-line">
-                                    {{ step.note }}
-                                </p>
+
+                                <div class="flex gap-2">
+                                    <!-- Ajouter / Modifier -->
+                                    <button
+                                        v-if="!editingStepId || editingStepId !== step.id"
+                                        @click="openEditor(step)"
+                                        class="flex items-center gap-1 px-3 py-1 text-sm border border-gray-300 rounded-lg hover:bg-gray-100 transition"
+                                    >
+                                        <span class="material-symbols-rounded text-sm">
+                                            {{ step.note ? 'edit' : 'add' }}
+                                        </span>
+                                        {{ step.note ? 'Modifier' : 'Ajouter' }}
+                                    </button>
+
+                                    <!-- Supprimer -->
+                                    <button
+                                        v-if="step.note"
+                                        @click="deleteNote(step)"
+                                        class="flex items-center gap-1 px-3 py-1 text-sm text-red-600 border border-red-200 rounded-lg hover:bg-red-50 transition"
+                                    >
+                                        <span class="material-symbols-rounded text-sm">delete</span>
+                                        Supprimer
+                                    </button>
+                                </div>
                             </div>
 
-                            <button
-                                class="self-start sm:self-auto px-4 py-2 bg-white border border-gray-300 rounded-lg shadow-sm text-sm font-medium hover:bg-gray-100 transition"
-                                @click="alert('Formulaire ou modal pour ajouter une note ici ✏️')"
-                            >
-                                ➕ Ajouter une note
-                            </button>
-                        </div>
+                            <!-- ✅ Mode édition -->
+                            <transition name="fade-slide">
+                                <div v-if="editingStepId === step.id" class="space-y-2">
+                                    <textarea
+                                        v-model="noteForm.content"
+                                        rows="3"
+                                        class="w-full rounded-lg border border-gray-300 p-2 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                                        placeholder="Ajoutez votre note ici..."
+                                    ></textarea>
+                                    <div class="flex justify-end gap-2">
+                                        <button
+                                            @click="cancelEdit"
+                                            class="flex items-center gap-1 px-3 py-1 text-sm bg-gray-200 rounded-lg hover:bg-gray-300"
+                                        >
+                                            <span class="material-symbols-rounded text-sm">close</span>
+                                            Annuler
+                                        </button>
+                                        <button
+                                            @click="saveOrUpdate(step)"
+                                            class="flex items-center gap-1 px-3 py-1 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                                        >
+                                            <span class="material-symbols-rounded text-sm">save</span>
+                                            Enregistrer
+                                        </button>
+                                    </div>
+                                </div>
+                            </transition>
 
+                            <!-- 📝 Affichage -->
+                            <p
+                                v-if="editingStepId !== step.id"
+                                class="text-gray-700 whitespace-pre-line text-sm"
+                            >
+                                {{ step.note?.content || 'Aucune note pour cette étape.' }}
+                            </p>
+                        </div>
                     </div>
                 </div>
             </section>
@@ -151,9 +232,20 @@ function flagFromCode(code) {
 
 <style scoped>
 @media (max-width: 1024px) {
-    aside {
-        position: relative;
-        height: 400px;
-    }
+    aside { position: relative; height: 400px; }
+}
+
+/* ✨ Animation fluide */
+.fade-slide-enter-active,
+.fade-slide-leave-active {
+    transition: all 0.25s ease;
+}
+.fade-slide-enter-from {
+    opacity: 0;
+    transform: translateY(-5px);
+}
+.fade-slide-leave-to {
+    opacity: 0;
+    transform: translateY(-5px);
 }
 </style>

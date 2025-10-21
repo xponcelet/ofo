@@ -15,6 +15,7 @@ use App\Http\Controllers\BillingController;
 use App\Http\Controllers\ChecklistItemController;
 use App\Http\Controllers\LanguageController;
 use App\Http\Controllers\TranslationController;
+use App\Http\Controllers\StepNoteController;
 
 // ============================
 // Page d’accueil publique
@@ -104,6 +105,16 @@ Route::middleware([
         ->name('checklist-items.toggle');
     Route::post('/trips/{trip}/checklist-items/reorder', [ChecklistItemController::class, 'reorder'])
         ->name('trips.checklist-items.reorder');
+    // Notes liées à une étape
+    // Notes liées à une étape
+    Route::resource('steps.notes', StepNoteController::class)
+        ->shallow()
+        ->only(['store', 'update', 'destroy'])
+        ->names([
+            'store' => 'step-notes.store',
+            'update' => 'step-notes.update',
+            'destroy' => 'step-notes.destroy',
+        ]);
 
     // Stripe
     Route::post('/billing/checkout', [BillingController::class, 'checkout'])->name('billing.checkout');

@@ -4,19 +4,32 @@ namespace App\Http\Controllers;
 
 use App\Models\Activity;
 use App\Models\Step;
-use App\Http\Requests\StoreActivityRequest;
+use Illuminate\Http\Request;
 
 class ActivityController extends Controller
 {
     /**
      * Créer une nouvelle activité liée à une étape.
      */
-    public function store(StoreActivityRequest $request, Step $step)
+    public function store(Request $request, Step $step)
     {
-        $data = $request->validated();
-        $data['step_id'] = $step->id;
+        $validated = $request->validate([
+            'title' => 'required|string|max:255',
+            'description' => 'nullable|string|max:5000',
+            'location' => 'nullable|string|max:255',
+            'external_link' => 'nullable|url|max:255',
+            'date' => 'nullable|date',
+            'start_at' => 'nullable|date',
+            'cost' => 'nullable|numeric|min:0',
+            'currency' => 'nullable|string|max:10',
+            'category' => 'nullable|string|max:100',
+            'latitude' => 'nullable|numeric|between:-90,90',
+            'longitude' => 'nullable|numeric|between:-180,180',
+        ]);
 
-        Activity::create($data);
+        $validated['step_id'] = $step->id;
+
+        Activity::create($validated);
 
         return back()->with('success', 'Activité créée avec succès.');
     }
@@ -24,9 +37,23 @@ class ActivityController extends Controller
     /**
      * Mettre à jour une activité existante.
      */
-    public function update(StoreActivityRequest $request, Activity $activity)
+    public function update(Request $request, Activity $activity)
     {
-        $activity->update($request->validated());
+        $validated = $request->validate([
+            'title' => 'required|string|max:255',
+            'description' => 'nullable|string|max:5000',
+            'location' => 'nullable|string|max:255',
+            'external_link' => 'nullable|url|max:255',
+            'date' => 'nullable|date',
+            'start_at' => 'nullable|date',
+            'cost' => 'nullable|numeric|min:0',
+            'currency' => 'nullable|string|max:10',
+            'category' => 'nullable|string|max:100',
+            'latitude' => 'nullable|numeric|between:-90,90',
+            'longitude' => 'nullable|numeric|between:-180,180',
+        ]);
+
+        $activity->update($validated);
 
         return back()->with('success', 'Activité mise à jour.');
     }

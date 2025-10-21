@@ -217,42 +217,42 @@ class TripController extends Controller
 
         $trip->load([
             'steps' => function ($q) {
-                $q->orderBy('order')->select(
-                    'id',
-                    'trip_id',
-                    'order',
-                    'title',
-                    'description',
-                    'location',
-                    'country_code',
-                    'country',
-                    'start_date',
-                    'end_date',
-                    'latitude',
-                    'longitude',
-                    'nights',
-                    'distance_to_next',
-                    'duration_to_next'
-                );
+                $q->orderBy('order')
+                    ->with(['note' => fn($n) => $n->select('id', 'step_id', 'content', 'user_id')])
+                    ->select(
+                        'id',
+                        'trip_id',
+                        'order',
+                        'title',
+                        'description',
+                        'location',
+                        'country_code',
+                        'country',
+                        'start_date',
+                        'end_date',
+                        'latitude',
+                        'longitude',
+                        'nights',
+                        'distance_to_next',
+                        'duration_to_next'
+                    );
             },
-            'steps.activities' => function ($q) {
-                $q->orderBy('start_at')->select(
-                    'id',
-                    'step_id',
-                    'title',
-                    'description',
-                    'location',
-                    'start_at',
-                    'end_at',
-                    'external_link',
-                    'cost',
-                    'currency',
-                    'category'
-                );
-            },
-            'steps.accommodations' => function ($q) {
-                $q->select('id', 'step_id', 'title', 'location', 'start_date', 'end_date');
-            },
+            'steps.activities' => fn($q) => $q->orderBy('start_at')->select(
+                'id',
+                'step_id',
+                'title',
+                'description',
+                'location',
+                'start_at',
+                'end_at',
+                'external_link',
+                'cost',
+                'currency',
+                'category',
+                'latitude',   // ✅ ajouté
+                'longitude'   // ✅ ajouté
+            ),
+            'steps.accommodations' => fn($q) => $q->select('id', 'step_id', 'title', 'location', 'start_date', 'end_date'),
             'checklistItems' => fn($q) => $q->orderBy('order')->orderBy('id'),
         ]);
 
@@ -271,6 +271,8 @@ class TripController extends Controller
                     'cost'          => $a->cost,
                     'currency'      => $a->currency,
                     'category'      => $a->category,
+                    'latitude'      => $a->latitude,   // ✅ ajouté
+                    'longitude'     => $a->longitude,  // ✅ ajouté
                     'date'          => optional($a->start_at)->toDateString(),
                     'step_location' => $step->location,
                     'step_title'    => $step->title,
@@ -281,16 +283,16 @@ class TripController extends Controller
         // 🗓️ Génère la liste complète des jours
         $days = [];
         if ($trip->start_date && $trip->end_date) {
-            $period = new DatePeriod(
-                new DateTime($trip->start_date),
-                new DateInterval('P1D'),
-                (new DateTime($trip->end_date))->modify('+1 day')
+            $period = new \DatePeriod(
+                new \DateTime($trip->start_date),
+                new \DateInterval('P1D'),
+                (new \DateTime($trip->end_date))->modify('+1 day')
             );
 
             foreach ($period as $date) {
                 $dayStep = $trip->steps->first(function ($step) use ($date) {
-                    return $date >= new DateTime($step->start_date)
-                        && $date <= new DateTime($step->end_date);
+                    return $date >= new \DateTime($step->start_date)
+                        && $date <= new \DateTime($step->end_date);
                 });
 
                 $days[] = [
@@ -302,31 +304,30 @@ class TripController extends Controller
             }
         }
 
-        $tripData = [
-            'id'             => $trip->id,
-            'title'          => $trip->title,
-            'description'    => $trip->description,
-            'image'          => $trip->image,
-            'is_public'      => $trip->is_public,
-            'favs'           => $trip->favs,
-            'start_date'     => $trip->start_date,
-            'end_date'       => $trip->end_date,
-            'total_nights'   => $trip->total_nights,
-            'days_count'     => $trip->days_count,
-            'steps_count'    => $trip->steps_count,
-            'steps'          => $trip->steps,
-            'checklist_items'=> $trip->checklistItems,
-            'days'           => $days,
-        ];
-
         return Inertia::render('Trips/Show', [
-            'trip'       => $tripData,
+            'trip'       => [
+                'id'             => $trip->id,
+                'title'          => $trip->title,
+                'description'    => $trip->description,
+                'image'          => $trip->image,
+                'is_public'      => $trip->is_public,
+                'favs'           => $trip->favs,
+                'start_date'     => $trip->start_date,
+                'end_date'       => $trip->end_date,
+                'total_nights'   => $trip->total_nights,
+                'days_count'     => $trip->days_count,
+                'steps_count'    => $trip->steps_count,
+                'steps'          => $trip->steps,
+                'checklist_items'=> $trip->checklistItems,
+                'days'           => $days,
+            ],
             'steps'      => $trip->steps,
             'activities' => $activities,
             'favs'       => $trip->favs,
             'likers'     => $likers,
         ]);
     }
+
 
     public function edit(Trip $trip): InertiaResponse
     {

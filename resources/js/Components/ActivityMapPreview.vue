@@ -13,22 +13,23 @@ const props = defineProps({
 const mapContainer = ref(null)
 let map = null
 let stepMarker = null
-let markers = []
+let activityMarkers = []
 let poiMarkers = []
+const showPOI = ref(false) // ✅ Toggle
 
-// 🎨 Couleurs d’activité
-function markerColorForCategory(cat) {
-    const c = (cat || "").toLowerCase()
-    if (c.includes("restaurant") || c.includes("food")) return "#ec4899"
-    if (c.includes("bar") || c.includes("pub")) return "#f59e0b"
-    if (c.includes("hotel") || c.includes("hébergement")) return "#8b5cf6"
-    if (c.includes("museum") || c.includes("musée")) return "#3b82f6"
-    if (c.includes("park") || c.includes("jardin")) return "#22c55e"
-    if (c.includes("attraction") || c.includes("site")) return "#a855f7"
-    return "#6b7280"
+// 🎨 Couleurs par jour
+const dayColors = [
+    "#ef4444", "#f97316", "#eab308", "#22c55e", "#3b82f6", "#a855f7", "#ec4899"
+]
+
+// 🎯 Couleur d’une activité
+function getColorForActivity(activity, index) {
+    return dayColors[activity.day_index !== undefined
+        ? activity.day_index % dayColors.length
+        : index % dayColors.length]
 }
 
-// ✅ Vérifie que le conteneur est visible
+// ✅ Vérifie si la carte est visible
 function isContainerVisible(el) {
     if (!el) return false
     const rect = el.getBoundingClientRect()
@@ -45,123 +46,114 @@ async function initMap() {
     const { latitude, longitude } = props.step
 
     if (map) {
-        map.flyTo({ center: [longitude, latitude], zoom: 12 })
-        stepMarker?.setLngLat([longitude, latitude])
+        updateStepMarker()
         updateActivityMarkers()
-        fetchPOI() // 👈 met à jour les POI
         return
     }
 
-    try {
-        map = new mapboxgl.Map({
-            container: el,
-            style: "mapbox://styles/mapbox/streets-v12",
-            center: [longitude, latitude],
-            zoom: 12,
-            attributionControl: false,
-        })
+    map = new mapboxgl.Map({
+        container: el,
+        style: "mapbox://styles/mapbox/streets-v12",
+        center: [longitude, latitude],
+        zoom: 11,
+        attributionControl: false,
+    })
 
-        // Marqueur principal
-        stepMarker = new mapboxgl.Marker({ color: "#059669" })
-            .setLngLat([longitude, latitude])
-            .setPopup(new mapboxgl.Popup().setText(props.step.title || "Étape"))
-            .addTo(map)
-
-        map.on("load", () => {
-            updateActivityMarkers()
-            fetchPOI()
-        })
-
-        map.on("error", (e) => console.warn("⚠️ Mapbox error:", e?.error?.message))
-        map.on("webglcontextlost", (e) => {
-            e.preventDefault()
-            console.warn("⚠️ WebGL context lost — reloading map")
-            map.remove()
-            map = null
-            initMap()
-        })
-    } catch (err) {
-        console.error("💥 Erreur d’initialisation Mapbox :", err)
-    }
-}
-
-// 🏷️ Met à jour les marqueurs d’activités
-function updateActivityMarkers() {
-    if (!props.showActivities || !map) return
-
-    markers.forEach((m) => m.remove())
-    markers = []
-
-    props.activities.forEach((a) => {
-        if (!a.latitude || !a.longitude) return
-
-        const color = markerColorForCategory(a.category)
-        const el = document.createElement("div")
-        el.className = "w-4 h-4 rounded-full border border-white shadow"
-        el.style.backgroundColor = color
-
-        const marker = new mapboxgl.Marker({ element: el })
-            .setLngLat([a.longitude, a.latitude])
-            .setPopup(
-                new mapboxgl.Popup({ offset: 12 }).setHTML(`
-                    <div class='text-sm font-medium text-gray-800'>
-                        ${a.title || "Activité"}
-                    </div>
-                    <div class='text-xs text-gray-500'>
-                        ${a.category || ""}
-                    </div>
-                `)
-            )
-            .addTo(map)
-
-        markers.push(marker)
+    map.on("load", () => {
+        updateStepMarker()
+        updateActivityMarkers()
     })
 }
 
-// 🧭 Recherche des POI (Overpass)
+// 📍 Étape principale
+function updateStepMarker() {
+    if (!map || !props.step?.latitude || !props.step?.longitude) return
+    if (stepMarker) stepMarker.remove()
+
+    stepMarker = new mapboxgl.Marker({ color: "#059669" })
+        .setLngLat([props.step.longitude, props.step.latitude])
+        .setPopup(new mapboxgl.Popup().setText(props.step.title || "Étape"))
+        .addTo(map)
+
+    map.flyTo({ center: [props.step.longitude, props.step.latitude], zoom: 11 })
+}
+
+// 🎯 Activités
+function updateActivityMarkers() {
+    if (!map) return
+    console.log("📍 Activities reçues :", props.activities)
+
+    activityMarkers.forEach((m) => m.remove())
+    activityMarkers = []
+
+    if (!props.showActivities) return
+
+    props.activities.forEach((a, i) => {
+        if (!a.latitude || !a.longitude) return
+
+        const color = getColorForActivity(a, i)
+        const el = document.createElement("div")
+        el.className = "w-4 h-4 rounded-full border border-white shadow cursor-pointer"
+        el.style.backgroundColor = color
+
+        const html = `
+            <div class='text-sm font-semibold text-gray-800 mb-1'>
+                ${a.title || "Activité"}
+            </div>
+            ${a.category ? `<div class='text-xs text-gray-500 mb-1'>${a.category}</div>` : ""}
+            ${
+            a.latitude && a.longitude
+                ? `<a href="https://www.google.com/maps/dir/?api=1&destination=${a.latitude},${a.longitude}"
+                        target="_blank"
+                        class="text-xs text-pink-600 hover:underline">📍 Itinéraire</a>`
+                : ""
+        }
+        `
+
+        const marker = new mapboxgl.Marker({ element: el })
+            .setLngLat([a.longitude, a.latitude])
+            .setPopup(new mapboxgl.Popup({ offset: 12 }).setHTML(html))
+            .addTo(map)
+
+        activityMarkers.push(marker)
+    })
+}
+
+// 🧭 Lieux à proximité (POI)
 async function fetchPOI() {
     if (!map || !props.step?.latitude || !props.step?.longitude) return
 
-    // Nettoyage des anciens POI
     poiMarkers.forEach((m) => m.remove())
     poiMarkers = []
+    if (!showPOI.value) return
 
     const { latitude, longitude } = props.step
     const query = `
-    [out:json][timeout:25];
-    (
-      node["tourism"="attraction"](around:1000,${latitude},${longitude});
-      node["amenity"="restaurant"](around:1000,${latitude},${longitude});
-      node["leisure"="park"](around:1000,${latitude},${longitude});
-    );
-    out center;
+      [out:json][timeout:25];
+      (
+        node["tourism"="attraction"](around:1000,${latitude},${longitude});
+        node["amenity"="restaurant"](around:1000,${latitude},${longitude});
+        node["leisure"="park"](around:1000,${latitude},${longitude});
+      );
+      out center;
     `
+
     try {
-        const url = `https://overpass-api.de/api/interpreter?data=${encodeURIComponent(query)}`
-        const res = await fetch(url)
-        const text = await res.text()
-
-        let data
-        try {
-            data = JSON.parse(text)
-        } catch {
-            console.warn("⚠️ Overpass a renvoyé une réponse non JSON :", text.slice(0, 120))
-            return
-        }
-
-        const pois = data.elements || []
-        console.log(`✅ ${pois.length} POI trouvés`)
+        const res = await fetch(
+            `https://overpass-api.de/api/interpreter?data=${encodeURIComponent(query)}`
+        )
+        const json = await res.json()
+        const pois = json.elements || []
+        console.log(`✅ ${pois.length} lieux trouvés`)
 
         pois.forEach((poi) => {
             if (!poi.lat || !poi.lon) return
-
             const el = document.createElement("div")
-            el.className = "w-2.5 h-2.5 rounded-full bg-gray-400 border border-white opacity-80"
+            el.className = "w-2.5 h-2.5 rounded-full bg-gray-400 border border-white opacity-80 cursor-pointer"
             const marker = new mapboxgl.Marker({ element: el })
                 .setLngLat([poi.lon, poi.lat])
                 .setPopup(new mapboxgl.Popup().setText(poi.tags?.name || "Lieu"))
                 .addTo(map)
-
             poiMarkers.push(marker)
         })
     } catch (e) {
@@ -169,16 +161,21 @@ async function fetchPOI() {
     }
 }
 
-// 🧹 Watchers et cleanup
-watch(() => props.step, initMap, { deep: true })
+// 🔄 Watchers
+watch(() => props.step, () => {
+    updateStepMarker()
+    updateActivityMarkers()
+    fetchPOI()
+}, { deep: true })
+
 watch(() => props.activities, updateActivityMarkers, { deep: true })
+
+watch(showPOI, fetchPOI)
 
 onMounted(initMap)
 onUnmounted(() => {
-    if (map) {
-        map.remove()
-        map = null
-    }
+    map?.remove()
+    map = null
 })
 </script>
 
@@ -194,13 +191,17 @@ onUnmounted(() => {
                 <span class="w-3 h-3 rounded-full bg-emerald-600"></span>
                 Étape
             </div>
-            <div class="flex items-center gap-2">
-                <span class="w-3 h-3 rounded-full bg-pink-500"></span>
-                Activité
+            <div v-for="(color, i) in dayColors" :key="i" class="flex items-center gap-2">
+                <span class="w-3 h-3 rounded-full" :style="{ backgroundColor: color }"></span>
+                Jour {{ i + 1 }}
             </div>
-            <div class="flex items-center gap-2">
-                <span class="w-2.5 h-2.5 rounded-full bg-gray-400"></span>
-                POI à proximité
+            <div class="pt-2 border-t border-gray-200 mt-1">
+                <button
+                    @click="showPOI = !showPOI"
+                    class="text-xs px-3 py-1 rounded-full border border-gray-300 bg-white hover:bg-gray-100 transition"
+                >
+                    {{ showPOI ? "Masquer les lieux à proximité" : "Afficher les lieux à proximité" }}
+                </button>
             </div>
         </div>
     </div>
