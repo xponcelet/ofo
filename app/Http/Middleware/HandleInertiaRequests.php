@@ -87,7 +87,10 @@ class HandleInertiaRequests extends Middleware
             ],
 
             'flash' => [
-                'status' => fn() => $request->session()->get('status'),
+                'success' => fn() => $request->session()->get('success'),
+                'error'   => fn() => $request->session()->get('error'),
+                'info'    => fn() => $request->session()->get('info'),
+                'status'  => fn() => $request->session()->get('status'),
             ],
             'csrf_token' => fn() => csrf_token(),
             // Dispo dans $page.props.destination / $page.props.start
