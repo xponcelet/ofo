@@ -157,7 +157,7 @@ async function fetchPOI() {
             poiMarkers.push(marker)
         })
     } catch (e) {
-        console.error("Erreur Overpass:", e)
+        console.error("Erreur overpass:", e)
     }
 }
 

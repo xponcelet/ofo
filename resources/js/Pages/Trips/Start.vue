@@ -13,6 +13,7 @@ const form = useForm({
     country_code: '',
 })
 
+// 🧭 Met à jour les coordonnées envoyées par l'autocomplete
 function updateCoords({ latitude, longitude }) {
     form.latitude = latitude
     form.longitude = longitude
@@ -26,12 +27,17 @@ function updateCountryCode(code) {
     form.country_code = code
 }
 
+// ✅ Soumission "classique" avec un point de départ
 function submit() {
-    form.post(route('trips.start.store'), {
-        preserveScroll: true,
-    })
+    form.post(route('trips.start.store'), { preserveScroll: true })
 }
 
+// 🕓 Passer l’étape (départ optionnel)
+function skip() {
+    router.post(route('trips.start.store'), { skip: true })
+}
+
+// ⬅️ Retour à la destination
 function goBack() {
     router.visit(route('trips.destination'))
 }
@@ -46,20 +52,21 @@ function goBack() {
         <div>
             <h1 class="text-2xl font-bold text-gray-900">📍 Point de départ</h1>
             <p class="text-sm text-gray-500 mt-1">
-                Choisissez l’endroit où commence votre voyage.
+                Choisissez l’endroit où commence votre voyage ou passez cette étape.
             </p>
         </div>
 
         <form @submit.prevent="submit" class="space-y-6">
             <div>
                 <label class="block text-sm font-medium text-gray-700 mb-1">
-                    Lieu de départ *
+                    Lieu de départ
                 </label>
                 <MapboxAutocomplete
                     v-model="form.departure"
                     @update:coords="updateCoords"
                     @update:country="updateCountry"
                     @update:countryCode="updateCountryCode"
+                    placeholder="Ex : Bruxelles, Belgique"
                 />
                 <InputError :message="form.errors.departure" />
             </div>
@@ -79,13 +86,26 @@ function goBack() {
                     ← Retour
                 </button>
 
-                <button
-                    type="submit"
-                    class="bg-blue-600 hover:bg-blue-700 text-white font-semibold px-6 py-2 rounded disabled:opacity-50"
-                    :disabled="form.processing || !form.departure"
-                >
-                    Continuer
-                </button>
+                <div class="flex items-center gap-3">
+                    <!-- 🕓 Passer -->
+                    <button
+                        type="button"
+                        @click="skip"
+                        class="text-sm text-gray-500 underline hover:text-gray-700"
+                        :disabled="form.processing"
+                    >
+                        Choisir plus tard
+                    </button>
+
+                    <!-- ✅ Continuer -->
+                    <button
+                        type="submit"
+                        class="bg-blue-600 hover:bg-blue-700 text-white font-semibold px-6 py-2 rounded disabled:opacity-50"
+                        :disabled="form.processing"
+                    >
+                        Continuer
+                    </button>
+                </div>
             </div>
         </form>
 

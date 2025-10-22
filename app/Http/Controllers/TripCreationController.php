@@ -17,7 +17,7 @@ class TripCreationController extends Controller
     {
         $user = auth()->user();
 
-        // 🚫 Bloque si la limite est atteinte
+        //  Bloque si la limite est atteinte
         if ($user && $user->trips()->count() >= $user->tripLimit()) {
             return redirect()
                 ->route('trips.index')
@@ -56,7 +56,7 @@ class TripCreationController extends Controller
     {
         $user = auth()->user();
 
-        // 🚫 Bloque si la limite est atteinte
+        //  Bloque si la limite est atteinte
         if ($user && $user->trips()->count() >= $user->tripLimit()) {
             return redirect()
                 ->route('trips.index')
@@ -69,18 +69,31 @@ class TripCreationController extends Controller
     /** Enregistre le point de départ en session */
     public function store(Request $request): RedirectResponse
     {
+        // Si l'utilisateur choisit de passer l'étape
+        if ($request->boolean('skip', false)) {
+            session()->forget([
+                'departure', 'departure_latitude', 'departure_longitude',
+                'departure_country', 'departure_code',
+            ]);
+
+            return redirect()
+                ->route('trips.details')
+                ->with('info', __('Vous pourrez définir votre point de départ plus tard.'));
+        }
+
+        // Sinon : validation normale du lieu
         $validated = $request->validate([
-            'departure'      => 'required|string|max:100',
-            'latitude'       => 'required|numeric|between:-90,90',
-            'longitude'      => 'required|numeric|between:-180,180',
+            'departure'      => 'nullable|string|max:100',
+            'latitude'       => 'nullable|numeric|between:-90,90',
+            'longitude'      => 'nullable|numeric|between:-180,180',
             'country'        => 'nullable|string|max:100',
             'country_code'   => 'nullable|string|size:2',
         ]);
 
         session([
-            'departure'           => $validated['departure'],
-            'departure_latitude'  => $validated['latitude'],
-            'departure_longitude' => $validated['longitude'],
+            'departure'           => $validated['departure'] ?? null,
+            'departure_latitude'  => $validated['latitude'] ?? null,
+            'departure_longitude' => $validated['longitude'] ?? null,
             'departure_country'   => $validated['country'] ?? null,
             'departure_code'      => strtoupper($validated['country_code'] ?? ''),
         ]);
@@ -95,17 +108,17 @@ class TripCreationController extends Controller
     {
         $user = auth()->user();
 
-        // 🚫 Bloque si la limite est atteinte
+        //  Bloque si la limite est atteinte
         if ($user && $user->trips()->count() >= $user->tripLimit()) {
             return redirect()
                 ->route('trips.index')
                 ->with('error', __('Vous avez atteint la limite maximale de voyages.'));
         }
 
-        if (!session()->has('destination') || !session()->has('departure')) {
+        if (!session()->has('destination')) {
             return redirect()
                 ->route('trips.destination')
-                ->with('error', __('trip_creation.previous_steps_required'));
+                ->with('error', __('trip_creation.incomplete_information'));
         }
 
         return Inertia::render('Trips/Details');
@@ -130,13 +143,14 @@ class TripCreationController extends Controller
         $destinationCountry  = session('country');
         $destinationCode     = session('country_code');
 
-        $departure           = session('departure');
-        $departureLat        = session('departure_latitude');
-        $departureLng        = session('departure_longitude');
-        $departureCountry    = session('departure_country');
-        $departureCode       = session('departure_code');
+        // 🟢 Départ désormais optionnel
+        $departure           = session('departure') ?? null;
+        $departureLat        = session('departure_latitude') ?? null;
+        $departureLng        = session('departure_longitude') ?? null;
+        $departureCountry    = session('departure_country') ?? null;
+        $departureCode       = session('departure_code') ?? null;
 
-        if (!$destination || !$departure) {
+        if (!$destination) {
             return redirect()
                 ->route('trips.destination')
                 ->with('error', __('trip_creation.incomplete_information'));
@@ -170,34 +184,26 @@ class TripCreationController extends Controller
             'is_public'   => $request->boolean('is_public', false),
         ]);
 
-        // 🔹 Étape 1 : départ
-        $trip->steps()->create([
-            'location'       => $departure,
-            'latitude'       => $departureLat,
-            'longitude'      => $departureLng,
-            'country'        => $departureCountry,
-            'country_code'   => $departureCode,
-            'order'          => 1,
-            'is_departure'   => true,
-            'start_date'     => $startDate,
-            'end_date'       => $startDate,
-            'nights'         => 0,
-            'transport_mode' => $request->transport_mode ?? 'car',
-        ]);
-
-        // 🔹 Étape 2 : destination
+        // 🔹 Étape de destination (la seule créée automatiquement)
         $trip->steps()->create([
             'location'       => $destination,
             'latitude'       => $destinationLat,
             'longitude'      => $destinationLng,
             'country'        => $destinationCountry,
             'country_code'   => $destinationCode,
-            'order'          => 2,
+            'order'          => 1,
             'is_destination' => true,
             'start_date'     => $startDate,
             'end_date'       => $endDate,
             'nights'         => max(0, (int) now()->parse($startDate)->diffInDays($endDate)),
             'transport_mode' => $request->transport_mode ?? 'car',
+        ]);
+
+        // 🔹 Associe l'utilisateur au voyage avec son départ (facultatif)
+        $trip->users()->attach($user->id, [
+            'start_location' => $departure,
+            'latitude'       => $departureLat,
+            'longitude'      => $departureLng,
         ]);
 
         // 🔹 Recalcule les distances (ItineraryService)

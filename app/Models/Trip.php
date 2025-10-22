@@ -25,10 +25,18 @@ class Trip extends Model
         return $query->where('is_public', true);
     }
 
-    public function user()
+    public function users()
     {
-        return $this->belongsTo(User::class);
+        return $this->belongsToMany(User::class, 'trip_user')
+            ->withPivot([
+                'start_location',
+                'latitude',
+                'longitude',
+                'departure_date',
+            ])
+            ->withTimestamps();
     }
+
 
     public function steps()
     {

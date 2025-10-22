@@ -10,6 +10,7 @@ use App\Http\Requests\StoreTripRequest;
 use App\Http\Requests\UpdateTripRequest;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Support\Collection;
 use Carbon\Carbon;
@@ -22,73 +23,79 @@ class TripController extends Controller
     use \Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 
     /** Liste des voyages de l’utilisateur */
+
+
     public function index(Request $request): InertiaResponse
     {
-        // 🧩 Si l’utilisateur n’est pas connecté → page d’invitation
-        if (!auth()->check()) {
+        if (!Auth::check()) {
             return Inertia::render('Trips/GuestPlaceholder');
         }
 
-        $user = auth()->user();
+        $user = Auth::user();
         $perPage = (int) $request->integer('per_page', 12);
         $search = $request->input('search');
 
-        // 🌍 Récupération des voyages
         $trips = Trip::query()
-            ->where('user_id', $user->id)
+            ->whereHas('users', fn($q) => $q->where('user_id', $user->id))
             ->when($search, function ($query, $search) {
                 $query->where(function ($q) use ($search) {
                     $q->where('title', 'like', "%{$search}%")
-                        ->orWhereHas('steps', function ($stepQuery) use ($search) {
-                            $stepQuery->where('country', 'like', "%{$search}%");
+                        ->orWhereHas('steps', function ($sq) use ($search) {
+                            $sq->where('country', 'like', "%{$search}%");
                         });
                 });
             })
-            ->withCount(['steps', 'favoredBy as favs'])
             ->with([
-                'steps:id,trip_id,start_date,end_date,nights,is_destination,country,country_code'
+                'steps:id,trip_id,title,latitude,longitude,country,country_code,is_destination,start_date,end_date',
+                'users'
             ])
-            ->latest()
+            ->withCount(['steps', 'favoredBy as favs'])
+            ->orderBy('created_at', 'desc')
             ->paginate($perPage)
             ->withQueryString()
-            ->through(function ($trip) {
-                $destinationStep = $trip->steps->firstWhere('is_destination', true);
+            ->through(function ($trip) use ($user) {
+                $pivot = $trip->users()->where('user_id', $user->id)->first()?->pivot;
+
+                // Étape de destination
+                $destination = $trip->steps->firstWhere('is_destination', true);
+
+                // Détermination du statut
+                $departure = $pivot?->departure_date ? now()->diffInDays($pivot->departure_date, false) : null;
+                if (!$pivot?->departure_date) {
+                    $status = 'sans_date'; // voyage sans date de départ
+                } elseif ($departure > 0) {
+                    $status = 'a_venir';
+                } elseif ($departure <= 0 && $trip->steps->max('end_date') >= now()->toDateString()) {
+                    $status = 'en_cours';
+                } else {
+                    $status = 'termine';
+                }
 
                 return [
-                    'id'           => $trip->id,
-                    'title'        => $trip->title,
-                    'description'  => $trip->description,
-                    'image'        => $trip->image,
-                    'is_public'    => $trip->is_public,
-                    'favs'         => $trip->favs,
-                    'start_date'   => $trip->start_date,
-                    'end_date'     => $trip->end_date,
-                    'total_nights' => $trip->total_nights,
-                    'days_count'   => $trip->days_count,
-                    'steps_count'  => $trip->steps_count,
-                    'destination_country'      => $destinationStep?->country,
-                    'destination_country_code' => $destinationStep?->country_code,
+                    'id' => $trip->id,
+                    'title' => $trip->title,
+                    'description' => $trip->description,
+                    'image' => $trip->image,
+                    'is_public' => $trip->is_public,
+                    'favs' => $trip->favs,
+                    'departure_date' => $pivot?->departure_date,
+                    'steps_count' => $trip->steps_count,
+                    'latitude' => $destination?->latitude,
+                    'longitude' => $destination?->longitude,
+                    'destination_country' => $destination?->country,
+                    'destination_country_code' => $destination?->country_code,
+                    'status' => $status,
                 ];
             });
-
-        // 🔢 Limite de voyages
-        $count = $user->trips()->count();
-        $max   = $user->tripLimit();
 
         return Inertia::render('Trips/Index', [
             'trips' => $trips,
             'filters' => [
                 'search' => $search,
             ],
-            'limits' => [
-                'max'   => $max,
-                'count' => $count,
-            ],
-            'can' => [
-                'create_trip' => $count < $max,
-            ],
         ]);
     }
+
 
     /** Formulaire de création */
     public function create(): InertiaResponse
