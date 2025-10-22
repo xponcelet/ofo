@@ -76,10 +76,11 @@ class User extends Authenticatable implements MustVerifyEmail
         return $this->belongsToMany(Trip::class, 'favorites')->withTimestamps();
     }
 
-    public function trips(): HasMany
+    public function trips()
     {
-        // FK par défaut: trips.user_id
-        return $this->hasMany(Trip::class);
+        return $this->belongsToMany(Trip::class, 'trip_user')
+            ->withPivot(['start_location', 'latitude', 'longitude', 'departure_date'])
+            ->withTimestamps();
     }
 
     public function isPremium(): bool

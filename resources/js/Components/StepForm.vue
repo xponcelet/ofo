@@ -23,7 +23,7 @@ const mapboxInstanceKey = computed(() => {
 
 // Date de fin = start_date + nights
 const computedEndDate = computed(() => {
-    if (!props.form.start_date || !props.form.nights) return ''
+    if (!props.form.start_date || props.form.nights == null) return ''
     const start = new Date(props.form.start_date)
     const end = new Date(start)
     end.setDate(start.getDate() + props.form.nights)
@@ -57,6 +57,17 @@ function updateCountry(country) {
 function updateCountryCode(code) {
     props.form.country_code = code
 }
+
+function formatLocalDate(d) {
+    const y = d.getFullYear()
+    const m = String(d.getMonth() + 1).padStart(2, '0')
+    const day = String(d.getDate()).padStart(2, '0')
+    return `${y}-${m}-${day}` // YYYY-MM-DD en LOCAL, pas en UTC
+}
+
+const today = formatLocalDate(new Date())
+
+
 </script>
 
 <template>
@@ -108,6 +119,7 @@ function updateCountryCode(code) {
                     <label class="block text-sm font-medium text-gray-700">Date de début</label>
                     <input
                         v-model="props.form.start_date"
+                        :min="today"
                         type="date"
                         class="mt-1 block w-full rounded-lg border-gray-300 shadow-sm focus:ring-pink-500 focus:border-pink-500"
                     />
@@ -131,6 +143,7 @@ function updateCountryCode(code) {
                     <label class="block text-sm font-medium text-gray-700">Date de fin</label>
                     <input
                         :value="computedEndDate"
+                        :min="props.form.start_date || today"
                         type="date"
                         readonly
                         class="mt-1 block w-full bg-gray-100 rounded-lg border-gray-300 shadow-sm text-gray-600"

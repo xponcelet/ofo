@@ -22,7 +22,7 @@ class StepRequest extends FormRequest
             'country' => ['nullable', 'string', 'max:100'],
             'country_code' => ['nullable', 'string', 'size:2'],
             'order' => ['nullable', 'integer', 'min:1'],
-            'start_date' => ['nullable', 'date'],
+            'start_date' => ['nullable', 'date', 'after_or_equal:today'],
             'end_date' => ['nullable', 'date', 'after_or_equal:start_date'],
             'nights' => ['nullable', 'integer', 'min:0'],
             'transport_mode' => ['nullable', 'string', 'max:50'],

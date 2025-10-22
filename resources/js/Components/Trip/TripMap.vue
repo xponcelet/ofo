@@ -116,10 +116,29 @@ function highlightActive() {
 function fitAll() {
     const pts = props.steps.map(toLngLat).filter(([x, y]) => isFinite(x) && isFinite(y))
     if (!pts.length) return
-    const b = new window.mapboxgl.LngLatBounds(pts[0], pts[0])
-    pts.forEach((p) => b.extend(p))
-    map.fitBounds(b, { padding: { top: 40, right: 40, bottom: 40, left: 40 } })
+
+    if (pts.length === 1) {
+        // 🗺️ Cas d’un seul point → zoom modéré
+        const [lng, lat] = pts[0]
+        map.easeTo({
+            center: [lng, lat],
+            zoom: 7, // 🔹 zoom plus doux
+            duration: 800,
+        })
+        return
+    }
+
+    // 🧭 Plusieurs points → fitBounds classique
+    const bounds = new window.mapboxgl.LngLatBounds(pts[0], pts[0])
+    pts.forEach((p) => bounds.extend(p))
+
+    map.fitBounds(bounds, {
+        padding: { top: 40, right: 40, bottom: 40, left: 40 },
+        maxZoom: 7, // 🔹 limite le zoom auto
+        duration: 1000,
+    })
 }
+
 
 onMounted(() => {
     if (!window.mapboxgl?.Map) return

@@ -10,12 +10,12 @@ use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 use Carbon\Carbon;
+use Illuminate\Http\Request;
 
 class StepController extends Controller
 {
     use AuthorizesRequests;
 
-    /** Liste des étapes d’un voyage */
     /** Liste des étapes d’un voyage */
     public function index(Trip $trip)
     {
@@ -35,15 +35,21 @@ class StepController extends Controller
                 'is_destination'
             ]);
 
+        // 🔹 Nouveau : récupérer le départ utilisateur (pivot trip_user)
+        $userDeparture = $trip->users()
+            ->where('user_id', auth()->id())
+            ->select('start_location', 'latitude', 'longitude')
+            ->first();
+
         return Inertia::render('Steps/Index', [
             'trip' => $trip,
             'steps' => $steps,
+            'userDeparture' => $userDeparture,
         ]);
     }
 
-
     /** Formulaire de création d’une étape */
-    public function create(\Illuminate\Http\Request $request, Trip $trip)
+    public function create(Request $request, Trip $trip)
     {
         $this->authorize('update', $trip);
 
@@ -76,14 +82,12 @@ class StepController extends Controller
 
         $validated = $this->prepareData($request->validated());
 
-        // Nettoie les codes pays
         if (!empty($validated['country_code'])) {
             $validated['country_code'] = strtoupper($validated['country_code']);
         }
 
         $insertAfterId = $request->input('insert_after_id');
         $atStart       = $request->boolean('at_start');
-
         $step = null;
 
         DB::transaction(function () use ($trip, $insertAfterId, $atStart, &$validated, &$step) {
@@ -147,7 +151,6 @@ class StepController extends Controller
         }
 
         $step->update($validated);
-
         $itinerary->recalcDistances($step->trip);
 
         return redirect()->route('trips.show', $step->trip)->with('success', __('step.updated'));
@@ -261,42 +264,39 @@ class StepController extends Controller
         return $validated;
     }
 
+    /** Réorganisation */
     public function reorder(Trip $trip)
     {
         $this->authorize('update', $trip);
 
         $order = request('order', []);
         foreach ($order as $index => $id) {
-            \App\Models\Step::where('id', $id)->update(['order' => $index + 1]);
+            Step::where('id', $id)->update(['order' => $index + 1]);
         }
 
         return back();
     }
+
+    /** Mise à jour du nombre de nuits */
     public function updateNights(Request $request, Step $step)
     {
-        // Autorisation sur le trip parent (selon ta Policy)
         $this->authorize('update', $step->trip);
 
-        // Validation simple et ciblée
         $data = $request->validate([
             'nights' => ['required', 'integer', 'min:0'],
         ]);
 
-        // Calcul end_date : start_date + nights jours (si start_date existe)
         $endDate = null;
         if (!empty($step->start_date)) {
-            // Si tu stockes des dates en date ou datetime, adapte parse
             $start = Carbon::parse($step->start_date)->startOfDay();
-            $endDate = $start->copy()->addDays($data['nights']); // 0 nuit => même jour
+            $endDate = $start->copy()->addDays($data['nights']);
         }
 
         $step->update([
             'nights'   => $data['nights'],
-            'end_date' => $endDate, // peut être null si pas de start_date
+            'end_date' => $endDate,
         ]);
 
-        // Optionnel : renvoyer les nouvelles valeurs pour un refresh partiel
         return back();
     }
-
 }

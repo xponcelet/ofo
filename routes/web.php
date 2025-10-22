@@ -16,6 +16,7 @@ use App\Http\Controllers\ChecklistItemController;
 use App\Http\Controllers\LanguageController;
 use App\Http\Controllers\TranslationController;
 use App\Http\Controllers\StepNoteController;
+use App\Http\Controllers\TripUserController;
 
 // ============================
 // Page d’accueil publique
@@ -138,3 +139,7 @@ Route::patch('/steps/{step}/move-down', [StepController::class, 'moveDown'])->na
 Route::put('/trips/{trip}/steps/reorder', [StepController::class, 'reorder'])->name('steps.reorder');
 // Mettre à jour uniquement les nuits (+ recalc end_date)
 Route::patch('/steps/{step}/nights', [StepController::class, 'updateNights'])->name('steps.update.nights');
+// Mettre à jour le point de départ d'un trip
+Route::patch('/trips/{trip}/departure', [TripUserController::class, 'updateDeparture'])
+    ->name('trips.updateDeparture');
+

@@ -19,7 +19,7 @@ class StoreTripRequest extends FormRequest
             'image'          => ['nullable', 'url', 'max:2048'],
 
             // Dates et nuits
-            'start_date'     => ['required', 'date', 'after_or_equal:today'],
+            'start_date'     => ['nullable', 'date', 'after_or_equal:today'],
             'end_date'       => ['nullable', 'date', 'after_or_equal:start_date'],
             'nights'         => ['nullable', 'integer', 'min:0'],
 
