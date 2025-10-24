@@ -65,6 +65,27 @@ const filteredTrips = computed(() =>
                 {{ $page.props.flash.info }}
             </div>
         </transition>
+        <!-- 🚀 Bandeau "limite atteinte" -->
+        <div
+            v-if="limits.count >= limits.max"
+            class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 p-4 mb-6 rounded-xl border border-yellow-300 bg-yellow-50 text-yellow-800 shadow-sm"
+        >
+            <div class="flex items-center gap-2">
+                <span class="material-symbols-rounded text-yellow-500 text-2xl">warning</span>
+                <div>
+                    <p class="font-semibold">Limite atteinte</p>
+                    <p class="text-sm">Vous avez atteint la limite de {{ limits.max }} voyages gratuits.</p>
+                </div>
+            </div>
+
+            <Link
+                :href="route('profile.show', { checkout: 1 })"
+                class="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-blue-600 to-green-500 text-white rounded-lg shadow-md hover:shadow-lg transition"
+            >
+                <span class="material-symbols-rounded text-base">workspace_premium</span>
+                Passer Premium
+            </Link>
+        </div>
 
         <!-- 💬 Header -->
         <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
