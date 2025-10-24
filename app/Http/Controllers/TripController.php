@@ -90,10 +90,13 @@ class TripController extends Controller
 
         return Inertia::render('Trips/Index', [
             'trips' => $trips,
-            'filters' => [
-                'search' => $search,
+            'filters' => ['search' => $search],
+            'limits' => [
+                'count' => $user->trips()->count(),
+                'max' => $user->tripLimit(),
             ],
         ]);
+
     }
 
 
@@ -134,11 +137,11 @@ class TripController extends Controller
     {
         $user = auth()->user();
 
-        // 🚫 Bloque côté backend si la limite est atteinte
+        //  Bloque côté backend si la limite est atteinte
         if ($user->trips()->count() >= $user->tripLimit()) {
             return redirect()
                 ->route('trips.index')
-                ->with('error', __('Vous avez atteint la limite maximale de voyages.'));
+                ->with('error', __("Vous avez atteint la limite de {$user->tripLimit()} voyages. Passez Premium pour en créer plus !"));
         }
 
         $lock = Cache::lock("user:{$user->id}:create-trip", 5);

@@ -1,6 +1,5 @@
 <?php
 
-
 namespace App\Http;
 
 use Illuminate\Foundation\Http\Kernel as HttpKernel;
@@ -8,47 +7,75 @@ use Illuminate\Foundation\Http\Kernel as HttpKernel;
 class Kernel extends HttpKernel
 {
     /**
-     * Middleware global appliqué à toutes les requêtes HTTP.
+     * The application's global HTTP middleware stack.
+     *
+     * These middleware are run during every request to your application.
+     *
+     * @var array<int, class-string|string>
      */
     protected $middleware = [
-        // Middleware global Laravel
-        \Illuminate\Foundation\Http\Middleware\CheckForMaintenanceMode::class,
+        // Handle CORS requests
         \Illuminate\Http\Middleware\HandleCors::class,
+
+        // Trust proxies
         \App\Http\Middleware\TrustProxies::class,
-        \Illuminate\Http\Middleware\TrustHosts::class,
+
+        // Handle application maintenance
+        \App\Http\Middleware\PreventRequestsDuringMaintenance::class,
+
+        // Validate POST size
+        \Illuminate\Foundation\Http\Middleware\ValidatePostSize::class,
+
+        // Trim strings
+        \App\Http\Middleware\TrimStrings::class,
+
+        // Convert empty strings to null
+        \Illuminate\Foundation\Http\Middleware\ConvertEmptyStringsToNull::class,
     ];
 
     /**
-     * Groupes de middleware pour les routes "web" et "api".
+     * The application's route middleware groups.
+     *
+     * @var array<string, array<int, class-string|string>>
      */
     protected $middlewareGroups = [
         'web' => [
             \App\Http\Middleware\EncryptCookies::class,
             \Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse::class,
             \Illuminate\Session\Middleware\StartSession::class,
+            // Share errors from session with views
             \Illuminate\View\Middleware\ShareErrorsFromSession::class,
-
-            // Ajoute ici notre CSRF custom
+            // CSRF protection
             \App\Http\Middleware\VerifyCsrfToken::class,
-
-            //  Inertia middleware (doit être après CSRF)
-            \Inertia\Middleware::class,
+            // Substitutes route bindings
+            \Illuminate\Routing\Middleware\SubstituteBindings::class,
         ],
 
         'api' => [
-            \Illuminate\Routing\Middleware\ThrottleRequests::class . ':api',
+            // Throttle requests
+            \Illuminate\Routing\Middleware\ThrottleRequests::class.':api',
+            // Substitutes route bindings
             \Illuminate\Routing\Middleware\SubstituteBindings::class,
         ],
     ];
 
     /**
-     * Middleware par route.
+     * The application's route middleware.
+     *
+     * These can be assigned to groups or used individually.
+     *
+     * @var array<string, class-string|string>
      */
-    protected $routeMiddleware = [
+    protected $middlewareAliases = [
         'auth' => \App\Http\Middleware\Authenticate::class,
-        'verified' => \Illuminate\Auth\Middleware\EnsureEmailIsVerified::class,
+        'auth.basic' => \Illuminate\Auth\Middleware\AuthenticateWithBasicAuth::class,
+        'auth.session' => \Illuminate\Session\Middleware\AuthenticateSession::class,
+        'cache.headers' => \Illuminate\Http\Middleware\SetCacheHeaders::class,
+        'can' => \Illuminate\Auth\Middleware\Authorize::class,
         'guest' => \App\Http\Middleware\RedirectIfAuthenticated::class,
+        'password.confirm' => \Illuminate\Auth\Middleware\RequirePassword::class,
+        'signed' => \App\Http\Middleware\ValidateSignature::class,
         'throttle' => \Illuminate\Routing\Middleware\ThrottleRequests::class,
-        'bindings' => \Illuminate\Routing\Middleware\SubstituteBindings::class,
+        'verified' => \Illuminate\Auth\Middleware\EnsureEmailIsVerified::class,
     ];
 }
