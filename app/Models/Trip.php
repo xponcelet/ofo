@@ -19,6 +19,8 @@ class Trip extends Model
         'currency',
         'average_rating',
         'is_public',
+        'start_date' => 'date:Y-m-d',
+        'end_date'   => 'date:Y-m-d',
     ];
     public function scopeIsPublic($query)
     {

@@ -21,7 +21,6 @@ class StepController extends Controller
     {
         $this->authorize('view', $trip);
 
-        // Charger les étapes liées au voyage
         $steps = $trip->steps()
             ->orderBy('order')
             ->get([
@@ -32,31 +31,32 @@ class StepController extends Controller
                 'start_date',
                 'end_date',
                 'nights',
-                'is_destination'
+                'order',
+                'is_destination',
             ]);
 
-        // 🔹 Nouveau : récupérer le départ utilisateur (pivot trip_user)
         $userDeparture = $trip->users()
             ->where('user_id', auth()->id())
             ->select('start_location', 'latitude', 'longitude')
             ->first();
 
         return Inertia::render('Steps/Index', [
-            'trip' => $trip,
-            'steps' => $steps,
+            'trip'          => $trip,
+            'steps'         => $steps,
             'userDeparture' => $userDeparture,
         ]);
     }
 
-    /** Formulaire de création d’une étape */
+    /** Formulaire de création d’une étape (avec date proposée) */
     public function create(Request $request, Trip $trip)
     {
         $this->authorize('update', $trip);
 
-        $afterId = $request->query('after');
-        $atStart = $request->boolean('at_start');
+        $afterId      = $request->query('after');
+        $atStart      = $request->boolean('at_start');
         $defaultOrder = $trip->steps()->count() + 1;
 
+        $afterStep = null;
         if ($afterId) {
             $afterStep = Step::where('trip_id', $trip->id)->find($afterId);
             if ($afterStep) {
@@ -66,12 +66,26 @@ class StepController extends Controller
             $defaultOrder = 1;
         }
 
+        // Calcul automatique de la start_date proposée
+        $suggestedStart = null;
+        if ($atStart) {
+            $first = $trip->steps()->orderBy('order')->first();
+            $suggestedStart = $trip->start_date
+                ?? ($first?->start_date?->toDateString())
+                ?? now()->toDateString();
+        } elseif ($afterStep) {
+            $suggestedStart = $afterStep->end_date
+                ? Carbon::parse($afterStep->end_date)->toDateString()
+                : ($afterStep->start_date ? Carbon::parse($afterStep->start_date)->toDateString() : null);
+        }
+
         return Inertia::render('Steps/Create', [
             'trip'            => $trip,
             'storeUrl'        => route('trips.steps.store', $trip),
             'defaultOrder'    => $defaultOrder,
             'insert_after_id' => $afterId,
             'at_start'        => $atStart,
+            'suggested_start' => $suggestedStart,
         ]);
     }
 
@@ -110,39 +124,82 @@ class StepController extends Controller
             $step = $trip->steps()->create($validated);
         });
 
-        if ($step) {
+        // Replanification immédiate (Mode A) selon le contexte
+        if ($atStart) {
+            $anchor = $trip->start_date ? Carbon::parse($trip->start_date) : null;
+            $itinerary->rescheduleAllFromFirst($trip, $anchor);
             $itinerary->recalcDistances($trip);
+        } elseif ($insertAfterId) {
+            $after = Step::where('trip_id', $trip->id)->find($insertAfterId);
+            if ($after) {
+                $itinerary->rescheduleFrom($after); // inclut refresh dates trip + distances
+            } else {
+                $itinerary->rescheduleAllFromFirst($trip);
+                $itinerary->recalcDistances($trip);
+            }
+        } else {
+            $prev = $trip->steps()->where('order', '<', $step->order)->orderBy('order', 'desc')->first();
+            if ($prev) {
+                $itinerary->rescheduleFrom($prev);
+            } else {
+                $itinerary->rescheduleAllFromFirst($trip);
+                $itinerary->recalcDistances($trip);
+            }
         }
 
-        return redirect()->route('trips.show', $trip)->with('success', __('step.created'));
+        // Rediriger vers l’index des étapes
+        return redirect()
+            ->route('trips.steps.index', $trip)
+            ->with('success', __('step.created'));
     }
 
-    /** Édition d’une étape */
+    /** Édition d’une étape (avec suggested_start si vide) */
     public function edit(Step $step)
     {
         $this->authorize('update', $step->trip);
 
         $step->load([
-            'trip:id,user_id,title',
+            'trip:id,user_id,title,start_date,end_date',
             'accommodations:id,step_id,title,location,start_date,end_date',
             'activities' => fn($q) => $q
                 ->orderBy('start_at')
                 ->select('id','step_id','title','description','start_at','end_at','external_link','cost','currency','category'),
         ]);
 
-        $allSteps = $step->trip->steps()->orderBy('order')->get(['id','order','location']);
+        $allSteps = $step->trip->steps()->orderBy('order')->get(['id','order','location','start_date','end_date']);
+
+        // suggested_start si l'étape n'a pas encore de start_date
+        $suggestedStart = null;
+        if (empty($step->start_date)) {
+            if ($step->order === 1) {
+                $suggestedStart = $step->trip->start_date
+                    ? $step->trip->start_date->toDateString()
+                    : now()->toDateString();
+            } else {
+                $prev = $step->trip->steps()->where('order', $step->order - 1)->first();
+                if ($prev) {
+                    $suggestedStart = $prev->end_date
+                        ? Carbon::parse($prev->end_date)->toDateString()
+                        : ($prev->start_date ? Carbon::parse($prev->start_date)->toDateString() : now()->toDateString());
+                }
+            }
+        }
 
         return Inertia::render('Steps/Edit', [
-            'step'     => $step,
-            'trip'     => $step->trip,
-            'allSteps' => $allSteps,
+            'step'            => $step,
+            'trip'            => $step->trip,
+            'allSteps'        => $allSteps,
+            'suggested_start' => $suggestedStart,
         ]);
     }
 
-    /** Mise à jour d’une étape */
+    /** Mise à jour d’une étape (replanifie si start/nights changent) */
     public function update(StepRequest $request, Step $step, ItineraryService $itinerary)
     {
         $this->authorize('update', $step->trip);
+
+        $originalStart  = $step->start_date ? $step->start_date->toDateString() : null;
+        $originalNights = $step->nights;
 
         $validated = $this->prepareData($request->validated());
 
@@ -150,20 +207,44 @@ class StepController extends Controller
             $validated['country_code'] = strtoupper($validated['country_code']);
         }
 
-        $step->update($validated);
-        $itinerary->recalcDistances($step->trip);
+        $step->fill($validated);
 
-        return redirect()->route('trips.show', $step->trip)->with('success', __('step.updated'));
+        $changedStart  = array_key_exists('start_date', $validated)
+            ? (($validated['start_date'] ?? null) !== $originalStart)
+            : false;
+        $changedNights = array_key_exists('nights', $validated)
+            ? ((int)($validated['nights'] ?? null) !== (int)$originalNights)
+            : false;
+
+        $step->save();
+
+        if ($changedStart || $changedNights) {
+            // Cascade autoritaire depuis l’étape modifiée
+            $itinerary->rescheduleFrom($step); // inclut refresh dates trip + distances
+        } else {
+            // Sinon au moins distances si coords/transport ont changé
+            $itinerary->recalcDistances($step->trip);
+        }
+
+        // Retourner sur l’index des étapes
+        return redirect()->route('trips.steps.index', $step->trip)->with('success', __('step.updated'));
     }
 
-    /** Suppression */
+    /** Suppression (≥ 1 étape + destination non-supprimable) */
     public function destroy(Step $step, ItineraryService $itinerary)
     {
         $this->authorize('update', $step->trip);
 
         $trip = $step->trip;
-        $deletedOrder = $step->order;
 
+        if ($trip->steps()->count() <= 1) {
+            return back()->with('error', "Vous devez conserver au moins une étape dans ce voyage.");
+        }
+        if ($step->is_destination) {
+            return back()->with('error', "La destination finale ne peut pas être supprimée.");
+        }
+
+        $deletedOrder = $step->order;
         $step->delete();
 
         Step::where('trip_id', $trip->id)
@@ -175,9 +256,11 @@ class StepController extends Controller
                 $s->save();
             });
 
+        $anchor = $trip->start_date ? Carbon::parse($trip->start_date) : null;
+        $itinerary->rescheduleAllFromFirst($trip, $anchor);
         $itinerary->recalcDistances($trip);
 
-        return redirect()->route('trips.show', $trip)->with('success', __('step.deleted'));
+        return back()->with('success', __('step.deleted'));
     }
 
     /** Duplication d’une étape */
@@ -252,7 +335,7 @@ class StepController extends Controller
         return back()->with('success', __('step.moved_down'));
     }
 
-    /** Ajout automatique de la date de fin si “nights” présent */
+    /** Ajout automatique de la date de fin si “nights” présent (pour store/update classiques) */
     private function prepareData(array $validated): array
     {
         if (!empty($validated['start_date']) && isset($validated['nights'])) {
@@ -264,21 +347,24 @@ class StepController extends Controller
         return $validated;
     }
 
-    /** Réorganisation */
-    public function reorder(Trip $trip)
+    /** Réorganisation (DnD) avec replanification immédiate */
+    public function reorder(Trip $trip, Request $request, ItineraryService $itinerary)
     {
         $this->authorize('update', $trip);
 
-        $order = request('order', []);
+        $order = $request->input('order', []);
         foreach ($order as $index => $id) {
-            Step::where('id', $id)->update(['order' => $index + 1]);
+            Step::where('id', $id)->where('trip_id', $trip->id)->update(['order' => $index + 1]);
         }
+
+        $itinerary->rescheduleAllFromFirst($trip);
+        $itinerary->recalcDistances($trip);
 
         return back();
     }
 
-    /** Mise à jour du nombre de nuits */
-    public function updateNights(Request $request, Step $step)
+    /** Mise à jour du nombre de nuits (cascade autoritaire) */
+    public function updateNights(Request $request, Step $step, ItineraryService $itinerary)
     {
         $this->authorize('update', $step->trip);
 
@@ -286,17 +372,47 @@ class StepController extends Controller
             'nights' => ['required', 'integer', 'min:0'],
         ]);
 
-        $endDate = null;
-        if (!empty($step->start_date)) {
-            $start = Carbon::parse($step->start_date)->startOfDay();
-            $endDate = $start->copy()->addDays($data['nights']);
-        }
+        $step->nights = (int) $data['nights'];
+        $step->save();
 
-        $step->update([
-            'nights'   => $data['nights'],
-            'end_date' => $endDate,
-        ]);
+        $itinerary->rescheduleFrom($step);
 
         return back();
+    }
+
+    /** Mise à jour de la date de départ d’une étape (cascade autoritaire) */
+    public function updateStartDate(Request $request, Step $step, ItineraryService $itinerary)
+    {
+        $this->authorize('update', $step->trip);
+
+        $data = $request->validate([
+            'start_date' => ['required', 'date', 'after_or_equal:today'],
+        ]);
+
+        $step->start_date = Carbon::parse($data['start_date'])->startOfDay();
+        $step->save();
+
+        $itinerary->rescheduleFrom($step);
+
+        return back();
+    }
+
+    /** Replanifier tout le trip depuis la 1ʳᵉ étape (ou ancre fournie) */
+    public function rebuildSchedule(Request $request, Trip $trip, ItineraryService $itinerary)
+    {
+        $this->authorize('update', $trip);
+
+        $data = $request->validate([
+            'trip_start' => ['nullable', 'date', 'after_or_equal:today'],
+        ]);
+
+        $anchor = !empty($data['trip_start'])
+            ? Carbon::parse($data['trip_start'])->startOfDay()
+            : null;
+
+        $itinerary->rescheduleAllFromFirst($trip, $anchor);
+        $itinerary->recalcDistances($trip);
+
+        return back()->with('success', __('trip.schedule_rebuilt'));
     }
 }
