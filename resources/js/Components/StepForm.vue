@@ -9,6 +9,9 @@ const props = defineProps({
     form: { type: Object, required: true },
     onSubmit: { type: Function, required: true },
     submitLabel: { type: String, default: 'Valider' },
+    // nouveaux props (optionnels)
+    suggestedStart: { type: String, default: null },
+    atStart: { type: Boolean, default: false },
 })
 
 const page = usePage()
@@ -21,15 +24,42 @@ const mapboxInstanceKey = computed(() => {
     return `step-${props.form?.id ?? routeStepId ?? 'new'}`
 })
 
-// Date de fin = start_date + nights
+/* --- Dates --- */
+function formatLocalDate(d) {
+    const y = d.getFullYear()
+    const m = String(d.getMonth() + 1).padStart(2, '0')
+    const day = String(d.getDate()).padStart(2, '0')
+    return `${y}-${m}-${day}` // YYYY-MM-DD local
+}
+const today = formatLocalDate(new Date())
+
+// End = start + nights (prévisualisation)
 const computedEndDate = computed(() => {
     if (!props.form.start_date || props.form.nights == null) return ''
     const start = new Date(props.form.start_date)
     const end = new Date(start)
-    end.setDate(start.getDate() + props.form.nights)
-    return end.toISOString().split('T')[0]
+    end.setDate(start.getDate() + Number(props.form.nights || 0))
+    return formatLocalDate(end)
 })
 
+// start dans le passé ?
+const startIsPast = computed(() => {
+    return !!props.form.start_date && props.form.start_date < today
+})
+
+// hint "date proposée"
+const showSuggestedHint = computed(() => !!props.suggestedStart)
+const suggestedIsUsed = computed(() => props.form.start_date === props.suggestedStart)
+
+/* --- Erreurs: fusion form.errors (422) + page.props.errors (après 302) --- */
+const allErrors = computed(() => {
+    const a = (page?.props?.errors) || {}
+    const b = (props.form?.errors) || {}
+    return { ...a, ...b }
+})
+const fieldError = (name) => allErrors.value?.[name] || ''
+
+/* --- Init champs par défaut (robuste) --- */
 onMounted(() => {
     Object.assign(props.form, {
         title: props.form.title ?? '',
@@ -42,39 +72,38 @@ onMounted(() => {
         transport_mode: props.form.transport_mode ?? 'car',
         nights: props.form.nights ?? 0,
     })
+
+    // Si jamais le back envoie d-m-Y et qu'il faut normaliser en YYYY-MM-DD :
+    // if (/^\d{2}-\d{2}-\d{4}$/.test(props.form.start_date || '')) {
+    //   const [dd, mm, yyyy] = props.form.start_date.split('-')
+    //   props.form.start_date = `${yyyy}-${mm}-${dd}`
+    // }
+    // if (/^\d{2}-\d{2}-\d{4}$/.test(props.form.end_date || '')) {
+    //   const [dd, mm, yyyy] = props.form.end_date.split('-')
+    //   props.form.end_date = `${yyyy}-${mm}-${dd}`
+    // }
 })
 
-// --- Mapbox callbacks ---
+/* --- Mapbox callbacks --- */
 function updateCoords({ latitude, longitude }) {
     props.form.latitude = latitude
     props.form.longitude = longitude
 }
-
 function updateCountry(country) {
     props.form.country = country
 }
-
 function updateCountryCode(code) {
     props.form.country_code = code
 }
-
-function formatLocalDate(d) {
-    const y = d.getFullYear()
-    const m = String(d.getMonth() + 1).padStart(2, '0')
-    const day = String(d.getDate()).padStart(2, '0')
-    return `${y}-${m}-${day}` // YYYY-MM-DD en LOCAL, pas en UTC
-}
-
-const today = formatLocalDate(new Date())
-
-
 </script>
 
 <template>
     <form @submit.prevent="props.onSubmit" class="space-y-8">
         <!-- Section infos générales -->
         <div class="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
-            <h3 class="text-lg font-semibold text-gray-800 mb-4">Informations générales</h3>
+            <h3 class="text-lg font-semibold text-gray-800 mb-4">
+                {{ atStart ? 'Départ' : 'Informations générales' }}
+            </h3>
 
             <!-- Titre -->
             <div class="mb-4">
@@ -85,20 +114,22 @@ const today = formatLocalDate(new Date())
                     placeholder="Ex: Camp de base"
                     class="mt-1 block w-full rounded-lg border-gray-300 shadow-sm focus:ring-pink-500 focus:border-pink-500"
                 />
-                <InputError :message="props.form.errors?.title" />
+                <InputError :message="fieldError('title')" />
             </div>
 
-            <!-- Lieu -->
-            <div>
+            <!-- Lieu (avec id pour scroll + état visuel d’erreur) -->
+            <div id="location-field" class="mb-1">
                 <label class="block text-sm font-medium text-gray-700">Lieu principal *</label>
-                <MapboxAutocomplete
-                    :key="mapboxInstanceKey"
-                    v-model="props.form.location"
-                    @update:coords="updateCoords"
-                    @update:country="updateCountry"
-                    @update:countryCode="updateCountryCode"
-                />
-                <InputError :message="props.form.errors?.location" />
+                <div :class="['rounded-lg', fieldError('location') ? 'ring-1 ring-red-400 ring-offset-0' : '']">
+                    <MapboxAutocomplete
+                        :key="mapboxInstanceKey"
+                        v-model="props.form.location"
+                        @update:coords="updateCoords"
+                        @update:country="updateCountry"
+                        @update:countryCode="updateCountryCode"
+                    />
+                </div>
+                <InputError :message="fieldError('location')" />
             </div>
 
             <!-- Carte -->
@@ -122,8 +153,18 @@ const today = formatLocalDate(new Date())
                         :min="today"
                         type="date"
                         class="mt-1 block w-full rounded-lg border-gray-300 shadow-sm focus:ring-pink-500 focus:border-pink-500"
+                        aria-describedby="start-help"
                     />
-                    <InputError :message="props.form.errors?.start_date" />
+                    <div class="mt-1">
+                        <p v-if="startIsPast" id="start-help" class="text-xs text-red-600">
+                            La date ne peut pas être dans le passé.
+                        </p>
+                        <p v-else-if="showSuggestedHint" class="text-xs text-gray-500">
+                            Date proposée : <strong>{{ suggestedStart }}</strong>
+                            <span v-if="suggestedIsUsed">(utilisée)</span>
+                        </p>
+                    </div>
+                    <InputError :message="fieldError('start_date')" />
                 </div>
 
                 <!-- Nuits -->
@@ -135,12 +176,12 @@ const today = formatLocalDate(new Date())
                         min="0"
                         class="mt-1 block w-full rounded-lg border-gray-300 shadow-sm focus:ring-pink-500 focus:border-pink-500"
                     />
-                    <InputError :message="props.form.errors?.nights" />
+                    <InputError :message="fieldError('nights')" />
                 </div>
 
                 <!-- Date fin -->
                 <div>
-                    <label class="block text-sm font-medium text-gray-700">Date de fin</label>
+                    <label class="block text-sm font-medium text-gray-700">Date de fin (automatique)</label>
                     <input
                         :value="computedEndDate"
                         :min="props.form.start_date || today"
@@ -166,7 +207,7 @@ const today = formatLocalDate(new Date())
                     <option value="walk">🚶 Marche</option>
                     <option value="boat">⛵ Bateau</option>
                 </select>
-                <InputError :message="props.form.errors?.transport_mode" />
+                <InputError :message="fieldError('transport_mode')" />
             </div>
         </div>
 
@@ -179,7 +220,7 @@ const today = formatLocalDate(new Date())
                 placeholder="Ajoutez quelques notes ou une description..."
                 class="mt-1 block w-full rounded-lg border-gray-300 shadow-sm focus:ring-pink-500 focus:border-pink-500"
             />
-            <InputError :message="props.form.errors?.description" />
+            <InputError :message="fieldError('description')" />
         </div>
 
         <!-- Bouton -->
@@ -187,7 +228,7 @@ const today = formatLocalDate(new Date())
             <button
                 type="submit"
                 class="inline-flex items-center px-5 py-2.5 bg-pink-600 text-white font-semibold rounded-lg shadow hover:bg-pink-700 transition disabled:opacity-60 disabled:cursor-not-allowed"
-                :disabled="props.form.processing"
+                :disabled="props.form.processing || startIsPast"
             >
                 {{ props.submitLabel }}
             </button>

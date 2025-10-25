@@ -36,6 +36,8 @@ class Step extends Model
         'distance_to_next' => 'float',
         'duration_to_next' => 'float',
         'nights'     => 'integer',
+        'start_date' => 'date:Y-m-d',
+        'end_date'   => 'date:Y-m-d',
     ];
 
     public function trip()
@@ -56,6 +58,16 @@ class Step extends Model
     public function note()
     {
         return $this->hasOne(StepNote::class)->where('user_id', auth()->id());
+    }
+    protected static function booted()
+    {
+        static::saving(function (Step $step) {
+            if (!is_null($step->start_date) && !is_null($step->nights)) {
+                $step->end_date = $step->start_date->copy()->addDays((int)$step->nights);
+            } else {
+                $step->end_date = null;
+            }
+        });
     }
 
 
