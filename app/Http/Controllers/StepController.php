@@ -46,6 +46,37 @@ class StepController extends Controller
             'userDeparture' => $userDeparture,
         ]);
     }
+    /** Affichage d’une étape avec ses activités (vue détaillée) */
+    public function show(Step $step)
+    {
+        $this->authorize('view', $step->trip);
+
+        $step->load([
+            'trip:id,user_id,title,start_date,end_date',
+            'activities' => fn($q) => $q
+                ->orderBy('start_at')
+                ->select(
+                    'id',
+                    'step_id',
+                    'title',
+                    'description',
+                    'location',
+                    'latitude',
+                    'longitude',
+                    'start_at',
+                    'end_at',
+                    'external_link',
+                    'cost',
+                    'currency',
+                    'category'
+                ),
+        ]);
+
+        return Inertia::render('Steps/Show', [
+            'step' => $step,
+            'trip' => $step->trip,
+        ]);
+    }
 
     /** Formulaire de création d’une étape (avec date proposée) */
     public function create(Request $request, Trip $trip)

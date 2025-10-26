@@ -3,7 +3,7 @@ import { ref, watch, onMounted, onBeforeUnmount } from 'vue'
 
 const props = defineProps({
     steps: { type: Array, default: () => [] },
-    activeId: [Number, String], // piloté depuis TripShowView
+    activeId: [Number, String],
 })
 const emit = defineEmits(['update:activeId'])
 
@@ -15,17 +15,12 @@ const mapEl = ref(null)
 
 function toLngLat(s) {
     if (!s) return [NaN, NaN]
-
-    // ⚡ Priorité aux champs stockés en DB
     if (s.latitude !== undefined && s.longitude !== undefined) {
         return [Number(s.longitude), Number(s.latitude)]
     }
-
-    // fallback si coords existe
     if (s.coords) {
         return [Number(s.coords.lng), Number(s.coords.lat)]
     }
-
     return [NaN, NaN]
 }
 
@@ -50,7 +45,7 @@ function drawRoute() {
             id: routeLayerId,
             type: 'line',
             source: routeSourceId,
-            paint: { 'line-color': '#176f55', 'line-width': 3, 'line-dasharray': [2, 2] },
+            paint: { 'line-color': '#d946ef', 'line-width': 3, 'line-dasharray': [2, 2] },
         })
     }
 }
@@ -75,12 +70,8 @@ function placeMarkers() {
             justifyContent: 'center',
         })
 
-        // Utilise l'ordre si dispo, sinon day, sinon index
         el.textContent = String(s.order ?? s.day ?? i + 1)
-
-        el.addEventListener('click', () => {
-            emit('update:activeId', s.id) // notifie le parent
-        })
+        el.addEventListener('click', () => emit('update:activeId', s.id))
 
         const marker = new window.mapboxgl.Marker({ element: el, anchor: 'center' })
             .setLngLat([lng, lat])
@@ -96,10 +87,9 @@ function highlightActive() {
     markers.forEach(({ stepId, el }) => {
         const active = stepId === props.activeId
         el.style.transform = active ? 'scale(1.08)' : 'scale(1.0)'
-        el.style.border = active ? '2px solid #22c55e' : '1px solid rgba(0,0,0,0.1)'
+        el.style.border = active ? '2px solid #ec4899' : '1px solid rgba(0,0,0,0.1)'
     })
 
-    // 🔍 Zoom sur l’étape active
     const activeStep = props.steps.find((s) => s.id === props.activeId)
     if (activeStep && map) {
         const [lng, lat] = toLngLat(activeStep)
@@ -118,31 +108,23 @@ function fitAll() {
     if (!pts.length) return
 
     if (pts.length === 1) {
-        // 🗺️ Cas d’un seul point → zoom modéré
         const [lng, lat] = pts[0]
-        map.easeTo({
-            center: [lng, lat],
-            zoom: 7, // 🔹 zoom plus doux
-            duration: 800,
-        })
+        map.easeTo({ center: [lng, lat], zoom: 7, duration: 800 })
         return
     }
 
-    // 🧭 Plusieurs points → fitBounds classique
     const bounds = new window.mapboxgl.LngLatBounds(pts[0], pts[0])
     pts.forEach((p) => bounds.extend(p))
 
     map.fitBounds(bounds, {
         padding: { top: 40, right: 40, bottom: 40, left: 40 },
-        maxZoom: 7, // 🔹 limite le zoom auto
+        maxZoom: 7,
         duration: 1000,
     })
 }
 
-
 onMounted(() => {
     if (!window.mapboxgl?.Map) return
-
     window.mapboxgl.accessToken = import.meta.env.VITE_MAPBOX_KEY
 
     map = new window.mapboxgl.Map({
@@ -151,7 +133,9 @@ onMounted(() => {
         center: [2, 48],
         zoom: 3.5,
     })
+
     map.addControl(new window.mapboxgl.NavigationControl({ visualizePitch: true }), 'top-right')
+
     map.on('load', () => {
         drawRoute()
         placeMarkers()
@@ -184,7 +168,23 @@ watch(
 </script>
 
 <template>
-    <div class="rounded-2xl border border-gray-200 overflow-hidden bg-white h-full">
+    <div class="relative w-full h-full">
         <div ref="mapEl" class="w-full h-full"></div>
+
+        <!-- 🎯 Bouton Recentrer -->
+        <button
+            @click="fitAll"
+            class="absolute bottom-4 right-4 z-20 bg-white text-pink-600 border border-gray-200 shadow-md
+             hover:bg-pink-50 transition-colors rounded-full p-2 flex items-center justify-center"
+            title="Recentrer la carte"
+        >
+            <span class="material-symbols-rounded text-[22px]">my_location</span>
+        </button>
     </div>
 </template>
+
+<style scoped>
+.material-symbols-rounded {
+    font-variation-settings: "FILL" 1, "wght" 400, "GRAD" 0, "opsz" 24;
+}
+</style>

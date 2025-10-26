@@ -16,7 +16,7 @@ const props = defineProps({
     days: { type: Array, default: () => [] },
 })
 
-const currentTab = ref('itineraire')
+const currentTab = ref('steps')
 const menuOpen = ref(false)
 const showEditModal = ref(false)
 const showShareModal = ref(false)
@@ -149,7 +149,7 @@ function submit() {
                     class="py-3 text-sm transition-colors flex items-center"
                     :class="tabClass('steps')"
                 >
-                    🧳 Étapes & Activités
+                    🧳 Étapes
                 </button>
                 <button
                     @click="currentTab = 'itineraire'"
@@ -158,21 +158,6 @@ function submit() {
                 >
                     🗺️ Itinéraire
                 </button>
-
-                <button
-                    @click="currentTab = 'activities'"
-                    class="py-3 text-sm transition-colors flex items-center"
-                    :class="tabClass('activities')"
-                >
-                    🧭 Activités
-                    <span
-                        v-if="totalActivitiesCount"
-                        class="ml-1 text-xs text-on-surface-variant"
-                    >
-                        ({{ totalActivitiesCount }})
-                    </span>
-                </button>
-
                 <button
                     @click="currentTab = 'checklist'"
                     class="py-3 text-sm transition-colors flex items-center"
@@ -207,11 +192,6 @@ function submit() {
                     @go-to-activities="currentTab = 'activities'"
                 />
             </div>
-
-            <div v-else-if="currentTab === 'activities'">
-                <TripActivities :days="trip.days" :activities="activities" />
-            </div>
-
             <div v-else-if="currentTab === 'checklist'">
                 <TripChecklist
                     :trip="trip"

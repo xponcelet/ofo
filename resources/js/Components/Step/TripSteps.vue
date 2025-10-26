@@ -101,9 +101,7 @@ onMounted(() => {
                     <div class="flex flex-col items-center w-[50px] shrink-0">
                         <div
                             class="flex items-center justify-center w-9 h-9 rounded-full font-semibold text-sm text-white shadow-md"
-                            :class="[
-                i === 0 ? 'bg-blue-600' : step.is_destination ? 'bg-pink-600' : 'bg-gray-400',
-              ]"
+                            :class="[i === 0 ? 'bg-blue-600' : step.is_destination ? 'bg-pink-600' : 'bg-gray-400']"
                         >
                             {{ i + 1 }}
                         </div>
@@ -122,42 +120,45 @@ onMounted(() => {
                                 <div class="flex justify-between items-start flex-wrap gap-3">
                                     <div>
                                         <h3 class="text-xl font-semibold text-gray-900 flex items-center gap-2">
-                      <span
-                          v-if="i === 0"
-                          class="material-symbols-rounded text-blue-600 text-lg"
-                      >flight_takeoff</span
-                      >
-                                            <span
-                                                v-else-if="step.is_destination"
-                                                class="material-symbols-rounded text-pink-600 text-lg"
-                                            >flag</span
-                                            >
+                                            <span v-if="i === 0" class="material-symbols-rounded text-blue-600 text-lg">
+                                                flight_takeoff
+                                            </span>
+                                            <span v-else-if="step.is_destination" class="material-symbols-rounded text-pink-600 text-lg">
+                                                flag
+                                            </span>
                                             {{ step.title || 'Étape sans titre' }}
                                         </h3>
-                                        <p
-                                            v-if="step.country"
-                                            class="text-sm text-gray-600 flex items-center gap-2"
-                                        >
+                                        <p v-if="step.country" class="text-sm text-gray-600 flex items-center gap-2">
                                             <span>{{ flagFromCode(step.country_code) }}</span>
                                             {{ step.country }}
                                         </p>
                                     </div>
 
-                                    <Link
-                                        :href="route('steps.edit', step.id)"
-                                        class="text-gray-500 hover:text-primary transition"
-                                        title="Modifier l'étape"
-                                    >
-                                        <span class="material-symbols-rounded text-[20px]">edit</span>
-                                    </Link>
+                                    <div class="flex gap-2">
+                                        <Link
+                                            :href="route('steps.show', step.id)"
+                                            class="text-pink-600 hover:text-pink-700 transition"
+                                            title="Voir les activités"
+                                        >
+                                            <span class="material-symbols-rounded text-[20px]">travel_explore</span>
+                                        </Link>
+
+                                        <Link
+                                            :href="route('steps.edit', step.id)"
+                                            class="text-gray-500 hover:text-primary transition"
+                                            title="Modifier l'étape"
+                                        >
+                                            <span class="material-symbols-rounded text-[20px]">edit</span>
+                                        </Link>
+                                    </div>
                                 </div>
 
                                 <!-- Résumé -->
                                 <div class="text-sm text-gray-700 flex flex-wrap gap-3 mt-2">
                                     <span v-if="step.nights">🌙 {{ plural(step.nights, 'nuit') }}</span>
                                     <span v-if="step.activities?.length">
-                    🎟️ {{ plural(step.activities.length, 'activité') }}
-                  </span>
+                                        🎟️ {{ plural(step.activities.length, 'activité') }}
+                                    </span>
                                 </div>
 
                                 <!-- Activités -->
@@ -167,25 +168,32 @@ onMounted(() => {
                                         Activités
                                     </h4>
                                     <div class="flex flex-wrap gap-2">
-                    <span
-                        v-for="a in step.activities.slice(0, 5)"
-                        :key="a.id"
-                        class="px-2 py-1 rounded-full text-xs font-medium bg-pink-50 text-pink-700 border border-pink-100"
-                    >
-                      {{ a.title }}
-                    </span>
                                         <span
-                                            v-if="step.activities.length > 5"
-                                            class="text-xs text-gray-400"
-                                        >+{{ step.activities.length - 5 }} autres…</span
+                                            v-for="a in step.activities.slice(0, 5)"
+                                            :key="a.id"
+                                            class="px-2 py-1 rounded-full text-xs font-medium bg-pink-50 text-pink-700 border border-pink-100"
                                         >
+                                            {{ a.title }}
+                                        </span>
+                                        <span v-if="step.activities.length > 5" class="text-xs text-gray-400">
+                                            +{{ step.activities.length - 5 }} autres…
+                                        </span>
+                                    </div>
+
+                                    <!-- 🔗 Lien vers la page de gestion -->
+                                    <div class="mt-3">
+                                        <Link
+                                            :href="route('steps.show', step.id)"
+                                            class="inline-flex items-center gap-1 text-sm text-pink-600 hover:underline"
+                                        >
+                                            <span class="material-symbols-rounded text-sm">open_in_new</span>
+                                            Voir les activités
+                                        </Link>
                                     </div>
                                 </div>
 
                                 <!-- Notes -->
-                                <div
-                                    class="mt-5 border border-dashed border-gray-300 rounded-xl p-4 bg-gray-50"
-                                >
+                                <div class="mt-5 border border-dashed border-gray-300 rounded-xl p-4 bg-gray-50">
                                     <div class="flex items-start justify-between mb-2">
                                         <p class="font-medium text-gray-800 flex items-center gap-2">
                                             <span class="material-symbols-rounded text-base text-blue-600">note</span>
@@ -198,9 +206,9 @@ onMounted(() => {
                                                 @click="openEditor(step)"
                                                 class="flex items-center gap-1 px-3 py-1 text-sm border border-gray-300 rounded-lg hover:bg-gray-100 transition"
                                             >
-                        <span class="material-symbols-rounded text-sm">
-                          {{ step.note ? 'edit' : 'add' }}
-                        </span>
+                                                <span class="material-symbols-rounded text-sm">
+                                                    {{ step.note ? 'edit' : 'add' }}
+                                                </span>
                                                 {{ step.note ? 'Modifier' : 'Ajouter' }}
                                             </button>
 
@@ -217,12 +225,12 @@ onMounted(() => {
 
                                     <transition name="fade-slide">
                                         <div v-if="editingStepId === step.id" class="space-y-2">
-                      <textarea
-                          v-model="noteForm.content"
-                          rows="3"
-                          class="w-full rounded-lg border border-gray-300 p-2 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
-                          placeholder="Ajoutez votre note ici..."
-                      ></textarea>
+                                            <textarea
+                                                v-model="noteForm.content"
+                                                rows="3"
+                                                class="w-full rounded-lg border border-gray-300 p-2 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                                                placeholder="Ajoutez votre note ici..."
+                                            ></textarea>
                                             <div class="flex justify-end gap-2">
                                                 <button
                                                     @click="cancelEdit"
@@ -252,10 +260,7 @@ onMounted(() => {
                             </div>
 
                             <!-- Carte -->
-                            <div
-                                v-if="step.latitude && step.longitude"
-                                class="h-[180px] rounded-xl overflow-hidden"
-                            >
+                            <div v-if="step.latitude && step.longitude" class="h-[180px] rounded-xl overflow-hidden">
                                 <transition name="fade-slide">
                                     <StepMapPreview
                                         v-if="visibleCards.has(String(step.id))"
