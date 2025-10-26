@@ -1,7 +1,7 @@
 <script setup>
 import { Head, useForm, router } from '@inertiajs/vue3'
 import MapboxAutocomplete from '@/Components/MapboxAutocomplete.vue'
-import StepMapPreview from '@/Components/StepMapPreview.vue'
+import StepMapPreview from '@/Components/Step/StepMapPreview.vue'
 import InputError from '@/Components/InputError.vue'
 import TripCreationProgress from '@/Components/Trip/TripCreationProgress.vue'
 

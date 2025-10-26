@@ -3,7 +3,7 @@ import { computed, onMounted } from 'vue'
 import { usePage } from '@inertiajs/vue3'
 import InputError from '@/Components/InputError.vue'
 import MapboxAutocomplete from '@/Components/MapboxAutocomplete.vue'
-import StepMapPreview from '@/Components/StepMapPreview.vue'
+import StepMapPreview from '@/Components/Step/StepMapPreview.vue'
 
 const props = defineProps({
     form: { type: Object, required: true },
