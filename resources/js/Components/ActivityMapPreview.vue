@@ -17,11 +17,6 @@ let activityMarkers = []
 let poiMarkers = []
 const showPOI = ref(false) // ✅ Toggle
 
-// 🎨 Couleurs par jour
-const dayColors = [
-    "#ef4444", "#f97316", "#eab308", "#22c55e", "#3b82f6", "#a855f7", "#ec4899"
-]
-
 // 🎯 Couleur d’une activité
 function getColorForActivity(activity, index) {
     return dayColors[activity.day_index !== undefined
@@ -190,10 +185,6 @@ onUnmounted(() => {
             <div class="flex items-center gap-2">
                 <span class="w-3 h-3 rounded-full bg-emerald-600"></span>
                 Étape
-            </div>
-            <div v-for="(color, i) in dayColors" :key="i" class="flex items-center gap-2">
-                <span class="w-3 h-3 rounded-full" :style="{ backgroundColor: color }"></span>
-                Jour {{ i + 1 }}
             </div>
             <div class="pt-2 border-t border-gray-200 mt-1">
                 <button

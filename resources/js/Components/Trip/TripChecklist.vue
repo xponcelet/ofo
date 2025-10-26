@@ -1,19 +1,15 @@
-<!-- resources/js/Components/Trip/TripChecklist.vue -->
 <script setup>
 import { Head, router, useForm } from '@inertiajs/vue3'
 import { computed, nextTick, ref, watch } from 'vue'
 
 const props = defineProps({
-    trip:   { type: Object, required: true },
-    items:  { type: Array,  default: () => [] },
-    title:  { type: String, default: 'Checklist du voyage' },
-    /** Largeur du bloc (classe Tailwind) : ex. 'max-w-xl' | 'max-w-2xl' | 'max-w-3xl' */
-    width:  { type: String, default: 'max-w-2xl' },
-    /** Mode compact (réduit les paddings/hauteurs) */
-    dense:  { type: Boolean, default: true },
+    trip: { type: Object, required: true },
+    items: { type: Array, default: () => [] },
+    title: { type: String, default: 'Checklist du voyage' },
+    width: { type: String, default: 'max-w-2xl' },
+    dense: { type: Boolean, default: true },
 })
 
-/* ---------- UI state & helpers ---------- */
 const list = ref(props.items.map(i => ({ ...i, _editing: false })))
 watch(() => props.items, nv => { list.value = nv.map(i => ({ ...i, _editing: false })) })
 
@@ -81,16 +77,11 @@ const onDrop = async (e, targetItem) => {
     }
 }
 
-// Suppression d'un element
 const confirmAndDelete = async (item) => {
     if (deleting.value) return
-    const msg = `Supprimer « ${item.label} » ?`
-    if (!window.confirm(msg)) return
+    if (!window.confirm(`Supprimer « ${item.label} » ?`)) return
     await deleteItem(item)
 }
-
-
-
 
 /* Indicators */
 const remaining   = computed(() => list.value.filter(i => !i.is_checked).length)
@@ -110,56 +101,42 @@ const textSize = computed(() => props.dense ? 'text-sm' : 'text-base')
     <section class="w-full">
         <Head :title="`${title} · ${trip.title ?? 'Voyage'}`" />
         <div :class="['mx-auto w-full', props.width, 'px-2 sm:px-0']">
-            <!-- Header -->
-            <div class="flex items-end justify-between gap-2 mb-3">
+
+            <!-- 🏷️ Header -->
+            <div class="flex items-end justify-between gap-2 mb-4">
                 <div>
-                    <h2 class="text-base sm:text-lg font-semibold leading-tight">{{ title }}</h2>
-                    <p class="text-xs text-gray-600">Coche, renomme et réorganise ta checklist.</p>
+                    <h2 class="text-lg font-semibold text-gray-900 flex items-center gap-1">
+                        <span class="material-symbols-rounded text-pink-600 text-[20px]">checklist</span>
+                        {{ title }}
+                    </h2>
+                    <p class="text-xs text-gray-500 mt-0.5">Organise ton voyage sans rien oublier</p>
                 </div>
                 <div class="text-xs sm:text-sm text-gray-600">
                     <span class="font-medium">{{ remaining }}</span> restant{{ remaining > 1 ? 's' : '' }}
                 </div>
             </div>
 
-            <!-- Progress -->
-            <div class="mb-4 rounded-xl bg-gray-50 ring-1 ring-gray-200 p-3">
-                <div class="flex items-center justify-between text-xs text-gray-600 mb-1">
+            <!-- 📊 Progress bar -->
+            <div class="mb-5 rounded-xl bg-white shadow-sm ring-1 ring-gray-200 p-4">
+                <div class="flex items-center justify-between text-xs text-gray-600 mb-2">
                     <span>Progression générale</span>
-                    <span class="font-medium">{{ progressPct }}%</span>
+                    <span class="font-medium text-gray-800">{{ progressPct }}%</span>
                 </div>
-                <div class="h-2 w-full rounded-full bg-gray-200 overflow-hidden">
-                    <div class="h-2 rounded-full bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 transition-all"
-                         :style="{ width: progressPct + '%' }" />
+                <div class="h-2 w-full rounded-full bg-gray-100 overflow-hidden">
+                    <div class="h-2 rounded-full bg-gradient-to-r from-pink-400 via-pink-500 to-pink-600 transition-all"
+                         :style="{ width: progressPct + '%' }"></div>
                 </div>
             </div>
 
-            <!-- Add -->
-            <form @submit.prevent="addItem" class="mb-3 flex gap-2">
-                <input
-                    v-model="addForm.label"
-                    type="text"
-                    placeholder="Ajouter un élément (ex. Passeport)"
-                    :class="['flex-1 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-600', padY, 'px-3', textSize]"
-                />
-                <button
-                    type="submit"
-                    :class="['rounded-lg bg-blue-600 text-white hover:bg-blue-700 active:bg-blue-800 transition', padY, 'px-4', textSize]"
-                >
-                    Ajouter
-                </button>
-            </form>
-            <div v-if="addForm.errors.label" class="text-xs text-red-600 mb-3">{{ addForm.errors.label }}</div>
-
-            <!-- Empty -->
+            <!-- 📋 Liste -->
             <div v-if="list.length === 0"
                  class="rounded-xl bg-white shadow-sm ring-1 ring-gray-200 p-6 text-center text-gray-600">
                 Ta checklist est vide. Ajoute tes premiers éléments (ex. Passeport, Trousse de toilette, Chargeurs…)
             </div>
 
-            <!-- List -->
-            <ul v-else class="space-y-2">
+            <ul v-else class="space-y-2 mb-6">
                 <li v-for="item in list" :key="item.id"
-                    class="group rounded-xl bg-white shadow-sm ring-1 ring-gray-200"
+                    class="group rounded-xl bg-white shadow-sm ring-1 ring-gray-200 hover:ring-pink-200 transition"
                     draggable="true"
                     @dragstart="onDragStart($event, item)"
                     @dragover="onDragOver"
@@ -167,21 +144,17 @@ const textSize = computed(() => props.dense ? 'text-sm' : 'text-base')
                     :class="draggingId === item.id ? 'opacity-60' : 'opacity-100'">
                     <div :class="['flex items-center gap-3', itemPad]">
                         <!-- drag handle -->
-                        <div class="cursor-grab select-none text-gray-400 group-hover:text-gray-500" title="Glisser">
-                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                                <circle cx="7" cy="6" r="1.5"/><circle cx="7" cy="10" r="1.5"/><circle cx="7" cy="14" r="1.5"/>
-                                <circle cx="13" cy="6" r="1.5"/><circle cx="13" cy="10" r="1.5"/><circle cx="13" cy="14" r="1.5"/>
-                            </svg>
+                        <div class="cursor-grab text-gray-400 hover:text-gray-500" title="Déplacer">
+                            <span class="material-symbols-rounded text-[20px]">drag_indicator</span>
                         </div>
 
                         <!-- checkbox + label -->
-                        <label class="flex items-center gap-3 flex-1">
+                        <label class="flex items-center gap-3 flex-1 cursor-pointer">
                             <input
                                 type="checkbox"
                                 :checked="item.is_checked"
                                 @change="toggleItem(item)"
-                                class="h-5 w-5 rounded border-gray-300 text-blue-600 focus:ring-blue-600"
-                                :aria-label="`Cocher ${item.label}`"
+                                class="h-5 w-5 rounded border-gray-300 text-pink-600 focus:ring-pink-600"
                             />
                             <div class="flex-1">
                                 <div v-if="!item._editing"
@@ -193,7 +166,7 @@ const textSize = computed(() => props.dense ? 'text-sm' : 'text-base')
                                        :id="`edit-input-${item.id}`"
                                        type="text"
                                        :value="item.label"
-                                       :class="['w-full rounded-md border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-600 px-2', props.dense ? 'py-1' : 'py-1.5', textSize]"
+                                       :class="['w-full rounded-md border border-gray-300 focus:outline-none focus:ring-2 focus:ring-pink-600 px-2', props.dense ? 'py-1' : 'py-1.5', textSize]"
                                        @keydown.enter.prevent="saveEdit(item, $event)"
                                        @keydown.esc.prevent="cancelEdit(item)"
                                        @blur="saveEdit(item, $event)" />
@@ -204,12 +177,40 @@ const textSize = computed(() => props.dense ? 'text-sm' : 'text-base')
                         <button type="button"
                                 @click="confirmAndDelete(item)"
                                 :disabled="deleting === item.id"
-                                :class="['rounded-md px-2', props.dense ? 'py-1' : 'py-1.5', 'text-xs sm:text-sm text-red-600 hover:bg-red-50 disabled:opacity-50']">
+                                class="text-xs sm:text-sm text-red-500 hover:text-red-700 hover:bg-red-50 rounded-md px-2 py-1 transition disabled:opacity-50">
                             Supprimer
                         </button>
                     </div>
                 </li>
             </ul>
+
+            <!-- ➕ Ajouter (en bas) -->
+            <form @submit.prevent="addItem" class="flex gap-2 sticky bottom-0 bg-white/80 backdrop-blur-sm p-3 rounded-xl shadow-sm border border-gray-200">
+                <input
+                    v-model="addForm.label"
+                    type="text"
+                    placeholder="Ajouter un élément (ex. Passeport)"
+                    class="flex-1 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-pink-600 px-3 py-2 text-sm"
+                />
+                <button
+                    type="submit"
+                    class="rounded-lg bg-pink-600 text-white hover:bg-pink-700 active:bg-pink-800 transition px-4 py-2 text-sm font-medium flex items-center gap-1"
+                >
+                    <span class="material-symbols-rounded text-[18px]">add</span>
+                    Ajouter
+                </button>
+            </form>
+            <div v-if="addForm.errors.label" class="text-xs text-red-600 mt-2">{{ addForm.errors.label }}</div>
         </div>
     </section>
 </template>
+
+<style scoped>
+.material-symbols-rounded {
+    font-variation-settings:
+        'FILL' 1,
+        'wght' 400,
+        'GRAD' 0,
+        'opsz' 24;
+}
+</style>

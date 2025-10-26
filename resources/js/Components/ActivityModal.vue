@@ -1,85 +1,105 @@
 <script setup>
+import { ref, watch, computed } from "vue"
 import { useForm } from "@inertiajs/vue3"
-import { computed, watch } from "vue"
-import MapboxAutocomplete from "@/Components/MapboxAutocomplete.vue"
-import PoiExplorer from "@/Components/PoiExplorer.vue"
 
 const props = defineProps({
-    show: { type: Boolean, default: false },
-    stepId: { type: Number, required: false },
-    step: { type: Object, required: false },
-    dayDate: { type: String, required: false },
-    activity: { type: Object, default: null },
+    show: Boolean,
+    stepId: Number,
+    step: Object,
+    activity: Object, // activité existante ou POI pré-rempli
 })
 
 const emit = defineEmits(["close", "created", "updated"])
 
-const isEdit = computed(() => !!props.activity)
+// --- Icônes disponibles pour les catégories ---
+const categories = [
+    { key: "restaurant", label: "Restaurant", icon: "restaurant" },
+    { key: "hotel", label: "Hôtel", icon: "hotel" },
+    { key: "bar", label: "Bar", icon: "local_bar" },
+    { key: "museum", label: "Musée", icon: "museum" },
+    { key: "park", label: "Parc", icon: "park" },
+    { key: "attraction", label: "Attraction", icon: "star" },
+    { key: "autre", label: "Autre", icon: "location_on" },
+]
 
+// --- Formulaire Inertia ---
 const form = useForm({
     title: "",
-    description: "",
+    category: "autre",
     location: "",
-    external_link: "",
-    date: props.dayDate || "",
-    start_at: "09:00",
-    cost: "",
-    currency: "EUR",
-    category: "",
-    step_id: props.stepId,
+    link: "",
+    description: "",
+    date: "",
+    time: "",
     latitude: null,
     longitude: null,
 })
 
-// 📍 coordonnées depuis Mapbox
-function updateCoords(coords) {
-    form.latitude = coords?.lat || null
-    form.longitude = coords?.lng || null
-}
+// --- Déterminer la plage autorisée ---
+const minDate = computed(() => props.step?.start_date ?? "")
+const maxDate = computed(() => props.step?.end_date ?? "")
 
-// 🔍 Préremplir à partir d’un POI sélectionné
-function prefillFromPoi(poi) {
-    const lat = poi.lat || poi.center?.lat || poi.geometry?.lat
-    const lon = poi.lon || poi.center?.lon || poi.geometry?.lon
-    form.title = poi.name || "Lieu sans nom"
-    form.location = poi.name || ""
-    form.latitude = lat
-    form.longitude = lon
-    form.description = poi.tags?.description || ""
-    form.category = poi.category || poi.tags?.amenity || poi.tags?.tourism || "Découverte"
-}
-
-// 🧩 Remplit si édition
+// --- Remplissage auto quand modal ouvert ---
 watch(
-    () => props.activity,
-    (a) => {
-        if (a) {
-            form.title = a.title || ""
-            form.description = a.description || ""
-            form.location = a.location || ""
-            form.external_link = a.external_link || ""
-            form.date = a.date || props.dayDate || ""
-            form.start_at = a.start_at ? a.start_at.slice(11, 16) : "09:00"
-            form.cost = a.cost || ""
-            form.currency = a.currency || "EUR"
-            form.category = a.category || ""
-            form.step_id = a.step_id || props.stepId
-            form.latitude = a.latitude || null
-            form.longitude = a.longitude || null
+    () => props.show,
+    (isOpen) => {
+        if (isOpen) {
+            if (props.activity?.id) {
+                // édition d'une activité existante
+                form.title = props.activity.title || ""
+                form.category = props.activity.category || "autre"
+                form.location = props.activity.location || ""
+                form.link = props.activity.external_link || ""
+                form.description = props.activity.description || ""
+                form.date = props.activity.start_at?.slice(0, 10) || props.step?.start_date || ""
+                form.time = props.activity.start_at?.slice(11, 16) || ""
+                form.latitude = props.activity.latitude || null
+                form.longitude = props.activity.longitude || null
+            } else if (props.activity) {
+                // ajout depuis un POI
+                form.reset()
+                form.category = props.activity.category || "autre"
+                form.title = props.activity.title || props.activity.name || ""
+                form.location = props.activity.location || props.activity.address || ""
+                form.latitude = props.activity.lat || props.activity.latitude || null
+                form.longitude = props.activity.lon || props.activity.longitude || null
+                form.date = props.step?.start_date || ""
+                form.time = "09:00"
+            } else {
+                // création manuelle
+                form.reset()
+                form.category = "autre"
+                form.date = props.step?.start_date || ""
+                form.time = "09:00"
+            }
         }
-    },
-    { immediate: true }
+    }
 )
 
-// 💾 Soumission
-function submit() {
-    form.transform((data) => ({
-        ...data,
-        start_at: data.start_at ? `${data.date} ${data.start_at}` : null,
-    }))
+// --- Helper pour datetime ---
+function toDateTime(date, time) {
+    if (!date) return null
+    const hhmm = (time && time.length) ? time : "09:00"
+    return `${date} ${hhmm}:00`
+}
 
-    if (isEdit.value) {
+// --- Soumission ---
+function submit() {
+    const payload = {
+        title: form.title || "",
+        description: form.description || null,
+        location: form.location || null,
+        external_link: form.link || null,
+        category: form.category || null,
+        date: form.date || null,
+        start_at: toDateTime(form.date, form.time),
+        latitude: form.latitude ?? null,
+        longitude: form.longitude ?? null,
+    }
+
+    if (props.activity?.id) {
         form.put(route("activities.update", props.activity.id), {
+            data: payload,
             preserveScroll: true,
             onSuccess: () => {
                 emit("updated")
@@ -88,12 +108,13 @@ function submit() {
         })
     } else {
         form.post(route("steps.activities.store", props.stepId), {
+            data: payload,
             preserveScroll: true,
             onSuccess: () => {
                 emit("created")
                 emit("close")
-                form.reset()
-                form.start_at = "09:00"
+                // reload partiel si besoin :
+                // router.reload({ only: ['step'] })
             },
         })
     }
@@ -101,164 +122,150 @@ function submit() {
 </script>
 
 <template>
-    <div
-        v-if="show"
-        class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm px-4"
-    >
+    <transition name="fade">
         <div
-            class="bg-white rounded-2xl shadow-xl w-full max-w-2xl p-8 relative overflow-y-auto max-h-[90vh]"
+            v-if="show"
+            class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4"
         >
-            <!-- 🏷️ En-tête -->
-            <div class="flex justify-between items-center mb-6">
-                <h2 class="text-2xl font-semibold text-gray-800">
-                    {{ isEdit ? "Modifier une activité" : "Nouvelle activité" }}
-                </h2>
-                <button
-                    @click="$emit('close')"
-                    class="text-gray-400 hover:text-gray-600 text-xl leading-none"
-                >
-                    ✕
-                </button>
-            </div>
-
-            <form @submit.prevent="submit" class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <!-- 🏷️ Titre -->
-                <div class="md:col-span-2">
-                    <label class="block text-sm font-medium text-gray-700">Titre</label>
-                    <input
-                        v-model="form.title"
-                        type="text"
-                        class="w-full mt-1 rounded-lg border-gray-300 focus:border-pink-500 focus:ring-pink-500"
-                        required
-                    />
-                </div>
-
-                <!-- 📝 Description -->
-                <div class="md:col-span-2">
-                    <label class="block text-sm font-medium text-gray-700">Description</label>
-                    <textarea
-                        v-model="form.description"
-                        rows="3"
-                        class="w-full mt-1 rounded-lg border-gray-300 focus:border-pink-500 focus:ring-pink-500"
-                    ></textarea>
-                </div>
-
-                <!-- 📍 Lieu -->
-                <div class="md:col-span-2">
-                    <label class="block text-sm font-medium text-gray-700">Lieu</label>
-                    <MapboxAutocomplete
-                        v-model="form.location"
-                        @update:coords="updateCoords"
-                        class="mt-1"
-                    />
-                </div>
-
-                <!-- 🔍 Explorer les lieux -->
-                <div class="md:col-span-2">
-                    <details v-if="!isEdit" class="border rounded-lg bg-gray-50">
-                        <summary
-                            class="cursor-pointer px-4 py-2 font-medium text-gray-700 select-none flex items-center gap-1"
-                        >
-                            <span class="material-symbols-rounded text-base text-gray-500">travel_explore</span>
-                            Explorer les lieux à proximité
-                        </summary>
-                        <div class="p-4">
-                            <PoiExplorer
-                                v-if="step?.latitude && step?.longitude"
-                                :latitude="step.latitude"
-                                :longitude="step.longitude"
-                                @select-poi="prefillFromPoi"
-                            />
-                            <p v-else class="text-sm text-gray-500 italic">
-                                Localisation indisponible pour cette étape.
-                            </p>
-                        </div>
-                    </details>
-                </div>
-
-                <!-- 🔗 Lien externe -->
-                <div class="md:col-span-2">
-                    <label class="block text-sm font-medium text-gray-700">Lien externe</label>
-                    <input
-                        v-model="form.external_link"
-                        type="url"
-                        placeholder="https://..."
-                        class="w-full mt-1 rounded-lg border-gray-300 focus:border-pink-500 focus:ring-pink-500"
-                    />
-                </div>
-
-                <!-- 📅 Date + Heure -->
-                <div>
-                    <label class="block text-sm font-medium text-gray-700">Date</label>
-                    <input
-                        v-model="form.date"
-                        type="date"
-                        class="w-full mt-1 rounded-lg border-gray-300 focus:border-pink-500 focus:ring-pink-500"
-                        required
-                    />
-                </div>
-
-                <div>
-                    <label class="block text-sm font-medium text-gray-700">Heure</label>
-                    <input
-                        v-model="form.start_at"
-                        type="time"
-                        class="w-full mt-1 rounded-lg border-gray-300 focus:border-pink-500 focus:ring-pink-500"
-                    />
-                </div>
-
-                <!-- 💰 Coût + Devise -->
-                <div>
-                    <label class="block text-sm font-medium text-gray-700">Coût</label>
-                    <input
-                        v-model="form.cost"
-                        type="number"
-                        min="0"
-                        step="0.01"
-                        class="w-full mt-1 rounded-lg border-gray-300 focus:border-pink-500 focus:ring-pink-500"
-                    />
-                </div>
-
-                <div>
-                    <label class="block text-sm font-medium text-gray-700">Devise</label>
-                    <input
-                        v-model="form.currency"
-                        type="text"
-                        placeholder="EUR"
-                        class="w-full mt-1 rounded-lg border-gray-300 focus:border-pink-500 focus:ring-pink-500"
-                    />
-                </div>
-
-                <!-- 🗂️ Catégorie -->
-                <div class="md:col-span-2">
-                    <label class="block text-sm font-medium text-gray-700">Catégorie</label>
-                    <input
-                        v-model="form.category"
-                        type="text"
-                        placeholder="Ex: Visite, Restaurant..."
-                        class="w-full mt-1 rounded-lg border-gray-300 focus:border-pink-500 focus:ring-pink-500"
-                    />
-                </div>
-
-                <!-- 🔘 Boutons -->
-                <div class="md:col-span-2 flex justify-end gap-3 pt-4">
+            <div class="bg-white w-full max-w-lg rounded-2xl shadow-xl overflow-hidden">
+                <!-- Header -->
+                <div class="flex justify-between items-center border-b border-gray-100 p-5">
+                    <h2 class="text-lg font-semibold text-gray-900 flex items-center gap-2">
+                        <span class="material-symbols-rounded text-pink-600">edit_calendar</span>
+                        {{ props.activity?.id ? "Modifier l’activité" : "Nouvelle activité" }}
+                    </h2>
                     <button
-                        type="button"
-                        @click="$emit('close')"
-                        class="px-4 py-2 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-100"
+                        @click="emit('close')"
+                        class="text-gray-400 hover:text-gray-600 transition"
+                    >
+                        <span class="material-symbols-rounded text-xl">close</span>
+                    </button>
+                </div>
+
+                <!-- Form -->
+                <div class="p-6 space-y-5">
+                    <!-- Titre -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Titre</label>
+                        <input
+                            v-model="form.title"
+                            type="text"
+                            class="w-full border-gray-300 rounded-lg shadow-sm focus:ring-pink-500 focus:border-pink-500"
+                            placeholder="Nom de l’activité"
+                        />
+                    </div>
+
+                    <!-- Catégorie -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Catégorie</label>
+                        <div class="flex flex-wrap gap-2">
+                            <button
+                                v-for="cat in categories"
+                                :key="cat.key"
+                                type="button"
+                                @click="form.category = cat.key"
+                                class="flex items-center justify-center gap-1 px-3 py-2 rounded-lg border transition"
+                                :class="form.category === cat.key
+                                    ? 'border-pink-500 bg-pink-50 text-pink-700'
+                                    : 'border-gray-200 text-gray-600 hover:bg-gray-50'"
+                            >
+                                <span class="material-symbols-rounded text-[18px]">{{ cat.icon }}</span>
+                                <span class="text-sm">{{ cat.label }}</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Localisation -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Localisation</label>
+                        <input
+                            v-model="form.location"
+                            type="text"
+                            class="w-full border-gray-300 rounded-lg shadow-sm focus:ring-pink-500 focus:border-pink-500"
+                            placeholder="Lieu, adresse..."
+                        />
+                    </div>
+
+                    <!-- Lien -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Lien externe</label>
+                        <input
+                            v-model="form.link"
+                            type="url"
+                            class="w-full border-gray-300 rounded-lg shadow-sm focus:ring-pink-500 focus:border-pink-500"
+                            placeholder="https://..."
+                        />
+                    </div>
+
+                    <!-- Date + heure -->
+                    <div class="grid grid-cols-2 gap-3">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Date</label>
+                            <input
+                                v-model="form.date"
+                                type="date"
+                                :min="minDate"
+                                :max="maxDate"
+                                class="w-full border-gray-300 rounded-lg shadow-sm focus:ring-pink-500 focus:border-pink-500"
+                            />
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Heure (optionnelle)</label>
+                            <input
+                                v-model="form.time"
+                                type="time"
+                                class="w-full border-gray-300 rounded-lg shadow-sm focus:ring-pink-500 focus:border-pink-500"
+                            />
+                        </div>
+                    </div>
+
+                    <!-- Description -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Description</label>
+                        <textarea
+                            v-model="form.description"
+                            rows="3"
+                            class="w-full border-gray-300 rounded-lg shadow-sm focus:ring-pink-500 focus:border-pink-500 resize-none"
+                            placeholder="Détails facultatifs sur l’activité..."
+                        ></textarea>
+                    </div>
+                </div>
+
+                <!-- Footer -->
+                <div class="border-t border-gray-100 bg-gray-50 p-4 flex justify-end gap-2">
+                    <button
+                        @click="emit('close')"
+                        class="px-4 py-2 text-sm text-gray-600 hover:text-gray-800 transition"
                     >
                         Annuler
                     </button>
-
                     <button
-                        type="submit"
-                        class="px-5 py-2 rounded-lg bg-pink-600 text-white hover:bg-pink-700 transition"
-                        :disabled="form.processing"
+                        @click="submit"
+                        class="px-4 py-2 bg-pink-600 hover:bg-pink-700 text-white text-sm font-medium rounded-lg transition disabled:bg-gray-300"
+                        :disabled="form.processing || !form.title"
                     >
-                        {{ isEdit ? "Enregistrer" : "Créer" }}
+                        {{ props.activity?.id ? "Enregistrer" : "Créer" }}
                     </button>
                 </div>
-            </form>
+            </div>
         </div>
-    </div>
+    </transition>
 </template>
+
+<style scoped>
+.fade-enter-active,
+.fade-leave-active {
+    transition: opacity 0.25s ease;
+}
+.fade-enter-from,
+.fade-leave-to {
+    opacity: 0;
+}
+.material-symbols-rounded {
+    font-variation-settings:
+        "FILL" 1,
+        "wght" 400,
+        "GRAD" 0,
+        "opsz" 24;
+}
+</style>
