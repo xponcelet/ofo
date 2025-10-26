@@ -5,21 +5,16 @@ namespace App\Http\Middleware;
 use Illuminate\Http\Request;
 use Inertia\Middleware;
 use App\Services\TranslationService;
+
 class HandleInertiaRequests extends Middleware
 {
     /**
      * The root template that's loaded on the first page visit.
-     *
-     * @see https://inertiajs.com/server-side-setup#root-template
-     *
-     * @var string
      */
     protected $rootView = 'app';
 
     /**
      * Determines the current asset version.
-     *
-     * @see https://inertiajs.com/asset-versioning
      */
     public function version(Request $request): ?string
     {
@@ -28,13 +23,7 @@ class HandleInertiaRequests extends Middleware
 
     /**
      * Define the props that are shared by default.
-     *
-     * @see https://inertiajs.com/shared-data
-     *
-     * @return array<string, mixed>
      */
-
-
     public function share(Request $request): array
     {
         return array_merge(parent::share($request), [
@@ -71,12 +60,10 @@ class HandleInertiaRequests extends Middleware
                         'id' => $user->id,
                         'name' => $user->name,
                         'email' => $user->email,
-                        // AJOUTS pour la photo & compat Jetstream
                         'email_verified_at' => $user->email_verified_at?->toIso8601String(),
-                        'profile_photo_url' => $user->profile_photo_url,   // <- important
-                        'profile_photo_path' => $user->profile_photo_path, // optionnel
+                        'profile_photo_url' => $user->profile_photo_url,
+                        'profile_photo_path' => $user->profile_photo_path,
 
-                        // Ton état d’abonnement
                         'is_premium' => $user->isPremium(),
                         'trip_limit' => $user->tripLimit(),
                         'premium_ends_at' => optional($user->premiumEndsAt())->toIso8601String(),
@@ -92,13 +79,21 @@ class HandleInertiaRequests extends Middleware
                 'info'    => fn() => $request->session()->get('info'),
                 'status'  => fn() => $request->session()->get('status'),
             ],
+
+            // ✅ Partage des erreurs de validation (après redirect 302)
+            'errors' => function () use ($request) {
+                $errors = $request->session()->get('errors');
+                return $errors ? $errors->getBag('default')->getMessages() : (object) [];
+            },
+
             'csrf_token' => fn() => csrf_token(),
+
             // Dispo dans $page.props.destination / $page.props.start
             'destination' => fn () => $request->session()->get('destination'),
             'start'       => fn () => $request->session()->get('start'),
-            // la langue
-            'locale' => fn () => app()->getLocale(),
-            // traduction front
+
+            // langue & traductions front
+            'locale'       => fn () => app()->getLocale(),
             'translations' => fn () => TranslationService::getVueTranslations(app()->getLocale()),
         ]);
     }

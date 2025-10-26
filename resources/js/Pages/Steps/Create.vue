@@ -1,15 +1,17 @@
 <script setup>
-import { useForm } from '@inertiajs/vue3'
+import { usePage, useForm } from '@inertiajs/vue3'
 import { onMounted } from 'vue'
 import StepForm from "@/Components/StepForm.vue";
+
+const page = usePage()
 
 const props = defineProps({
     trip: Object,
     storeUrl: String,
     defaultOrder: Number,
-    // ⚠️ accepte Number ou String pour éviter le warning Vue
-    insert_after_id: { type: [Number, String], default: null },
-    at_start: { type: Boolean, default: false },
+    // peut venir en string via la query (?after=120), on gère les 2
+    insert_after_id: [Number, String],
+    at_start: Boolean,
     // fourni par StepController@create
     suggested_start: { type: String, default: null },
 })
@@ -26,8 +28,8 @@ const form = useForm({
     country_code: '',
     transport_mode: 'car',
     nights: 0,
-    insert_after_id: props.insert_after_id,
-    at_start: props.at_start,
+    insert_after_id: props.insert_after_id ? Number(props.insert_after_id) : null,
+    at_start: !!props.at_start,
 })
 
 onMounted(() => {
@@ -36,15 +38,24 @@ onMounted(() => {
 })
 
 function handleSubmit() {
+    // ✅ Garde-fou client : champ obligatoire
+    if (!form.location || String(form.location).trim() === '') {
+        form.setError('location', 'Le lieu principal est requis.')
+        // remonte visuellement vers le champ
+        const el = document.getElementById('location-field')
+        if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' })
+        return
+    }
+
     form.post(props.storeUrl, {
         preserveScroll: true,
-        preserveState: true,
-        onError: () => {
-            // Scroll vers le champ "Lieu principal" si une erreur est renvoyée (ex: location required)
-            const el = document.getElementById('location-field')
-            if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' })
-            // Optionnel: tenter de focus un input interne si dispo :
-            // document.querySelector('#location-field input')?.focus()
+        onError: (errors) => {
+            // Affiche les erreurs remontées par Laravel (422 ou 302->session)
+            console.debug('[Create onError] errors =', errors)
+            if (errors.location) {
+                const el = document.getElementById('location-field')
+                if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' })
+            }
         },
     })
 }

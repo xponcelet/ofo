@@ -3,7 +3,8 @@
 namespace App\Http\Requests;
 
 use Illuminate\Foundation\Http\FormRequest;
-
+use Illuminate\Contracts\Validation\Validator;
+use Illuminate\Http\Exceptions\HttpResponseException;
 class StepRequest extends FormRequest
 {
     public function authorize(): bool
@@ -14,30 +15,20 @@ class StepRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'title'           => ['nullable', 'string', 'max:255'],
-            'description'     => ['nullable', 'string'],
-            'location'        => ['required', 'string', 'max:100'],
-
-            'latitude'        => ['nullable', 'numeric', 'between:-90,90'],
-            'longitude'       => ['nullable', 'numeric', 'between:-180,180'],
-
-            'country'         => ['nullable', 'string', 'max:100'],
-            'country_code'    => ['nullable', 'string', 'size:2'],
-
-            'order'           => ['nullable', 'integer', 'min:1'],
-
-            // Dates : start_date non passée ; end_date laissée libre (on la recalcule côté serveur)
-            'start_date'      => ['nullable', 'date', 'after_or_equal:today'],
-            'end_date'        => ['nullable', 'date', 'after_or_equal:start_date'],
-
-            // Durée (peut être null, sinon entier >= 0)
-            'nights'          => ['nullable', 'integer', 'min:0'],
-
-            // Transport restreint aux valeurs supportées
-            'transport_mode'  => ['nullable', 'string', 'in:car,plane,train,bus,bike,walk,boat', 'max:50'],
-
-            'is_destination'  => ['sometimes', 'boolean'],
-            'is_departure'    => ['sometimes', 'boolean'],
+            'title'          => ['nullable', 'string', 'max:255'],
+            'description'    => ['nullable', 'string'],
+            'location'       => ['required', 'string', 'max:100'],
+            'latitude'       => ['nullable', 'numeric', 'between:-90,90'],
+            'longitude'      => ['nullable', 'numeric', 'between:-180,180'],
+            'country'        => ['nullable', 'string', 'max:100'],
+            'country_code'   => ['nullable', 'string', 'size:2'],
+            'order'          => ['nullable', 'integer', 'min:1'],
+            'start_date'     => ['nullable', 'date', 'after_or_equal:today'],
+            'end_date'       => ['nullable', 'date', 'after_or_equal:start_date'],
+            'nights'         => ['nullable', 'integer', 'min:0'],
+            'transport_mode' => ['nullable', 'string', 'max:50'],
+            'is_destination' => ['sometimes', 'boolean'],
+            'is_departure'   => ['sometimes', 'boolean'],
         ];
     }
 
