@@ -2,7 +2,7 @@
 import { Link } from '@inertiajs/vue3'
 import { ref, computed } from 'vue'
 import MapboxAutocomplete from '@/Components/MapboxAutocomplete.vue'
-import StepMapPreview from '@/Components/StepMapPreview.vue'
+import StepMapPreview from '@/Components/Step/StepMapPreview.vue'
 import { t } from '@/Composables/useTranslations'
 
 const props = defineProps({

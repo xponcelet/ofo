@@ -209,10 +209,12 @@ class TripController extends Controller
     }
 
     /** Affichage d’un voyage */
+    /** Affichage d’un voyage */
     public function show(Trip $trip): InertiaResponse
     {
         $this->authorize('view', $trip);
 
+        // Charge les relations nécessaires
         $trip->loadCount(['favoredBy as favs', 'steps']);
 
         $likers = null;
@@ -225,72 +227,31 @@ class TripController extends Controller
                 ->withQueryString();
         }
 
+        // Charge toutes les relations pertinentes
         $trip->load([
             'steps' => function ($q) {
                 $q->orderBy('order')
-                    ->with(['note' => fn($n) => $n->select('id', 'step_id', 'content', 'user_id')])
+                    ->with([
+                        'note:id,step_id,content,user_id',
+                        'activities' => fn($a) => $a
+                            ->orderBy('start_at')
+                            ->select(
+                                'id', 'step_id', 'title', 'description', 'location',
+                                'start_at', 'end_at', 'external_link', 'cost',
+                                'currency', 'category', 'latitude', 'longitude'
+                            ),
+                        'accommodations:id,step_id,title,location,start_date,end_date'
+                    ])
                     ->select(
-                        'id',
-                        'trip_id',
-                        'order',
-                        'title',
-                        'description',
-                        'location',
-                        'country_code',
-                        'country',
-                        'start_date',
-                        'end_date',
-                        'latitude',
-                        'longitude',
-                        'nights',
-                        'distance_to_next',
-                        'duration_to_next'
+                        'id', 'trip_id', 'order', 'title', 'description', 'location',
+                        'country_code', 'country', 'start_date', 'end_date',
+                        'latitude', 'longitude', 'nights', 'distance_to_next', 'duration_to_next'
                     );
             },
-            'steps.activities' => fn($q) => $q->orderBy('start_at')->select(
-                'id',
-                'step_id',
-                'title',
-                'description',
-                'location',
-                'start_at',
-                'end_at',
-                'external_link',
-                'cost',
-                'currency',
-                'category',
-                'latitude',   // ✅ ajouté
-                'longitude'   // ✅ ajouté
-            ),
-            'steps.accommodations' => fn($q) => $q->select('id', 'step_id', 'title', 'location', 'start_date', 'end_date'),
             'checklistItems' => fn($q) => $q->orderBy('order')->orderBy('id'),
         ]);
 
-        // 🧭 Rassemble toutes les activités
-        $activities = $trip->steps->flatMap(function ($step) {
-            return $step->activities->map(function ($a) use ($step) {
-                return [
-                    'id'            => $a->id,
-                    'step_id'       => $a->step_id,
-                    'title'         => $a->title,
-                    'description'   => $a->description,
-                    'location'      => $a->location,
-                    'start_at'      => optional($a->start_at)->toDateTimeString(),
-                    'end_at'        => optional($a->end_at)->toDateTimeString(),
-                    'external_link' => $a->external_link,
-                    'cost'          => $a->cost,
-                    'currency'      => $a->currency,
-                    'category'      => $a->category,
-                    'latitude'      => $a->latitude,   // ✅ ajouté
-                    'longitude'     => $a->longitude,  // ✅ ajouté
-                    'date'          => optional($a->start_at)->toDateString(),
-                    'step_location' => $step->location,
-                    'step_title'    => $step->title,
-                ];
-            });
-        })->values();
-
-        // 🗓️ Génère la liste complète des jours
+        // 🗓️ Liste complète des jours (pour affichage du calendrier)
         $days = [];
         if ($trip->start_date && $trip->end_date) {
             $period = new \DatePeriod(
@@ -306,16 +267,39 @@ class TripController extends Controller
                 });
 
                 $days[] = [
-                    'date'      => $date->format('Y-m-d'),
-                    'location'  => $dayStep->location ?? null,
-                    'step_id'   => $dayStep->id ?? null,
-                    'step'      => $dayStep ?? null,
+                    'date'     => $date->format('Y-m-d'),
+                    'location' => $dayStep->location ?? null,
+                    'step_id'  => $dayStep->id ?? null,
+                    'step'     => $dayStep ?? null,
                 ];
             }
         }
 
+        // ✅ Rassemble proprement les activités pour affichage global
+        $activities = $trip->steps->flatMap(fn($step) =>
+        $step->activities->map(fn($a) => [
+            'id'            => $a->id,
+            'step_id'       => $a->step_id,
+            'title'         => $a->title,
+            'description'   => $a->description,
+            'location'      => $a->location,
+            'start_at'      => optional($a->start_at)->toDateTimeString(),
+            'end_at'        => optional($a->end_at)->toDateTimeString(),
+            'external_link' => $a->external_link,
+            'cost'          => $a->cost,
+            'currency'      => $a->currency,
+            'category'      => $a->category,
+            'latitude'      => $a->latitude,
+            'longitude'     => $a->longitude,
+            'date'          => optional($a->start_at)->toDateString(),
+            'step_location' => $step->location,
+            'step_title'    => $step->title,
+        ])
+        )->values();
+
+        // ✅ Structure claire et complète pour Inertia
         return Inertia::render('Trips/Show', [
-            'trip'       => [
+            'trip' => [
                 'id'             => $trip->id,
                 'title'          => $trip->title,
                 'description'    => $trip->description,
@@ -327,16 +311,19 @@ class TripController extends Controller
                 'total_nights'   => $trip->total_nights,
                 'days_count'     => $trip->days_count,
                 'steps_count'    => $trip->steps_count,
-                'steps'          => $trip->steps,
+                'steps'          => $trip->steps, // ✅ inclus directement dans `trip`
                 'checklist_items'=> $trip->checklistItems,
                 'days'           => $days,
             ],
-            'steps'      => $trip->steps,
-            'activities' => $activities,
+
+            // ✅ Ces props facilitent l’accès direct dans Vue :
+            'steps'      => $trip->steps,       // pour <TripSteps :steps="steps" />
+            'activities' => $activities,        // pour <TripActivities />
             'favs'       => $trip->favs,
             'likers'     => $likers,
         ]);
     }
+
 
 
     public function edit(Trip $trip): InertiaResponse

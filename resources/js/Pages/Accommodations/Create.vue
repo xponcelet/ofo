@@ -103,7 +103,7 @@
 import { useForm } from '@inertiajs/vue3'
 import InputError from '@/Components/InputError.vue'
 import MapboxAutocomplete from '@/Components/MapboxAutocomplete.vue'
-import StepMapPreview from '@/Components/StepMapPreview.vue'
+import StepMapPreview from '@/Components/Step/StepMapPreview.vue'
 import RootLayout from "@/Layouts/RootLayout.vue";
 
 const props = defineProps({

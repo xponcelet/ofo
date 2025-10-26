@@ -197,7 +197,7 @@ function submit() {
         <section class="max-w-screen-2xl mx-auto px-4 py-6">
             <!-- D’abord le v-if principal -->
             <div v-if="currentTab === 'steps'">
-                <TripSteps :trip="trip" />
+                <TripSteps :trip="trip" :steps="trip.steps ?? []" />
             </div>
 
             <!-- Puis les autres -->
