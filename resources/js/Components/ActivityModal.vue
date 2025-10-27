@@ -1,17 +1,17 @@
 <script setup>
 import { ref, watch, computed } from "vue"
-import { useForm } from "@inertiajs/vue3"
+import { useForm, router } from "@inertiajs/vue3"
 
 const props = defineProps({
     show: Boolean,
     stepId: Number,
     step: Object,
-    activity: Object, // activité existante ou POI pré-rempli
+    activity: Object,
+    selectedDate: String,
 })
 
 const emit = defineEmits(["close", "created", "updated"])
 
-// --- Icônes disponibles pour les catégories ---
 const categories = [
     { key: "restaurant", label: "Restaurant", icon: "restaurant" },
     { key: "hotel", label: "Hôtel", icon: "hotel" },
@@ -22,7 +22,6 @@ const categories = [
     { key: "autre", label: "Autre", icon: "location_on" },
 ]
 
-// --- Formulaire Inertia ---
 const form = useForm({
     title: "",
     category: "autre",
@@ -35,55 +34,44 @@ const form = useForm({
     longitude: null,
 })
 
-// --- Déterminer la plage autorisée ---
 const minDate = computed(() => props.step?.start_date ?? "")
 const maxDate = computed(() => props.step?.end_date ?? "")
 
-// --- Remplissage auto quand modal ouvert ---
 watch(
     () => props.show,
     (isOpen) => {
-        if (isOpen) {
-            if (props.activity?.id) {
-                // édition d'une activité existante
-                form.title = props.activity.title || ""
-                form.category = props.activity.category || "autre"
-                form.location = props.activity.location || ""
-                form.link = props.activity.external_link || ""
-                form.description = props.activity.description || ""
-                form.date = props.activity.start_at?.slice(0, 10) || props.step?.start_date || ""
-                form.time = props.activity.start_at?.slice(11, 16) || ""
-                form.latitude = props.activity.latitude || null
-                form.longitude = props.activity.longitude || null
-            } else if (props.activity) {
-                // ajout depuis un POI
-                form.reset()
-                form.category = props.activity.category || "autre"
-                form.title = props.activity.title || props.activity.name || ""
-                form.location = props.activity.location || props.activity.address || ""
-                form.latitude = props.activity.lat || props.activity.latitude || null
-                form.longitude = props.activity.lon || props.activity.longitude || null
-                form.date = props.step?.start_date || ""
-                form.time = "09:00"
-            } else {
-                // création manuelle
-                form.reset()
-                form.category = "autre"
-                form.date = props.step?.start_date || ""
-                form.time = "09:00"
-            }
+        if (!isOpen) return
+        form.reset()
+        form.category = "autre"
+        form.time = "09:00"
+        form.date = props.selectedDate || props.step?.start_date || ""
+
+        if (props.activity?.id) {
+            form.title = props.activity.title || ""
+            form.category = props.activity.category || "autre"
+            form.location = props.activity.location || ""
+            form.link = props.activity.external_link || ""
+            form.description = props.activity.description || ""
+            form.date = props.activity.start_at?.slice(0, 10) || props.step?.start_date || ""
+            form.time = props.activity.start_at?.slice(11, 16) || "09:00"
+            form.latitude = props.activity.latitude || null
+            form.longitude = props.activity.longitude || null
+        } else if (props.activity) {
+            form.title = props.activity.title || props.activity.name || ""
+            form.category = props.activity.category || "autre"
+            form.location = props.activity.location || props.activity.address || ""
+            form.latitude = props.activity.lat || props.activity.latitude || null
+            form.longitude = props.activity.lon || props.activity.longitude || null
         }
     }
 )
 
-// --- Helper pour datetime ---
 function toDateTime(date, time) {
     if (!date) return null
-    const hhmm = (time && time.length) ? time : "09:00"
+    const hhmm = time && time.length ? time : "09:00"
     return `${date} ${hhmm}:00`
 }
 
-// --- Soumission ---
 function submit() {
     const payload = {
         title: form.title || "",
@@ -97,6 +85,9 @@ function submit() {
         longitude: form.longitude ?? null,
     }
 
+    // ✅ Vérification du contenu envoyé
+    console.log("Payload envoyé :", payload)
+
     if (props.activity?.id) {
         form.put(route("activities.update", props.activity.id), {
             data: payload,
@@ -104,6 +95,7 @@ function submit() {
             onSuccess: () => {
                 emit("updated")
                 emit("close")
+                router.reload({ only: ["activities"] })
             },
         })
     } else {
@@ -113,8 +105,7 @@ function submit() {
             onSuccess: () => {
                 emit("created")
                 emit("close")
-                // reload partiel si besoin :
-                // router.reload({ only: ['step'] })
+                router.reload({ only: ["activities"] })
             },
         })
     }
@@ -128,7 +119,6 @@ function submit() {
             class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4"
         >
             <div class="bg-white w-full max-w-lg rounded-2xl shadow-xl overflow-hidden">
-                <!-- Header -->
                 <div class="flex justify-between items-center border-b border-gray-100 p-5">
                     <h2 class="text-lg font-semibold text-gray-900 flex items-center gap-2">
                         <span class="material-symbols-rounded text-pink-600">edit_calendar</span>
@@ -142,9 +132,7 @@ function submit() {
                     </button>
                 </div>
 
-                <!-- Form -->
                 <div class="p-6 space-y-5">
-                    <!-- Titre -->
                     <div>
                         <label class="block text-sm font-medium text-gray-700 mb-1">Titre</label>
                         <input
@@ -155,7 +143,6 @@ function submit() {
                         />
                     </div>
 
-                    <!-- Catégorie -->
                     <div>
                         <label class="block text-sm font-medium text-gray-700 mb-2">Catégorie</label>
                         <div class="flex flex-wrap gap-2">
@@ -175,7 +162,6 @@ function submit() {
                         </div>
                     </div>
 
-                    <!-- Localisation -->
                     <div>
                         <label class="block text-sm font-medium text-gray-700 mb-1">Localisation</label>
                         <input
@@ -186,7 +172,6 @@ function submit() {
                         />
                     </div>
 
-                    <!-- Lien -->
                     <div>
                         <label class="block text-sm font-medium text-gray-700 mb-1">Lien externe</label>
                         <input
@@ -197,7 +182,6 @@ function submit() {
                         />
                     </div>
 
-                    <!-- Date + heure -->
                     <div class="grid grid-cols-2 gap-3">
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-1">Date</label>
@@ -219,7 +203,6 @@ function submit() {
                         </div>
                     </div>
 
-                    <!-- Description -->
                     <div>
                         <label class="block text-sm font-medium text-gray-700 mb-1">Description</label>
                         <textarea
@@ -231,7 +214,6 @@ function submit() {
                     </div>
                 </div>
 
-                <!-- Footer -->
                 <div class="border-t border-gray-100 bg-gray-50 p-4 flex justify-end gap-2">
                     <button
                         @click="emit('close')"
