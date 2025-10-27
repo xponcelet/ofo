@@ -14,6 +14,7 @@ const props = defineProps({
     totalActivitiesCount: Number,
     activities: { type: Array, default: () => [] },
     days: { type: Array, default: () => [] },
+    states: { type: Object, default: () => ({}) },
 })
 
 const currentTab = ref('steps')
@@ -196,10 +197,12 @@ function submit() {
                 <TripChecklist
                     :trip="trip"
                     :items="trip.checklist_items ?? []"
+                    :states="states ?? {}"
                     width="max-w-3xl"
                     :dense="true"
                 />
             </div>
+
         </section>
 
 

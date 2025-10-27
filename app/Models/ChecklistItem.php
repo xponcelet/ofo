@@ -24,4 +24,9 @@ class ChecklistItem extends Model
     {
         return $this->belongsTo(Trip::class);
     }
+    public function userStates()
+    {
+        return $this->hasMany(\App\Models\TripUserChecklistItem::class);
+    }
+
 }

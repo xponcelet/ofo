@@ -78,7 +78,7 @@ class User extends Authenticatable implements MustVerifyEmail
 
     public function trips()
     {
-        return $this->belongsToMany(Trip::class, 'trip_user')
+        return $this->belongsToMany(Trip::class, 'trip_users')
             ->withPivot(['start_location', 'latitude', 'longitude', 'departure_date'])
             ->withTimestamps();
     }

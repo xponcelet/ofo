@@ -4,15 +4,33 @@ import { computed, nextTick, ref, watch } from 'vue'
 
 const props = defineProps({
     trip: { type: Object, required: true },
-    items: { type: Array, default: () => [] },
-    title: { type: String, default: 'Checklist du voyage' },
+    items: { type: Array, default: () => [] },       // checklist commune
+    states: { type: Object, default: () => ({}) },   // états personnels de l'utilisateur
+    title: { type: String, default: 'Ma checklist' },
     width: { type: String, default: 'max-w-2xl' },
     dense: { type: Boolean, default: true },
 })
 
-const list = ref(props.items.map(i => ({ ...i, _editing: false })))
-watch(() => props.items, nv => { list.value = nv.map(i => ({ ...i, _editing: false })) })
+// === État local réactif ===
+const list = ref(props.items.map(i => ({
+    ...i,
+    is_checked: !!props.states[i.id],
+    _editing: false,
+})))
 
+watch(
+    () => [props.items, props.states],
+    ([newItems, newStates]) => {
+        list.value = newItems.map(i => ({
+            ...i,
+            is_checked: !!newStates[i.id],
+            _editing: false,
+        }))
+    },
+    { deep: true }
+)
+
+// === Ajout d’un item (commun à tous les users) ===
 const addForm = useForm({ label: '' })
 const addItem = () => {
     const label = addForm.label.trim()
@@ -23,14 +41,24 @@ const addItem = () => {
     })
 }
 
-const toggleItem = async (item) => {
+// === Toggle personnel ===
+const toggleItem = async (item, event) => {
+    const isChecked = event.target.checked
     const prev = item.is_checked
-    item.is_checked = !prev
+    item.is_checked = isChecked
+
     try {
-        await router.patch(route('checklist-items.toggle', item.id), {}, { preserveScroll: true, preserveState: true })
-    } catch { item.is_checked = prev }
+        await router.post(
+            route('trips.checklist.toggle', { trip: props.trip.id, item: item.id }),
+            { is_checked: isChecked },
+            { preserveScroll: true, preserveState: true }
+        )
+    } catch {
+        item.is_checked = prev
+    }
 }
 
+// === Suppression (commune) ===
 const deleting = ref(null)
 const deleteItem = async (item) => {
     deleting.value = item.id
@@ -44,18 +72,32 @@ const deleteItem = async (item) => {
     } finally { deleting.value = null }
 }
 
-const startEdit = async (item) => { item._editing = true; await nextTick(); document.getElementById(`edit-input-${item.id}`)?.focus() }
+// === Édition (commune) ===
+const startEdit = async (item) => {
+    item._editing = true
+    await nextTick()
+    document.getElementById(`edit-input-${item.id}`)?.focus()
+}
+
 const saveEdit = async (item, ev) => {
     const newLabel = (ev?.target?.value ?? '').trim()
-    if (!newLabel || newLabel === item.label) { item._editing = false; return }
+    if (!newLabel || newLabel === item.label) {
+        item._editing = false
+        return
+    }
     const prev = item.label
-    item.label = newLabel; item._editing = false
-    try { await router.put(route('checklist-items.update', item.id), { label: newLabel }, { preserveScroll: true }) }
-    catch { item.label = prev }
+    item.label = newLabel
+    item._editing = false
+    try {
+        await router.put(route('checklist-items.update', item.id), { label: newLabel }, { preserveScroll: true })
+    } catch {
+        item.label = prev
+    }
 }
+
 const cancelEdit = (item) => { item._editing = false }
 
-/* Drag & Drop */
+// === Drag & Drop (commun) ===
 const draggingId = ref(null)
 const onDragStart = (e, item) => { draggingId.value = item.id; e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('text/plain', String(item.id)) }
 const onDragOver  = (e) => { e.preventDefault(); e.dataTransfer.dropEffect = 'move' }
@@ -77,13 +119,14 @@ const onDrop = async (e, targetItem) => {
     }
 }
 
+// === Confirmation suppression ===
 const confirmAndDelete = async (item) => {
     if (deleting.value) return
     if (!window.confirm(`Supprimer « ${item.label} » ?`)) return
     await deleteItem(item)
 }
 
-/* Indicators */
+// === Indicateurs ===
 const remaining   = computed(() => list.value.filter(i => !i.is_checked).length)
 const progressPct = computed(() => {
     const total = list.value.length || 1
@@ -91,7 +134,7 @@ const progressPct = computed(() => {
     return Math.round((done / total) * 100)
 })
 
-/* Compact classes */
+// === Style compact ===
 const padY     = computed(() => props.dense ? 'py-2' : 'py-3')
 const itemPad  = computed(() => props.dense ? 'px-3 py-2' : 'px-4 py-3')
 const textSize = computed(() => props.dense ? 'text-sm' : 'text-base')
@@ -109,17 +152,19 @@ const textSize = computed(() => props.dense ? 'text-sm' : 'text-base')
                         <span class="material-symbols-rounded text-pink-600 text-[20px]">checklist</span>
                         {{ title }}
                     </h2>
-                    <p class="text-xs text-gray-500 mt-0.5">Organise ton voyage sans rien oublier</p>
+                    <p class="text-xs text-gray-500 mt-0.5">
+                        Tes cases cochées sont personnelles à ton profil.
+                    </p>
                 </div>
                 <div class="text-xs sm:text-sm text-gray-600">
                     <span class="font-medium">{{ remaining }}</span> restant{{ remaining > 1 ? 's' : '' }}
                 </div>
             </div>
 
-            <!-- 📊 Progress bar -->
+            <!-- 📊 Barre de progression -->
             <div class="mb-5 rounded-xl bg-white shadow-sm ring-1 ring-gray-200 p-4">
                 <div class="flex items-center justify-between text-xs text-gray-600 mb-2">
-                    <span>Progression générale</span>
+                    <span>Progression personnelle</span>
                     <span class="font-medium text-gray-800">{{ progressPct }}%</span>
                 </div>
                 <div class="h-2 w-full rounded-full bg-gray-100 overflow-hidden">
@@ -142,18 +187,19 @@ const textSize = computed(() => props.dense ? 'text-sm' : 'text-base')
                     @dragover="onDragOver"
                     @drop="onDrop($event, item)"
                     :class="draggingId === item.id ? 'opacity-60' : 'opacity-100'">
+
                     <div :class="['flex items-center gap-3', itemPad]">
-                        <!-- drag handle -->
+                        <!-- Déplacer -->
                         <div class="cursor-grab text-gray-400 hover:text-gray-500" title="Déplacer">
                             <span class="material-symbols-rounded text-[20px]">drag_indicator</span>
                         </div>
 
-                        <!-- checkbox + label -->
+                        <!-- Checkbox -->
                         <label class="flex items-center gap-3 flex-1 cursor-pointer">
                             <input
                                 type="checkbox"
                                 :checked="item.is_checked"
-                                @change="toggleItem(item)"
+                                @change="(e) => toggleItem(item, e)"
                                 class="h-5 w-5 rounded border-gray-300 text-pink-600 focus:ring-pink-600"
                             />
                             <div class="flex-1">
@@ -162,18 +208,20 @@ const textSize = computed(() => props.dense ? 'text-sm' : 'text-base')
                                      @dblclick="startEdit(item)">
                                     {{ item.label }}
                                 </div>
-                                <input v-else
-                                       :id="`edit-input-${item.id}`"
-                                       type="text"
-                                       :value="item.label"
-                                       :class="['w-full rounded-md border border-gray-300 focus:outline-none focus:ring-2 focus:ring-pink-600 px-2', props.dense ? 'py-1' : 'py-1.5', textSize]"
-                                       @keydown.enter.prevent="saveEdit(item, $event)"
-                                       @keydown.esc.prevent="cancelEdit(item)"
-                                       @blur="saveEdit(item, $event)" />
+                                <input
+                                    v-else
+                                    :id="`edit-input-${item.id}`"
+                                    type="text"
+                                    :value="item.label"
+                                    :class="['w-full rounded-md border border-gray-300 focus:outline-none focus:ring-2 focus:ring-pink-600 px-2', props.dense ? 'py-1' : 'py-1.5', textSize]"
+                                    @keydown.enter.prevent="saveEdit(item, $event)"
+                                    @keydown.esc.prevent="cancelEdit(item)"
+                                    @blur="saveEdit(item, $event)"
+                                />
                             </div>
                         </label>
 
-                        <!-- delete -->
+                        <!-- Supprimer -->
                         <button type="button"
                                 @click="confirmAndDelete(item)"
                                 :disabled="deleting === item.id"
@@ -184,7 +232,7 @@ const textSize = computed(() => props.dense ? 'text-sm' : 'text-base')
                 </li>
             </ul>
 
-            <!-- ➕ Ajouter (en bas) -->
+            <!-- ➕ Ajouter (commun à tous) -->
             <form @submit.prevent="addItem" class="flex gap-2 sticky bottom-0 bg-white/80 backdrop-blur-sm p-3 rounded-xl shadow-sm border border-gray-200">
                 <input
                     v-model="addForm.label"
@@ -200,6 +248,7 @@ const textSize = computed(() => props.dense ? 'text-sm' : 'text-base')
                     Ajouter
                 </button>
             </form>
+
             <div v-if="addForm.errors.label" class="text-xs text-red-600 mt-2">{{ addForm.errors.label }}</div>
         </div>
     </section>
