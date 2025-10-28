@@ -6,6 +6,7 @@ use App\Actions\Jetstream\DeleteUser;
 use Illuminate\Support\Facades\Vite;
 use Illuminate\Support\ServiceProvider;
 use Laravel\Jetstream\Jetstream;
+use Inertia\Inertia;
 
 class JetstreamServiceProvider extends ServiceProvider
 {
@@ -27,6 +28,22 @@ class JetstreamServiceProvider extends ServiceProvider
         Jetstream::deleteUsersUsing(DeleteUser::class);
 
         Vite::prefetch(concurrency: 3);
+
+        Inertia::share([
+            'auth' => function () {
+                $user = auth()->user();
+
+                return [
+                    'user' => $user ? [
+                        'id' => $user->id,
+                        'name' => $user->name,
+                        'email' => $user->email,
+                        'role' => $user->role, //
+                        'profile_photo_url' => $user->profile_photo_url,
+                    ] : null,
+                ];
+            },
+        ]);
     }
 
     /**
