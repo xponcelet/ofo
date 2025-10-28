@@ -118,6 +118,9 @@ class User extends Authenticatable implements MustVerifyEmail
         // sinon limite
         return (int) ($this->trip_limit ?? config('trips.default_max_per_user'));
     }
-
+    public function isAdmin(): bool
+    {
+        return $this->role === 'admin';
+    }
 
 }

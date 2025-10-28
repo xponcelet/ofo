@@ -163,3 +163,18 @@ Route::controller(GoogleAuthController::class)->group(function () {
     Route::get('/auth/google/redirect', 'redirect')->name('auth.google.redirect');
     Route::get('/auth/google/callback', 'callback')->name('auth.google.callback');
 });
+
+// ============================
+// Routes Admin (protégées par middleware)
+// ============================
+
+use App\Http\Controllers\Admin\UserController as AdminUserController;
+use App\Http\Controllers\Admin\TripController as AdminTripController;
+
+Route::middleware(['auth', 'verified', 'admin'])
+    ->prefix('admin')
+    ->name('admin.')
+    ->group(function () {
+        Route::get('/users', [AdminUserController::class, 'index'])->name('users.index');
+        Route::get('/trips', [AdminTripController::class, 'index'])->name('trips.index');
+    });
