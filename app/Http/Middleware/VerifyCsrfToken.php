@@ -13,9 +13,25 @@ class VerifyCsrfToken extends Middleware
      * @var array<int, string>
      */
     protected $except = [
-        // tu peux exclure certaines routes ici si besoin, ex :
-        // 'webhook/*',
+        // Pour tester temporairement
+        '/register',
+        '/login',
     ];
+
+    public function handle($request, \Closure $next)
+    {
+        \Log::info('🔍 CSRF Middleware - Début', [
+            'path' => $request->path(),
+            'method' => $request->method(),
+            'has_session' => $request->hasSession(),
+            'session_id' => $request->session()->getId(),
+            'csrf_from_session' => $request->session()->token(),
+            'csrf_from_header' => $request->header('X-CSRF-TOKEN'),
+            'xsrf_from_header' => $request->header('X-XSRF-TOKEN'),
+        ]);
+
+        return parent::handle($request, $next);
+    }
 
     /**
      * Surcharge pour loguer des infos de debug quand on a une erreur 419.

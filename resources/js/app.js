@@ -1,4 +1,4 @@
-import './bootstrap';
+import './bootstrap'; // ← Le bootstrap.js gère déjà le CSRF
 import '../css/app.css';
 
 import mapboxgl from 'mapbox-gl';
