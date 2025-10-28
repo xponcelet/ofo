@@ -23,6 +23,7 @@ export default {
                 primary: {
                     light: '#9498F2',   // lavande douce
                     DEFAULT: '#115D8C', // bleu moyen
+                    dark: '#0B3B59',    // bleu profond
                     foreground: '#FFFFFF',
                 },
 
