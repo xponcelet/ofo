@@ -13,7 +13,19 @@ import { resolvePageComponent } from 'laravel-vite-plugin/inertia-helpers';
 import { ZiggyVue } from '../../vendor/tightenco/ziggy';
 import RootLayout from '@/Layouts/RootLayout.vue';
 
-const appName = import.meta.env.VITE_APP_NAME || 'MyRoadbook';
+import axios from 'axios'; // ✅ pour gérer les requêtes et CSRF
+
+// 🔑 Configuration CSRF pour Axios
+axios.defaults.headers.common['X-Requested-With'] = 'XMLHttpRequest';
+
+const token = document.head.querySelector('meta[name="csrf-token"]');
+if (token) {
+    axios.defaults.headers.common['X-CSRF-TOKEN'] = token.content;
+} else {
+    console.error('❌ CSRF token not found in app.blade.php');
+}
+
+const appName = import.meta.env.VITE_APP_NAME || 'OFO';
 
 createInertiaApp({
     title: (title) => `${title} - ${appName}`,
