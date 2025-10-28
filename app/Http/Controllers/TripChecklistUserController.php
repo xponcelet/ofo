@@ -7,6 +7,7 @@ use App\Models\TripUser;
 use App\Models\ChecklistItem;
 use App\Models\TripUserChecklistItem;
 use Illuminate\Http\Request;
+use Inertia\Inertia;
 
 class TripChecklistUserController extends Controller
 {
@@ -17,21 +18,21 @@ class TripChecklistUserController extends Controller
     {
         $this->authorize('view', $trip);
 
-        // 🔐 Relation pivot entre user et trip
+        // 🔗 Récupère la relation user-trip
         $tripUser = TripUser::where('trip_id', $trip->id)
             ->where('user_id', auth()->id())
             ->firstOrFail();
 
-        // 📋 Éléments communs de la checklist
+        // 📋 Récupère les items de la checklist du voyage
         $items = ChecklistItem::where('trip_id', $trip->id)
             ->orderBy('order')
-            ->get(['id', 'trip_id', 'label', 'order', 'created_at', 'updated_at']);
+            ->get(['id', 'trip_id', 'label', 'order']);
 
-        // ✅ États personnalisés de cet utilisateur
+        // ✅ États personnels de l’utilisateur connecté
         $states = TripUserChecklistItem::where('trip_user_id', $tripUser->id)
             ->pluck('is_checked', 'checklist_item_id');
 
-        return inertia('Trip/Checklist', [
+        return Inertia::render('Trips/Checklist', [
             'trip'   => $trip,
             'items'  => $items,
             'states' => $states,
@@ -45,28 +46,25 @@ class TripChecklistUserController extends Controller
     {
         $this->authorize('view', $trip);
 
-        // 🔒 Vérifie que l’item appartient bien au voyage
+        // 🔒 Vérifie que l’item appartient bien à ce voyage
         abort_if($item->trip_id !== $trip->id, 404, 'Élément non valide.');
 
         $validated = $request->validate([
             'is_checked' => ['required', 'boolean'],
         ]);
 
-        // 🔗 Récupère le pivot TripUser (relation user-trip)
-        $tripUser = TripUser::where('trip_id', $trip->id)
-            ->where('user_id', auth()->id())
-            ->first();
-
-        // 🩹 Sécurité : si jamais la ligne n’existe pas (cas limite)
-        if (!$tripUser) {
-            $tripUser = TripUser::create([
+        // 🔗 Relation pivot (user-trip)
+        $tripUser = TripUser::firstOrCreate(
+            [
                 'trip_id' => $trip->id,
                 'user_id' => auth()->id(),
-                'role' => 'owner',
-            ]);
-        }
+            ],
+            [
+                'role' => 'owner', // par défaut si non défini
+            ]
+        );
 
-        //  Met à jour ou crée le statut personnel de la case
+        // ✅ Met à jour ou crée le statut personnel
         TripUserChecklistItem::updateOrCreate(
             [
                 'trip_user_id'      => $tripUser->id,
@@ -78,7 +76,7 @@ class TripChecklistUserController extends Controller
             ]
         );
 
-        return back()->with('success', 'Checklist mise à jour.');
-
+        // 🔁 Redirection propre sans AJAX (Inertia fera le reload du composant)
+        return back()->with('success', __('Checklist mise à jour.'));
     }
 }
