@@ -47,10 +47,12 @@ class StepController extends Controller
         ]);
     }
     /** Affichage d’une étape avec ses activités (vue détaillée) */
+    /** Affichage d’une étape avec ses activités (vue détaillée) */
     public function show(Step $step)
     {
         $this->authorize('view', $step->trip);
 
+        // Charger toutes les relations utiles
         $step->load([
             'trip:id,user_id,title,start_date,end_date',
             'activities' => fn($q) => $q
@@ -72,11 +74,15 @@ class StepController extends Controller
                 ),
         ]);
 
+        // 🔥 On renvoie aussi les activités en props séparées
+        // pour Steps/Show.vue (elles étaient absentes dans ta version)
         return Inertia::render('Steps/Show', [
             'step' => $step,
             'trip' => $step->trip,
+            'activities' => $step->activities()->orderBy('start_at')->get(), // ✅ important
         ]);
     }
+
 
     /** Formulaire de création d’une étape (avec date proposée) */
     public function create(Request $request, Trip $trip)

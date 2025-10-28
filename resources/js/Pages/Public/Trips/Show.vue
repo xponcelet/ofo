@@ -1,8 +1,9 @@
 <script setup>
-import { ref, computed } from 'vue'  // ⬅️ ajoute computed
+import { ref, computed } from 'vue'
 import TripShowView from '@/Components/Trip/TripShowView.vue'
 import TripChecklist from '@/Components/Trip/TripChecklist.vue'
 import TripActivities from '@/Components/Trip/TripActivities.vue'
+import FavoriteButton from '@/Components/FavoriteButton.vue'
 
 const props = defineProps({
     trip: Object,
@@ -23,9 +24,7 @@ function getFlagEmoji(code) {
     if (!code) return ''
     return code.toUpperCase().replace(/./g, c => String.fromCodePoint(127397 + c.charCodeAt()))
 }
-
 </script>
-
 
 <template>
     <div class="min-h-screen bg-gray-50">
@@ -35,6 +34,16 @@ function getFlagEmoji(code) {
                    bg-gradient-to-r from-pink-600 via-red-500 to-orange-400 text-white
                    shadow-md overflow-hidden"
         >
+            <!-- Bouton favori (en haut à droite) -->
+            <div class="absolute top-4 right-4">
+                <FavoriteButton
+                    v-if="$page.props.auth?.user"
+                    :key="props.trip.id + '-' + String(props.trip.is_favorite)"
+                    :trip-id="props.trip.id"
+                    :is-favorite="props.trip.is_favorite"
+                />
+            </div>
+
             <div class="max-w-screen-2xl mx-auto px-6 md:px-10 py-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-6">
                 <div class="flex-1">
                     <h1 class="text-3xl sm:text-4xl font-extrabold tracking-tight mb-1 flex items-center gap-2">
@@ -86,7 +95,6 @@ function getFlagEmoji(code) {
             </div>
 
             <div v-else-if="currentTab === 'activities'">
-                <!-- ✅ days bien passé ici -->
                 <TripActivities :days="days" :activities="activities" />
             </div>
         </section>
@@ -94,11 +102,6 @@ function getFlagEmoji(code) {
 </template>
 
 <style scoped>
-.scrollbar-hide::-webkit-scrollbar {
-    display: none;
-}
-.scrollbar-hide {
-    -ms-overflow-style: none;
-    scrollbar-width: none;
-}
+.scrollbar-hide::-webkit-scrollbar { display: none; }
+.scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
 </style>
