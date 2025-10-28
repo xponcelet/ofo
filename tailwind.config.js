@@ -4,6 +4,9 @@ import typography from '@tailwindcss/typography'
 
 /** @type {import('tailwindcss').Config} */
 export default {
+
+    darkMode: 'class', // desactivation du mode sombre
+
     content: [
         './vendor/laravel/framework/src/Illuminate/Pagination/resources/views/*.blade.php',
         './vendor/laravel/jetstream/**/*.blade.php',
@@ -20,7 +23,6 @@ export default {
                 primary: {
                     light: '#9498F2',   // lavande douce
                     DEFAULT: '#115D8C', // bleu moyen
-                    dark: '#0B3B59',    // bleu profond
                     foreground: '#FFFFFF',
                 },
 
