@@ -14,7 +14,7 @@ use App\Models\Trip;
 use Laravel\Cashier\Billable;
 use Carbon\Carbon;
 
-class User extends Authenticatable implements MustVerifyEmail
+class User extends Authenticatable // implements MustVerifyEmail --> Pour l'instant
 {
     use HasApiTokens;
 
