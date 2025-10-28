@@ -28,7 +28,7 @@ const features = [
 </script>
 
 <template>
-    <section class="py-16 bg-gray-50 dark:bg-neutral-900">
+    <section class="py-16 bg-gray-50">
         <div class="max-w-7xl mx-auto px-6">
             <!-- Titre principal -->
             <div class="text-center max-w-3xl mx-auto mb-12">
@@ -47,7 +47,7 @@ const features = [
                 <div
                     v-for="feature in features"
                     :key="feature.title"
-                    class="bg-white dark:bg-neutral-800 rounded-3xl shadow-sm hover:shadow-md border border-gray-100 dark:border-neutral-700 p-6 transition-all group"
+                    class="bg-white  rounded-3xl shadow-sm hover:shadow-md border border-gray-100  p-6 transition-all group"
                 >
                     <div
                         class="w-12 h-12 rounded-2xl flex items-center justify-center mb-4 bg-gradient-to-br text-white group-hover:scale-110 transition-transform"
@@ -56,11 +56,11 @@ const features = [
                         <span class="material-symbol text-[26px]">{{ feature.icon }}</span>
                     </div>
 
-                    <h3 class="font-semibold text-lg text-gray-900 dark:text-gray-100">
+                    <h3 class="font-semibold text-lg text-gray-900 ">
                         {{ feature.title }}
                     </h3>
 
-                    <p class="text-gray-500 dark:text-gray-400 text-sm leading-relaxed mt-2">
+                    <p class="text-gray-500  text-sm leading-relaxed mt-2">
                         {{ feature.description }}
                     </p>
                 </div>
