@@ -33,17 +33,22 @@ class JetstreamServiceProvider extends ServiceProvider
             'auth' => function () {
                 $user = auth()->user();
 
+                if (! $user) {
+                    return ['user' => null];
+                }
+
                 return [
-                    'user' => $user ? [
+                    'user' => [
                         'id' => $user->id,
                         'name' => $user->name,
                         'email' => $user->email,
-                        'role' => $user->role, //
+                        'role' => $user->role ?? 'user',
                         'profile_photo_url' => $user->profile_photo_url,
-                    ] : null,
+                    ],
                 ];
             },
         ]);
+
     }
 
     /**

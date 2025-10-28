@@ -6,6 +6,9 @@ import Dropdown from '@/Components/Dropdown.vue'
 import DropdownLink from '@/Components/DropdownLink.vue'
 import NavLink from '@/Components/NavLink.vue'
 
+
+
+
 defineProps({ title: String })
 
 const showingNavigationDropdown = ref(false)
@@ -13,6 +16,11 @@ const logout = () => router.post(route('logout'))
 
 const page = usePage()
 const isCurrentUrl = (path) => page.url.startsWith(path)
+
+
+// debug temporaire
+console.log('Inertia page props:', page.props)
+
 </script>
 
 <template>
