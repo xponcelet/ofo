@@ -6,6 +6,7 @@ use App\Models\Trip;
 use Illuminate\Support\Facades\Auth;
 use Inertia\Inertia;
 use Inertia\Response;
+use Illuminate\Http\RedirectResponse;
 
 class PublicTripController extends Controller
 {
@@ -105,14 +106,23 @@ class PublicTripController extends Controller
     /**
      * Voyage public aléatoire
      */
-    public function random(): Response
+    public function random(): RedirectResponse
     {
+        // Récupère un voyage public aléatoire
         $trip = Trip::query()
             ->where('is_public', true)
             ->inRandomOrder()
-            ->firstOrFail();
+            ->first();
 
-        return redirect()->route('public.trips.show', $trip);
+        // S'il n'y a aucun voyage public, on revient au dashboard
+        if (! $trip) {
+            return redirect()
+                ->route('public.dashboard')
+                ->with('error', 'Aucun voyage public disponible pour le moment.');
+        }
+
+        // Sinon, on redirige vers la page du voyage choisi
+        return redirect()->route('public.trips.show', $trip->id);
     }
 
     /**
