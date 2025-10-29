@@ -23,9 +23,14 @@ class AuthServiceProvider extends ServiceProvider
     {
         $this->registerPolicies();
 
-        // ✅ Gate pour accès admin
-        Gate::define('access-admin', function ($user) {
-            return $user->isAdmin();
+        // Autorisation explicite (utile si on veut l’appeler manuellement)
+        Gate::define('access-admin', fn($user) => $user->isAdmin());
+
+        // Donne tous les droits aux admins par défaut
+        Gate::before(function ($user, $ability) {
+            if ($user->isAdmin()) {
+                return true;
+            }
         });
     }
 }

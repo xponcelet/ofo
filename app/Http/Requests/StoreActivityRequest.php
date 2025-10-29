@@ -16,7 +16,7 @@ class StoreActivityRequest extends FormRequest
 
             'location'      => ['nullable','string','max:255'],
 
-            // ✅ On accepte date+time (et on reconstruira start_at côté serveur)
+            //  On accepte date+time (et on reconstruira start_at côté serveur)
             'date'          => ['nullable','date'],
             'time'          => ['nullable','date_format:H:i'],
 
@@ -24,7 +24,7 @@ class StoreActivityRequest extends FormRequest
             'start_at'      => ['prohibited'],
             'end_at'        => ['nullable','date','after_or_equal:date'],
 
-            // ✅ URL moins stricte : on normalise côté serveur
+            //  URL moins stricte : on normalise côté serveur
             'external_link' => ['nullable','string','max:255'],
 
             'cost'          => ['nullable','numeric','min:0'],

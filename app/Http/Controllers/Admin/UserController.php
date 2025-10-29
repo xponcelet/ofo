@@ -11,10 +11,15 @@ class UserController extends Controller
     public function index()
     {
         $users = User::query()
-            ->select('id', 'name', 'email', 'role', 'created_at')
-            ->latest()
+            ->orderBy('created_at', 'desc')
             ->paginate(10)
-            ->withQueryString();
+            ->through(fn($user) => [
+                'id' => $user->id,
+                'name' => $user->name,
+                'email' => $user->email,
+                'role' => $user->role,
+                'created_at' => $user->created_at,
+            ]);
 
         return Inertia::render('Admin/Users/Index', [
             'users' => $users,
