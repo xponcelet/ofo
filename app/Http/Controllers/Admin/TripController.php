@@ -10,12 +10,20 @@ class TripController extends Controller
 {
     public function index()
     {
-        $trips = Trip::query()
-            ->select('id', 'title', 'user_id', 'is_public', 'budget', 'created_at')
-            ->with('user:id,name,email')
+        $trips = Trip::with('user')
             ->latest()
             ->paginate(10)
-            ->withQueryString();
+            ->through(fn($trip) => [
+                'id' => $trip->id,
+                'title' => $trip->title,
+                'user' => $trip->user ? [
+                    'id' => $trip->user->id,
+                    'name' => $trip->user->name,
+                ] : null,
+                'budget' => $trip->budget,
+                'is_public' => (bool) $trip->is_public,
+                'created_at' => $trip->created_at,
+            ]);
 
         return Inertia::render('Admin/Trips/Index', [
             'trips' => $trips,

@@ -14,21 +14,21 @@ class Activity extends Model
         'title',
         'description',
         'location',
-        'date',          // ✅ important
+        'date',
         'start_at',
         'end_at',
         'external_link',
         'cost',
         'currency',
         'category',
-        'latitude',      // ✅ pour Mapbox
-        'longitude',     // ✅ pour Mapbox
+        'latitude',      //  pour Mapbox
+        'longitude',     // pour Mapbox
     ];
 
     protected $casts = [
         'start_at' => 'datetime',
         'end_at'   => 'datetime',
-        'date'     => 'date',   // ✅ pour le champ date
+        'date'     => 'date',
         'cost'     => 'decimal:2',
     ];
 

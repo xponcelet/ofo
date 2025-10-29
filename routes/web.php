@@ -19,6 +19,8 @@ use App\Http\Controllers\TranslationController;
 use App\Http\Controllers\StepNoteController;
 use App\Http\Controllers\TripUserController;
 use App\Http\Controllers\TripChecklistUserController;
+use App\Http\Controllers\Admin\UserController as AdminUserController;
+use App\Http\Controllers\Admin\TripController as AdminTripController;
 
 // ============================
 // Page d’accueil publique
@@ -168,10 +170,8 @@ Route::controller(GoogleAuthController::class)->group(function () {
 // Routes Admin (protégées par middleware)
 // ============================
 
-use App\Http\Controllers\Admin\UserController as AdminUserController;
-use App\Http\Controllers\Admin\TripController as AdminTripController;
 
-Route::middleware(['auth', 'verified', 'admin'])
+Route::middleware(['auth', 'verified', 'is_admin'])
     ->prefix('admin')
     ->name('admin.')
     ->group(function () {

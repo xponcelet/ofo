@@ -16,8 +16,7 @@ class AppServiceProvider extends ServiceProvider
 
     public function boot(): void
     {
-        // Policy Trip
+        //  Liaison explicite entre modèle et policy
         Gate::policy(Trip::class, TripPolicy::class);
-
     }
 }

@@ -29,25 +29,7 @@ class JetstreamServiceProvider extends ServiceProvider
 
         Vite::prefetch(concurrency: 3);
 
-        Inertia::share([
-            'auth' => function () {
-                $user = auth()->user();
 
-                if (! $user) {
-                    return ['user' => null];
-                }
-
-                return [
-                    'user' => [
-                        'id' => $user->id,
-                        'name' => $user->name,
-                        'email' => $user->email,
-                        'role' => $user->role ?? 'user',
-                        'profile_photo_url' => $user->profile_photo_url,
-                    ],
-                ];
-            },
-        ]);
 
     }
 

@@ -64,6 +64,8 @@ class HandleInertiaRequests extends Middleware
                         'profile_photo_url' => $user->profile_photo_url,
                         'profile_photo_path' => $user->profile_photo_path,
 
+                        'role' => $user->role ?? 'user',
+
                         'is_premium' => $user->isPremium(),
                         'trip_limit' => $user->tripLimit(),
                         'premium_ends_at' => optional($user->premiumEndsAt())->toIso8601String(),
@@ -80,7 +82,7 @@ class HandleInertiaRequests extends Middleware
                 'status'  => fn() => $request->session()->get('status'),
             ],
 
-            // ✅ Partage des erreurs de validation (après redirect 302)
+            // Partage des erreurs de validation (après redirect 302)
             'errors' => function () use ($request) {
                 $errors = $request->session()->get('errors');
                 return $errors ? $errors->getBag('default')->getMessages() : (object) [];

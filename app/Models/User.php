@@ -35,6 +35,7 @@ class User extends Authenticatable // implements MustVerifyEmail --> Pour l'inst
         'password',
         'google_id',
         'locale',
+        'role',
     ];
 
     /**

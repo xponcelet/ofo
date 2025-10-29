@@ -42,7 +42,6 @@ class Trip extends Model
      | RELATIONS
      ----------------------------- */
 
-    // 👥 Participants (relation pivot trip_user)
     public function users()
     {
         return $this->belongsToMany(User::class, 'trip_users')
@@ -56,37 +55,32 @@ class Trip extends Model
             ->withTimestamps();
     }
 
-    // 🚩 Étapes du voyage
     public function steps()
     {
         return $this->hasMany(Step::class)->orderBy('order');
     }
 
-    // 🏨 Hébergements liés
     public function accommodations()
     {
         return $this->hasMany(Accommodation::class);
     }
 
-    // 🎯 Activités (via étapes)
     public function activities()
     {
         return $this->hasManyThrough(Activity::class, Step::class);
     }
 
-    // ✅ Checklist commune au voyage
+    // Checklist commune au voyage
     public function checklistItems()
     {
         return $this->hasMany(ChecklistItem::class)->orderBy('order');
     }
 
-    // 💬 Notes via étapes
     public function stepNotes()
     {
         return $this->hasManyThrough(StepNote::class, Step::class);
     }
 
-    // ⭐ Gestion des favoris
     public function favoredBy()
     {
         return $this->belongsToMany(User::class, 'favorites')->withTimestamps();
