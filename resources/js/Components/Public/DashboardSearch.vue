@@ -1,6 +1,6 @@
 <script setup>
 import { Link } from '@inertiajs/vue3'
-import { ref, computed } from 'vue'
+import { ref } from 'vue'
 import MapboxAutocomplete from '@/Components/MapboxAutocomplete.vue'
 import StepMapPreview from '@/Components/Step/StepMapPreview.vue'
 import { t } from '@/Composables/useTranslations'
@@ -9,28 +9,40 @@ const props = defineProps({
     canCreate: { type: Boolean, default: false },
 })
 
-const query = ref('Espagne')
-const selected = ref({ label: 'Espagne', center: [-3.7, 40.4], bbox: null })
-
-function onSelect(place) {
-    if (!place) return
-    const center = place.center || place?.geometry?.coordinates
-    selected.value = {
-        label: place.label || place.place_name || place.text || query.value,
-        center: Array.isArray(center) ? center : selected.value.center,
-        bbox: place.bbox ?? null,
-    }
-    if (selected.value.label) query.value = selected.value.label
+// 🗺️ Valeurs par défaut : Espagne
+const DEFAULT_PLACE = {
+    label: 'Espagne',
+    center: [-3.7038, 40.4168], // Madrid (coordonnées approximatives)
+    bbox: null,
 }
 
-const previewSteps = computed(() => {
-    const [lng, lat] = selected.value.center
-    return [{ id: 'preview', title: query.value, latitude: lat, longitude: lng }]
-})
+// 🔍 Input prérempli
+const query = ref(DEFAULT_PLACE.label)
+
+// 📍 Sélection initiale = Espagne
+const selected = ref(DEFAULT_PLACE)
+
+// ⚙️ Fonction appelée lors d'une sélection Mapbox
+function onSelect(place) {
+    if (!place) return
+
+    const center = place.center || place?.geometry?.coordinates
+
+    selected.value = {
+        label: place.place_name || place.text || query.value,
+        center: Array.isArray(center) ? center : DEFAULT_PLACE.center,
+        bbox: place.bbox ?? null,
+    }
+
+    query.value = selected.value.label || ''
+}
 </script>
 
 <template>
-    <section class="flex flex-col h-full rounded-2xl border border-outline/20 bg-surface shadow-md overflow-hidden">
+    <section
+        class="flex flex-col h-full rounded-2xl border border-outline/20 bg-surface shadow-md overflow-hidden"
+    >
+        <!-- En-tête -->
         <div class="p-6">
             <h2 class="text-xl font-semibold text-on-surface text-center">
                 {{ t('dashboardSearch.title') }}
@@ -39,6 +51,7 @@ const previewSteps = computed(() => {
                 {{ t('dashboardSearch.subtitle') }}
             </p>
 
+            <!-- Champ de recherche -->
             <label class="block text-sm text-on-surface mt-5 mb-2">
                 {{ t('dashboardSearch.label') }}
             </label>
@@ -52,9 +65,13 @@ const previewSteps = computed(() => {
                        focus:outline-none focus:ring-2 focus:ring-primary/50"
             />
 
+            <!-- Carte -->
             <div class="mt-5">
                 <StepMapPreview
-                    :steps="previewSteps"
+                    v-if="selected?.center"
+                    :latitude="selected.center[1]"
+                    :longitude="selected.center[0]"
+                    :zoom="5"
                     class="w-full h-56 md:h-64 rounded-xl overflow-hidden border border-outline/20"
                 />
             </div>
