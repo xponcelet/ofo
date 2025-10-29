@@ -8,8 +8,7 @@ const props = defineProps({
 })
 
 const loading = ref(false)
-// null => on suit la prop ; true/false => état optimiste temporaire
-const optimistic = ref(null) // null | boolean
+const optimistic = ref(null)
 
 const displayedFavorite = computed(() =>
     optimistic.value === null ? props.isFavorite : optimistic.value
@@ -23,33 +22,23 @@ function toggleFavorite() {
     const method = was ? 'delete' : 'post'
     const url = route(was ? 'favorites.destroy' : 'favorites.store', props.tripId)
 
-    // UI optimiste immédiate
     optimistic.value = !was
 
     router[method](url, {}, {
         preserveScroll: true,
-        onError: () => {
-            // rollback si erreur
-            optimistic.value = was
-        },
+        onError: () => (optimistic.value = was),
         onSuccess: () => {
-            // 🔄 Reload CONTEXTUEL + état non préservé pour forcer de nouvelles props
             const path = window.location.pathname
             const only = path.includes('/voyages') ? ['trips'] : ['trip']
 
             router.reload({
                 only,
                 preserveScroll: true,
-                preserveState: false, // <- clé pour éviter l’état coincé
-                onSuccess: () => {
-                    // on repasse en mode "prop source de vérité"
-                    optimistic.value = null
-                },
+                preserveState: false,
+                onSuccess: () => (optimistic.value = null),
             })
         },
-        onFinish: () => {
-            loading.value = false
-        },
+        onFinish: () => (loading.value = false),
     })
 }
 </script>
@@ -58,14 +47,18 @@ function toggleFavorite() {
     <button
         @click.stop.prevent="toggleFavorite"
         :disabled="loading"
-        class="p-1 rounded-full bg-white/20 hover:bg-white/30 transition"
+        class="p-2 rounded-full shadow-sm border transition
+               bg-white hover:bg-gray-50
+               hover:shadow-md focus:outline-none focus:ring-2 focus:ring-pink-400"
         :title="displayedFavorite ? 'Retirer des favoris' : 'Ajouter aux favoris'"
     >
-    <span
-        class="material-symbols-rounded text-white text-[18px] transition-all duration-200"
-        :class="displayedFavorite ? 'text-yellow-400 scale-110' : 'opacity-90'"
-    >
-      {{ displayedFavorite ? 'bookmark' : 'bookmark_add' }}
-    </span>
+        <span
+            class="material-symbols-rounded text-[20px] transition-all duration-200"
+            :class="displayedFavorite
+                ? 'text-yellow-500 scale-110'
+                : 'text-gray-500 hover:text-pink-500'"
+        >
+            {{ displayedFavorite ? 'bookmark' : 'bookmark_add' }}
+        </span>
     </button>
 </template>
