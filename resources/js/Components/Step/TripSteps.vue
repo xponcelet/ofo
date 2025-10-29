@@ -3,19 +3,18 @@ import StepMapPreview from '@/Components/Step/StepMapPreview.vue'
 import { ref, computed, onMounted } from 'vue'
 import { router, useForm, Link } from '@inertiajs/vue3'
 
-const props = defineProps({ trip: Object })
+const props = defineProps({
+    trip: Object,
+    publicView: { type: Boolean, default: false }, // 👈 nouveau prop
+})
 
-// 🇫🇷 Drapeau depuis code pays
 function flagFromCode(code) {
     if (!code) return ''
     try {
         return String.fromCodePoint(...[...code.toUpperCase()].map(c => 0x1f1e6 + c.charCodeAt(0) - 65))
-    } catch {
-        return ''
-    }
+    } catch { return '' }
 }
 
-// Helpers
 function plural(n, word) {
     return `${n} ${word}${n > 1 ? 's' : ''}`
 }
@@ -32,8 +31,6 @@ function formatDateRange(start, end) {
     const eTxt = e.toLocaleDateString('fr-FR', opts)
     return sTxt === eTxt ? sTxt : `${sTxt} → ${eTxt}`
 }
-
-// 🧭 Nom d’affichage intelligent
 function getStepDisplayName(step) {
     return step.title?.trim() || step.location?.trim() || 'Étape sans titre'
 }
@@ -73,10 +70,7 @@ function deleteNote(step) {
     })
 }
 
-// Étapes triées
 const steps = computed(() => [...props.trip.steps].sort((a, b) => (a.order ?? 0) - (b.order ?? 0)))
-
-// Lazy loading des cartes
 const visibleCards = ref(new Set())
 function handleIntersection(entries) {
     entries.forEach(e => {
@@ -96,10 +90,8 @@ onMounted(() => {
         </h2>
 
         <div class="relative">
-            <!-- Ligne verticale statique -->
             <div class="absolute left-[1.25rem] top-0 bottom-0 w-[2px] bg-gray-200"></div>
 
-            <!-- Étapes -->
             <div v-for="(step, i) in steps" :key="step.id" class="relative pb-16">
                 <div class="flex flex-col md:flex-row gap-6 md:gap-8 items-start" :data-step-id="step.id">
                     <!-- Numéro + dates -->
@@ -110,7 +102,7 @@ onMounted(() => {
                         >
                             {{ i + 1 }}
                         </div>
-                        <div class="text-[11px] text-gray-600 text-center mt-2 leading-tight font-medium">
+                        <div v-if="!props.publicView" class="text-[11px] text-gray-600 text-center mt-2 leading-tight font-medium">
                             {{ formatDateRange(step.start_date, step.end_date) }}
                         </div>
                     </div>
@@ -118,51 +110,31 @@ onMounted(() => {
                     <!-- Carte + contenu -->
                     <div class="flex-1 bg-white border border-gray-200 rounded-2xl shadow-sm hover:shadow-md transition overflow-hidden">
                         <div class="grid grid-cols-1 md:grid-cols-[2fr_1.2fr] gap-4 p-6 md:p-8">
-                            <!-- Texte -->
                             <div class="space-y-3">
                                 <div class="flex justify-between items-start flex-wrap gap-3">
                                     <div>
                                         <h3 class="text-xl font-semibold text-gray-900 flex items-center gap-2">
-                                            <span v-if="i === 0" class="material-symbols-rounded text-blue-600 text-lg">
-                                                flight_takeoff
-                                            </span>
-                                            <span v-else-if="step.is_destination" class="material-symbols-rounded text-pink-600 text-lg">
-                                                flag
-                                            </span>
+                                            <span v-if="i === 0" class="material-symbols-rounded text-blue-600 text-lg">flight_takeoff</span>
+                                            <span v-else-if="step.is_destination" class="material-symbols-rounded text-pink-600 text-lg">flag</span>
                                             {{ getStepDisplayName(step) }}
                                         </h3>
-
-                                        <!-- Localisation secondaire -->
-                                        <p v-if="step.title && step.location" class="text-sm text-gray-500">
-                                            📍 {{ step.location }}
-                                        </p>
-
                                         <p v-if="step.country" class="text-sm text-gray-600 flex items-center gap-2 mt-1">
                                             <span>{{ flagFromCode(step.country_code) }}</span>
                                             {{ step.country }}
                                         </p>
                                     </div>
 
-                                    <div class="flex gap-2">
-                                        <Link
-                                            :href="route('steps.show', step.id)"
-                                            class="text-pink-600 hover:text-pink-700 transition"
-                                            title="Voir les activités"
-                                        >
+                                    <!-- ✅ Actions masquées seulement si public -->
+                                    <div class="flex gap-2" v-if="!props.publicView">
+                                        <Link :href="route('steps.show', step.id)" class="text-pink-600 hover:text-pink-700 transition" title="Voir les activités">
                                             <span class="material-symbols-rounded text-[20px]">travel_explore</span>
                                         </Link>
-
-                                        <Link
-                                            :href="route('steps.edit', step.id)"
-                                            class="text-gray-500 hover:text-primary transition"
-                                            title="Modifier l'étape"
-                                        >
+                                        <Link :href="route('steps.edit', step.id)" class="text-gray-500 hover:text-primary transition" title="Modifier l'étape">
                                             <span class="material-symbols-rounded text-[20px]">edit</span>
                                         </Link>
                                     </div>
                                 </div>
 
-                                <!-- Résumé -->
                                 <div class="text-sm text-gray-700 flex flex-wrap gap-3 mt-2">
                                     <span v-if="step.nights">🌙 {{ plural(step.nights, 'nuit') }}</span>
                                     <span v-if="step.activities?.length">
@@ -170,38 +142,8 @@ onMounted(() => {
                                     </span>
                                 </div>
 
-                                <!-- Activités -->
-                                <div v-if="step.activities?.length" class="mt-3">
-                                    <h4 class="text-sm font-semibold text-gray-800 mb-1 flex items-center gap-1">
-                                        <span class="material-symbols-rounded text-sm text-pink-600">explore</span>
-                                        Activités
-                                    </h4>
-                                    <div class="flex flex-wrap gap-2">
-                                        <span
-                                            v-for="a in step.activities.slice(0, 5)"
-                                            :key="a.id"
-                                            class="px-2 py-1 rounded-full text-xs font-medium bg-pink-50 text-pink-700 border border-pink-100"
-                                        >
-                                            {{ a.title }}
-                                        </span>
-                                        <span v-if="step.activities.length > 5" class="text-xs text-gray-400">
-                                            +{{ step.activities.length - 5 }} autres…
-                                        </span>
-                                    </div>
-
-                                    <div class="mt-3">
-                                        <Link
-                                            :href="route('steps.show', step.id)"
-                                            class="inline-flex items-center gap-1 text-sm text-pink-600 hover:underline"
-                                        >
-                                            <span class="material-symbols-rounded text-sm">open_in_new</span>
-                                            Voir les activités
-                                        </Link>
-                                    </div>
-                                </div>
-
-                                <!-- Notes -->
-                                <div class="mt-5 border border-dashed border-gray-300 rounded-xl p-4 bg-gray-50">
+                                <!-- ✅ Notes masquées seulement si public -->
+                                <div v-if="!props.publicView" class="mt-5 border border-dashed border-gray-300 rounded-xl p-4 bg-gray-50">
                                     <div class="flex items-start justify-between mb-2">
                                         <p class="font-medium text-gray-800 flex items-center gap-2">
                                             <span class="material-symbols-rounded text-base text-blue-600">note</span>
@@ -258,10 +200,7 @@ onMounted(() => {
                                         </div>
                                     </transition>
 
-                                    <p
-                                        v-if="editingStepId !== step.id"
-                                        class="text-gray-700 whitespace-pre-line text-sm"
-                                    >
+                                    <p v-if="editingStepId !== step.id" class="text-gray-700 whitespace-pre-line text-sm">
                                         {{ step.note?.content || 'Aucune note pour cette étape.' }}
                                     </p>
                                 </div>

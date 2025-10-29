@@ -5,6 +5,7 @@ import TripMap from '@/Components/Trip/TripMap.vue'
 const props = defineProps({
     steps: { type: Array, default: () => [] },
     initialActiveId: [Number, String],
+    publicView: { type: Boolean, default: false }, // 👈 ajoute ce prop
 })
 
 const emit = defineEmits(['update:activeStep', 'go-to-activities'])
@@ -65,14 +66,14 @@ function getFlagEmoji(code) {
                         @click="activeId = s.id"
                         class="w-full text-left rounded-lg px-4 py-3 mb-1 flex items-center gap-3 border transition"
                         :class="s.id === activeId
-                ? 'bg-pink-50 border-pink-200 shadow-sm'
-                : 'hover:bg-gray-50 border-transparent'"
+                            ? 'bg-pink-50 border-pink-200 shadow-sm'
+                            : 'hover:bg-gray-50 border-transparent'"
                     >
                         <div
                             class="flex h-8 w-8 items-center justify-center rounded-full text-sm font-medium"
                             :class="s.id === activeId
-                  ? 'bg-pink-100 text-pink-700'
-                  : 'bg-gray-100 text-gray-600'"
+                                ? 'bg-pink-100 text-pink-700'
+                                : 'bg-gray-100 text-gray-600'"
                         >
                             {{ s.order ?? '?' }}
                         </div>
@@ -82,7 +83,9 @@ function getFlagEmoji(code) {
                                 {{ s.title || s.location }}
                                 <span v-if="s.country_code" class="ml-1">{{ getFlagEmoji(s.country_code) }}</span>
                             </p>
-                            <p class="text-xs text-gray-500 truncate">
+
+                            <!-- Dates affichées uniquement si non public -->
+                            <p v-if="!props.publicView" class="text-xs text-gray-500 truncate">
                                 {{ s.start_date }} → {{ s.end_date }}
                             </p>
                         </div>
@@ -96,7 +99,7 @@ function getFlagEmoji(code) {
                     target="_blank"
                     rel="noopener noreferrer"
                     class="inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium
-                 text-pink-700 border border-pink-200 hover:bg-pink-50 transition"
+                        text-pink-700 border border-pink-200 hover:bg-pink-50 transition"
                 >
                     <span class="material-symbols-rounded text-base">travel_explore</span>
                     Voir l’itinéraire complet
@@ -110,14 +113,10 @@ function getFlagEmoji(code) {
         <section class="space-y-8 pb-16">
             <!-- 🗺️ Carte -->
             <div class="bg-white border border-gray-200 rounded-xl overflow-hidden shadow-sm h-[320px] lg:h-[400px]">
-                <TripMap
-                    :steps="steps"
-                    :active-id="activeId"
-                    @update:activeId="activeId = $event"
-                />
+                <TripMap :steps="steps" :active-id="activeId" @update:activeId="activeId = $event" />
             </div>
 
-            <!-- 📍 Détails de l’étape active -->
+            <!-- 📍 Détails -->
             <div v-if="activeStep" class="bg-white border border-gray-200 rounded-xl shadow-sm p-6 animate-fade-in">
                 <h3 class="text-xl font-semibold text-gray-900 flex items-center gap-1 mb-1">
                     <span class="material-symbols-rounded text-pink-600 text-lg">location_on</span>
@@ -125,20 +124,10 @@ function getFlagEmoji(code) {
                     <span v-if="activeStep.country_code" class="ml-1">{{ getFlagEmoji(activeStep.country_code) }}</span>
                 </h3>
 
-                <p class="text-sm text-gray-500 mb-3">{{ formatDates(activeStep) }}</p>
-                <p v-if="activeStep.description" class="text-gray-700 mb-4">{{ activeStep.description }}</p>
+                <!-- ✅ Dates masquées seulement en mode public -->
+                <p v-if="!props.publicView" class="text-sm text-gray-500 mb-3">{{ formatDates(activeStep) }}</p>
 
-                <div v-if="activeStep.distance_to_next || activeStep.duration_to_next"
-                     class="flex flex-wrap gap-3 text-sm text-gray-700 mb-4">
-          <span v-if="activeStep.distance_to_next" class="flex items-center gap-1">
-            <span class="material-symbols-rounded text-gray-400 text-base">straighten</span>
-            {{ (activeStep.distance_to_next / 1000).toFixed(1) }} km
-          </span>
-                    <span v-if="activeStep.duration_to_next" class="flex items-center gap-1">
-            <span class="material-symbols-rounded text-gray-400 text-base">schedule</span>
-            {{ Math.round(activeStep.duration_to_next / 3600) }} h
-          </span>
-                </div>
+                <p v-if="activeStep.description" class="text-gray-700 mb-4">{{ activeStep.description }}</p>
 
                 <!-- 🌍 Liens Google Maps -->
                 <div class="flex flex-wrap gap-3 mb-4">
@@ -196,14 +185,8 @@ function getFlagEmoji(code) {
     animation: fadeIn 0.3s ease-in-out;
 }
 @keyframes fadeIn {
-    from {
-        opacity: 0;
-        transform: translateY(4px);
-    }
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
+    from { opacity: 0; transform: translateY(4px); }
+    to { opacity: 1; transform: translateY(0); }
 }
 .material-symbols-rounded {
     font-variation-settings: 'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 24;
