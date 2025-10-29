@@ -33,6 +33,11 @@ function formatDateRange(start, end) {
     return sTxt === eTxt ? sTxt : `${sTxt} → ${eTxt}`
 }
 
+// 🧭 Nom d’affichage intelligent
+function getStepDisplayName(step) {
+    return step.title?.trim() || step.location?.trim() || 'Étape sans titre'
+}
+
 // Notes
 const editingStepId = ref(null)
 const noteForm = useForm({ content: '' })
@@ -111,9 +116,7 @@ onMounted(() => {
                     </div>
 
                     <!-- Carte + contenu -->
-                    <div
-                        class="flex-1 bg-white border border-gray-200 rounded-2xl shadow-sm hover:shadow-md transition overflow-hidden"
-                    >
+                    <div class="flex-1 bg-white border border-gray-200 rounded-2xl shadow-sm hover:shadow-md transition overflow-hidden">
                         <div class="grid grid-cols-1 md:grid-cols-[2fr_1.2fr] gap-4 p-6 md:p-8">
                             <!-- Texte -->
                             <div class="space-y-3">
@@ -126,9 +129,15 @@ onMounted(() => {
                                             <span v-else-if="step.is_destination" class="material-symbols-rounded text-pink-600 text-lg">
                                                 flag
                                             </span>
-                                            {{ step.title || 'Étape sans titre' }}
+                                            {{ getStepDisplayName(step) }}
                                         </h3>
-                                        <p v-if="step.country" class="text-sm text-gray-600 flex items-center gap-2">
+
+                                        <!-- Localisation secondaire -->
+                                        <p v-if="step.title && step.location" class="text-sm text-gray-500">
+                                            📍 {{ step.location }}
+                                        </p>
+
+                                        <p v-if="step.country" class="text-sm text-gray-600 flex items-center gap-2 mt-1">
                                             <span>{{ flagFromCode(step.country_code) }}</span>
                                             {{ step.country }}
                                         </p>
@@ -180,7 +189,6 @@ onMounted(() => {
                                         </span>
                                     </div>
 
-                                    <!-- 🔗 Lien vers la page de gestion -->
                                     <div class="mt-3">
                                         <Link
                                             :href="route('steps.show', step.id)"
