@@ -38,9 +38,6 @@ const isAdminRoute = computed(() => page.url.startsWith('/admin'))
             class="bg-surface-variant text-on-surface-variant border-t border-outline mt-8"
         >
             <div class="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex flex-col sm:flex-row justify-between items-center gap-4">
-                <button type="button" class="text-sm hover:underline">
-                    Politique de confidentialité
-                </button>
                 <p class="text-sm text-center">&copy; 2025 MyRoadbook | Xavier Poncelet</p>
                 <LanguageSwitcher placement="top" />
             </div>

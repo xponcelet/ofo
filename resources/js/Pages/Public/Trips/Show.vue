@@ -1,18 +1,18 @@
 <script setup>
-import { ref, computed } from 'vue'
+import { ref } from 'vue'
+import { Head } from '@inertiajs/vue3'
+
 import TripShowView from '@/Components/Trip/TripShowView.vue'
-import TripChecklist from '@/Components/Trip/TripChecklist.vue'
-import TripActivities from '@/Components/Trip/TripActivities.vue'
-import FavoriteButton from '@/Components/FavoriteButton.vue'
+import TripSteps from "@/Components/Step/TripSteps.vue"
+import FavoriteButton from "@/Components/FavoriteButton.vue"
 
 const props = defineProps({
     trip: Object,
     days: { type: Array, default: () => [] },
     activities: { type: Array, default: () => [] },
-    totalActivitiesCount: Number,
 })
 
-const currentTab = ref('itineraire')
+const currentTab = ref('steps')
 
 function tabClass(tab) {
     return currentTab.value === tab
@@ -22,86 +22,92 @@ function tabClass(tab) {
 
 function getFlagEmoji(code) {
     if (!code) return ''
-    return code.toUpperCase().replace(/./g, c => String.fromCodePoint(127397 + c.charCodeAt()))
+    return code
+        .toUpperCase()
+        .replace(/./g, c => String.fromCodePoint(127397 + c.charCodeAt()))
 }
 </script>
 
 <template>
-    <div class="min-h-screen bg-gray-50">
-        <!-- Hero du voyage -->
-        <section
-            class="relative left-1/2 right-1/2 -mx-[50vw] w-screen
-                   bg-gradient-to-r from-pink-600 via-red-500 to-orange-400 text-white
-                   shadow-md overflow-hidden"
-        >
-            <!-- Bouton favori (en haut à droite) -->
-            <div class="absolute top-4 right-4">
-                <FavoriteButton
-                    v-if="$page.props.auth?.user"
-                    :key="props.trip.id + '-' + String(props.trip.is_favorite)"
-                    :trip-id="props.trip.id"
-                    :is-favorite="props.trip.is_favorite"
-                />
-            </div>
+    <Head :title="trip.title" />
 
-            <div class="max-w-screen-2xl mx-auto px-6 md:px-10 py-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-6">
+    <div class="min-h-screen bg-gray-50 text-gray-800">
+        <!-- =======================
+             HEADER PUBLIC
+        ======================= -->
+        <section class="border-b border-gray-200 bg-white shadow-sm">
+            <div class="max-w-screen-2xl mx-auto px-4 md:px-6 py-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-6">
+                <!-- Titre -->
                 <div class="flex-1">
-                    <h1 class="text-3xl sm:text-4xl font-extrabold tracking-tight mb-1 flex items-center gap-2">
+                    <h1 class="text-3xl sm:text-4xl font-bold flex items-center gap-2 text-pink-600">
                         <span>{{ trip.title }}</span>
                         <span v-if="trip.destination_country_code" class="text-2xl leading-none">
                             {{ getFlagEmoji(trip.destination_country_code) }}
                         </span>
                     </h1>
-                    <p class="text-sm sm:text-base opacity-90">{{ trip.steps.length }} étapes</p>
+                    <p class="text-sm text-gray-500 mt-1">
+                        {{ trip.steps?.length || 0 }} étapes
+                        <span v-if="trip.days_count">• {{ trip.days_count }} jours</span>
+                    </p>
+                    <p v-if="trip.creator" class="text-sm text-gray-500 italic">
+                        Par {{ trip.creator.name }}
+                    </p>
                 </div>
 
-                <div class="grid grid-cols-3 gap-4 text-center">
-                    <div class="bg-white/10 backdrop-blur rounded-lg px-3 py-2">
-                        <p class="text-xl font-bold">{{ trip.days_count || 0 }}</p>
-                        <p class="text-xs opacity-80">Jours</p>
-                    </div>
-                    <div class="bg-white/10 backdrop-blur rounded-lg px-3 py-2">
-                        <p class="text-xl font-bold">{{ trip.steps.length }}</p>
-                        <p class="text-xs opacity-80">Étapes</p>
-                    </div>
-                    <div class="bg-white/10 backdrop-blur rounded-lg px-3 py-2">
-                        <p class="text-xl font-bold">🌍</p>
-                        <p class="text-xs opacity-80">Public</p>
-                    </div>
+                <!-- Bouton favori -->
+                <div class="flex-shrink-0">
+                    <FavoriteButton
+                        :trip-id="trip.id"
+                        :is-favorite="trip.is_favorite"
+                        class="!bg-white hover:!bg-pink-50 text-pink-500 shadow-sm"
+                    />
                 </div>
             </div>
         </section>
 
-        <!-- Onglets -->
+        <!-- =======================
+             ONGLET PRINCIPAL
+        ======================= -->
         <section class="bg-white border-b border-gray-200">
-            <nav class="max-w-screen-2xl mx-auto px-6 flex gap-6 overflow-x-auto scrollbar-hide">
-                <button @click="currentTab = 'itineraire'" class="py-3 text-sm transition-colors" :class="tabClass('itineraire')">
-                    🗺️ Itinéraire
+            <nav class="max-w-screen-2xl mx-auto px-4 flex gap-6 overflow-x-auto scrollbar-hide">
+                <button
+                    @click="currentTab = 'steps'"
+                    class="py-3 text-sm transition-colors flex items-center"
+                    :class="tabClass('steps')"
+                >
+                    🧳 Étapes
                 </button>
-
-                <button @click="currentTab = 'activities'" class="py-3 text-sm transition-colors flex items-center" :class="tabClass('activities')">
-                    🧭 Activités
-                    <span v-if="totalActivitiesCount" class="ml-1 text-xs text-gray-400">
-                        ({{ totalActivitiesCount }})
-                    </span>
+                <button
+                    @click="currentTab = 'itineraire'"
+                    class="py-3 text-sm transition-colors flex items-center"
+                    :class="tabClass('itineraire')"
+                >
+                    🗺️ Itinéraire
                 </button>
             </nav>
         </section>
 
-        <!-- Contenu des onglets -->
-        <section class="max-w-screen-2xl mx-auto px-6 py-8">
-            <div v-if="currentTab === 'itineraire'">
-                <TripShowView :steps="trip.steps" />
+        <!-- =======================
+             CONTENU
+        ======================= -->
+        <section class="max-w-screen-2xl mx-auto px-4 py-6">
+            <div v-if="currentTab === 'steps'">
+                <TripSteps :trip="trip" :steps="trip.steps ?? []" public-view/>
             </div>
 
-            <div v-else-if="currentTab === 'activities'">
-                <TripActivities :days="days" :activities="activities" />
+            <div v-else-if="currentTab === 'itineraire'">
+                <TripShowView :steps="trip.steps" public-view />
             </div>
         </section>
     </div>
 </template>
 
 <style scoped>
-.scrollbar-hide::-webkit-scrollbar { display: none; }
-.scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
+.scrollbar-hide::-webkit-scrollbar {
+    display: none;
+}
+.scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+}
 </style>

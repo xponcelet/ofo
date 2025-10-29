@@ -41,7 +41,7 @@ class PublicTripController extends Controller
                 'users:id,name',
                 'steps' => fn($q) => $q->where('is_destination', true)->select('id','trip_id','country','country_code'),
             ])
-            ->select('id', 'title', 'description', 'image', 'start_date', 'end_date', 'is_public')
+            ->select('id', 'title', 'description', 'image', 'is_public')
             ->latest()
             ->paginate(12)
             ->through(fn ($trip) => $this->formatTrip($trip));
@@ -73,21 +73,17 @@ class PublicTripController extends Controller
                 'latitude',
                 'longitude',
                 'is_destination',
-                'start_date',
-                'end_date'
             ),
         ]);
 
         $creator = $trip->users->first();
 
-        return Inertia::render('Trips/Show', [
+        return Inertia::render('Public/Trips/Show', [
             'trip' => [
                 'id'          => $trip->id,
                 'title'       => $trip->title,
                 'description' => $trip->description,
                 'image'       => $trip->image,
-                'start_date'  => $trip->start_date,
-                'end_date'    => $trip->end_date,
                 'favorites'   => $trip->favored_by_count,
                 'is_favorite' => Auth::check()
                     ? Auth::user()->favoriteTrips->contains($trip->id)
@@ -138,8 +134,6 @@ class PublicTripController extends Controller
             'title'       => $trip->title,
             'description' => $trip->description,
             'image'       => $trip->image,
-            'start_date'  => $trip->start_date,
-            'end_date'    => $trip->end_date,
             'steps_count' => $trip->steps_count,
             'favorites'   => $trip->favored_by_count,
             'is_favorite' => Auth::check()
