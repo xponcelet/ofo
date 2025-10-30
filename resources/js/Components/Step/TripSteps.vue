@@ -5,7 +5,7 @@ import { router, useForm, Link } from '@inertiajs/vue3'
 
 const props = defineProps({
     trip: Object,
-    publicView: { type: Boolean, default: false }, // 👈 nouveau prop
+    publicView: { type: Boolean, default: false },
 })
 
 function flagFromCode(code) {
@@ -35,7 +35,7 @@ function getStepDisplayName(step) {
     return step.title?.trim() || step.location?.trim() || 'Étape sans titre'
 }
 
-// Notes
+// Notes (non affichées en mode public)
 const editingStepId = ref(null)
 const noteForm = useForm({ content: '' })
 function openEditor(step) {
@@ -70,6 +70,7 @@ function deleteNote(step) {
     })
 }
 
+// Animation / visibilité
 const steps = computed(() => [...props.trip.steps].sort((a, b) => (a.order ?? 0) - (b.order ?? 0)))
 const visibleCards = ref(new Set())
 function handleIntersection(entries) {
@@ -124,7 +125,7 @@ onMounted(() => {
                                         </p>
                                     </div>
 
-                                    <!-- ✅ Actions masquées seulement si public -->
+                                    <!-- Actions privées -->
                                     <div class="flex gap-2" v-if="!props.publicView">
                                         <Link :href="route('steps.show', step.id)" class="text-pink-600 hover:text-pink-700 transition" title="Voir les activités">
                                             <span class="material-symbols-rounded text-[20px]">travel_explore</span>
@@ -142,7 +143,18 @@ onMounted(() => {
                                     </span>
                                 </div>
 
-                                <!-- ✅ Notes masquées seulement si public -->
+                                <!-- ✅ Lien visible uniquement en public -->
+                                <div v-if="props.publicView" class="mt-4">
+                                    <Link
+                                        :href="route('public.steps.show', step.id)"
+                                        class="inline-flex items-center gap-1 text-sm text-pink-600 hover:underline font-medium"
+                                    >
+                                        <span class="material-symbols-rounded text-sm">arrow_forward</span>
+                                        Voir les activités
+                                    </Link>
+                                </div>
+
+                                <!-- Notes (privé uniquement) -->
                                 <div v-if="!props.publicView" class="mt-5 border border-dashed border-gray-300 rounded-xl p-4 bg-gray-50">
                                     <div class="flex items-start justify-between mb-2">
                                         <p class="font-medium text-gray-800 flex items-center gap-2">
