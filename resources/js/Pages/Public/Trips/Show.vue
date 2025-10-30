@@ -1,5 +1,5 @@
 <script setup>
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
 import { Head } from '@inertiajs/vue3'
 
 import TripShowView from '@/Components/Trip/TripShowView.vue'
@@ -8,12 +8,21 @@ import FavoriteButton from "@/Components/FavoriteButton.vue"
 
 const props = defineProps({
     trip: Object,
-    days: { type: Array, default: () => [] },
-    activities: { type: Array, default: () => [] },
 })
 
+// Onglet actif
 const currentTab = ref('steps')
 
+// Calcul du nombre de jours
+const daysCount = computed(() => {
+    if (!props.trip.start_date || !props.trip.end_date) return null
+    const start = new Date(props.trip.start_date)
+    const end = new Date(props.trip.end_date)
+    const diff = Math.ceil((end - start) / (1000 * 60 * 60 * 24)) + 1
+    return diff
+})
+
+// Helper
 function tabClass(tab) {
     return currentTab.value === tab
         ? 'text-pink-600 border-b-2 border-pink-600 font-semibold'
@@ -45,21 +54,35 @@ function getFlagEmoji(code) {
                             {{ getFlagEmoji(trip.destination_country_code) }}
                         </span>
                     </h1>
+
                     <p class="text-sm text-gray-500 mt-1">
-                        {{ trip.steps?.length || 0 }} étapes
-                        <span v-if="trip.days_count">• {{ trip.days_count }} jours</span>
+                        {{ new Date(trip.start_date).toLocaleDateString('fr-FR') }}
+                        →
+                        {{ new Date(trip.end_date).toLocaleDateString('fr-FR') }}
+                        • {{ trip.steps?.length || 0 }} étapes
                     </p>
+
                     <p v-if="trip.creator" class="text-sm text-gray-500 italic">
                         Par {{ trip.creator.name }}
                     </p>
                 </div>
 
-                <!-- Bouton favori -->
-                <div class="flex-shrink-0">
+                <!-- Compteurs (jours / étapes / public) -->
+                <div class="flex items-center gap-4">
+                    <div class="flex items-center justify-center flex-col w-16 h-16 rounded-xl bg-gray-50 border border-gray-200">
+                        <span class="text-xl font-semibold text-gray-900">{{ daysCount ?? '–' }}</span>
+                        <span class="text-xs text-gray-500">Jours</span>
+                    </div>
+                    <div class="flex items-center justify-center flex-col w-16 h-16 rounded-xl bg-gray-50 border border-gray-200">
+                        <span class="text-xl font-semibold text-gray-900">{{ trip.steps?.length || 0 }}</span>
+                        <span class="text-xs text-gray-500">Étapes</span>
+                    </div>
+
+                    <!-- Bouton favori -->
                     <FavoriteButton
                         :trip-id="trip.id"
                         :is-favorite="trip.is_favorite"
-                        class="!bg-white hover:!bg-pink-50 text-pink-500 shadow-sm"
+                        class="!bg-white hover:!bg-pink-50 text-pink-500 shadow-sm ml-2"
                     />
                 </div>
             </div>
@@ -91,12 +114,18 @@ function getFlagEmoji(code) {
              CONTENU
         ======================= -->
         <section class="max-w-screen-2xl mx-auto px-4 py-6">
-            <div v-if="currentTab === 'steps'">
-                <TripSteps :trip="trip" :steps="trip.steps ?? []" public-view/>
+            <!-- Étapes -->
+            <div v-if="currentTab === 'steps' && trip.steps?.length">
+                <TripSteps :trip="trip" publicView />
             </div>
 
+            <div v-else-if="currentTab === 'steps'">
+                <p class="text-gray-500 text-center py-10">Aucune étape disponible.</p>
+            </div>
+
+            <!-- Itinéraire -->
             <div v-else-if="currentTab === 'itineraire'">
-                <TripShowView :steps="trip.steps" public-view />
+                <TripShowView :steps="trip.steps" publicView />
             </div>
         </section>
     </div>

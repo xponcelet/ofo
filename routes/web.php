@@ -44,6 +44,10 @@ Route::prefix('voyages')->name('public.trips.')->group(function () {
     Route::get('/{trip}',    [PublicTripController::class, 'show'])->name('show');
 });
 
+// Étapes publiques
+Route::get('/voyages/steps/{step}', [PublicTripController::class, 'showStep'])
+    ->name('public.steps.show');
+
 // Dashboard public (découverte)
 Route::get('/decouvrir', [PublicTripController::class, 'dashboard'])->name('public.dashboard');
 

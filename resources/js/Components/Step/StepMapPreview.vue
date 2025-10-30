@@ -1,5 +1,5 @@
 <script setup>
-import { onMounted, ref, watch } from 'vue'
+import { onMounted, onBeforeUnmount, ref, watch } from 'vue'
 import mapboxgl from 'mapbox-gl'
 
 const props = defineProps({
@@ -12,8 +12,9 @@ const props = defineProps({
 const mapContainer = ref(null)
 let map = null
 
+// ✅ Initialisation sécurisée
 onMounted(() => {
-    if (!props.latitude || !props.longitude) return
+    if (!props.latitude || !props.longitude || !mapContainer.value) return
 
     mapboxgl.accessToken = import.meta.env.VITE_MAPBOX_KEY
 
@@ -23,6 +24,7 @@ onMounted(() => {
         center: [props.longitude, props.latitude],
         zoom: props.zoom,
         interactive: false,
+        attributionControl: false,
     })
 
     new mapboxgl.Marker({ color: '#e91e63' })
@@ -30,9 +32,18 @@ onMounted(() => {
         .addTo(map)
 })
 
+// ✅ Mise à jour dynamique du centre
 watch(() => [props.latitude, props.longitude], ([lat, lng]) => {
     if (map && lat && lng) {
         map.setCenter([lng, lat])
+    }
+})
+
+// ✅ Nettoyage pour éviter le "el is null"
+onBeforeUnmount(() => {
+    if (map) {
+        map.remove()
+        map = null
     }
 })
 </script>
