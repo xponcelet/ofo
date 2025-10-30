@@ -134,11 +134,17 @@ Route::middleware([
     // ============================
     // Checklist utilisateur (états par user)
     // ============================
-    Route::get('/trips/{trip}/checklist', [TripChecklistUserController::class, 'index'])
-        ->name('trips.checklist.index');
+    Route::prefix('trips')->name('trips.')->group(function () {
+        // Vue checklist utilisateur
+        Route::get('/{trip}/checklist', [TripChecklistUserController::class, 'index'])
+            ->middleware(['auth', 'verified'])
+            ->name('checklist.index');
 
-    Route::post('/trips/{trip}/checklist/{item}/toggle', [TripChecklistUserController::class, 'toggle'])
-        ->name('trips.checklist.toggle');
+        // Coche / décoche un item (fonctionne pour trip classique et inspiré)
+        Route::post('/{trip}/checklist/{item}/toggle', [TripChecklistUserController::class, 'toggle'])
+            ->middleware(['auth', 'verified'])
+            ->name('checklist.toggle');
+    });
 
     // Notes sur étapes
     Route::resource('steps.notes', StepNoteController::class)
