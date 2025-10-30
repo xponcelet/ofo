@@ -54,14 +54,6 @@ function getFlagEmoji(code) {
                             {{ getFlagEmoji(trip.destination_country_code) }}
                         </span>
                     </h1>
-
-                    <p class="text-sm text-gray-500 mt-1">
-                        {{ new Date(trip.start_date).toLocaleDateString('fr-FR') }}
-                        →
-                        {{ new Date(trip.end_date).toLocaleDateString('fr-FR') }}
-                        • {{ trip.steps?.length || 0 }} étapes
-                    </p>
-
                     <p v-if="trip.creator" class="text-sm text-gray-500 italic">
                         Par {{ trip.creator.name }}
                     </p>
