@@ -146,7 +146,11 @@ const filteredTrips = computed(() =>
             <div
                 v-for="trip in filteredTrips"
                 :key="trip.id"
-                @click="$inertia.visit(route('trips.show', trip.id))"
+                @click="
+                  trip.role === 'used' && trip.trip_user_id
+                    ? $inertia.visit(route('trips.used.show', { tripUser: trip.trip_user_id }))
+                    : $inertia.visit(route('trips.show', trip.id))
+                "
                 class="group relative bg-white rounded-2xl shadow-sm hover:shadow-lg transition cursor-pointer border border-gray-200 hover:border-blue-300 overflow-hidden"
             >
                 <!-- 🗺️ Mini carte -->
@@ -159,22 +163,28 @@ const filteredTrips = computed(() =>
                 <!-- Contenu -->
                 <div class="p-5 space-y-3">
                     <div class="flex items-center justify-between">
-                        <h3
-                            class="text-lg font-semibold text-gray-900 truncate group-hover:text-blue-600"
-                        >
+                        <h3 class="text-lg font-semibold text-gray-900 truncate group-hover:text-blue-600">
                             {{ trip.title }}
                         </h3>
+
+                        <!--  Pastille "Inspiré" -->
                         <span
+                            v-if="trip.role === 'used'"
+                            class="text-xs px-2 py-1 rounded-full bg-pink-100 text-pink-700 font-medium"
+                        >
+                          🌍 Inspiré
+                        </span>
+
+                        <span
+                            v-else
                             class="material-symbols-rounded text-gray-400 group-hover:text-blue-500 transition"
                         >
-                            chevron_right
+                          chevron_right
                         </span>
                     </div>
 
                     <div class="text-sm text-gray-600 flex items-center gap-1">
-                        <span class="material-symbols-rounded text-gray-400 text-base"
-                        >location_on</span
-                        >
+                        <span class="material-symbols-rounded text-gray-400 text-base">location_on</span>
                         {{
                             trip.destination_country
                                 ? `${trip.destination_country} ${getFlagEmoji(trip.destination_country_code)}`
@@ -183,9 +193,7 @@ const filteredTrips = computed(() =>
                     </div>
 
                     <div class="text-sm text-gray-500 flex items-center gap-1">
-                        <span class="material-symbols-rounded text-gray-400 text-base"
-                        >calendar_month</span
-                        >
+                        <span class="material-symbols-rounded text-gray-400 text-base">calendar_month</span>
                         {{
                             trip.departure_date
                                 ? new Date(trip.departure_date).toLocaleDateString("fr-FR")
@@ -201,10 +209,11 @@ const filteredTrips = computed(() =>
                         'bg-blue-500': trip.status === 'a_venir' || trip.status === 'sans_date',
                         'bg-green-500': trip.status === 'en_cours',
                         'bg-gray-400': trip.status === 'termine',
-                    }"
-                />
+                      }"
+                                />
             </div>
         </div>
+
 
         <!-- 🚫 Aucun voyage -->
         <div v-else class="text-center py-24 text-gray-500">

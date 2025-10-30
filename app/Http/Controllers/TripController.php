@@ -22,16 +22,15 @@ use Illuminate\Support\Collection;
 use Carbon\Carbon;
 use DatePeriod;
 use DateInterval;
-use DateTime;
 use Illuminate\Support\Facades\DB;
 
 class TripController extends Controller
 {
     use \Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 
-    /** Liste des voyages de l’utilisateur */
-
-
+    /**
+     * Liste des voyages de l’utilisateur
+     */
     public function index(Request $request): InertiaResponse
     {
         if (!Auth::check()) {
@@ -69,7 +68,7 @@ class TripController extends Controller
                 // Détermination du statut
                 $departure = $pivot?->departure_date ? now()->diffInDays($pivot->departure_date, false) : null;
                 if (!$pivot?->departure_date) {
-                    $status = 'sans_date'; // voyage sans date de départ
+                    $status = 'sans_date';
                 } elseif ($departure > 0) {
                     $status = 'a_venir';
                 } elseif ($departure <= 0 && $trip->steps->max('end_date') >= now()->toDateString()) {
@@ -80,6 +79,8 @@ class TripController extends Controller
 
                 return [
                     'id' => $trip->id,
+                    'role' => $pivot?->role,
+                    'trip_user_id' => $pivot?->id ?? null,
                     'title' => $trip->title,
                     'description' => $trip->description,
                     'image' => $trip->image,
@@ -103,18 +104,17 @@ class TripController extends Controller
                 'max' => $user->tripLimit(),
             ],
         ]);
-
     }
 
-
-    /** Formulaire de création */
+    /**
+     * Formulaire de création
+     */
     public function create(): InertiaResponse
     {
         $user  = auth()->user();
         $count = $user->trips()->count();
         $max   = $user->tripLimit();
 
-        // 🚫 Bloque la création si la limite est atteinte
         if ($count >= $max) {
             return Inertia::render('Trips/Index', [
                 'trips' => Trip::where('user_id', $user->id)
@@ -139,12 +139,13 @@ class TripController extends Controller
         return Inertia::render('Trips/Create');
     }
 
-    /** Enregistrement du voyage */
+    /**
+     * Enregistrement du voyage
+     */
     public function store(StoreTripRequest $request)
     {
         $user = auth()->user();
 
-        //  Bloque côté backend si la limite est atteinte
         if ($user->trips()->count() >= $user->tripLimit()) {
             return redirect()
                 ->route('trips.index')
@@ -215,15 +216,15 @@ class TripController extends Controller
         });
     }
 
-    /** Affichage d’un voyage */
+    /**
+     * Affichage d’un voyage
+     */
     public function show(Trip $trip): InertiaResponse
     {
         $this->authorize('view', $trip);
 
-        // 📦 Relations de base
         $trip->loadCount(['favoredBy as favs', 'steps']);
 
-        // 👥 Liste des "likers" (favoris)
         $likers = null;
         if (auth()->check() && auth()->user()->can('viewLikers', $trip)) {
             $likers = $trip->favoredBy()
@@ -234,7 +235,6 @@ class TripController extends Controller
                 ->withQueryString();
         }
 
-        // 🔗 Relations complètes
         $trip->load([
             'steps' => function ($q) {
                 $q->orderBy('order')
@@ -258,12 +258,11 @@ class TripController extends Controller
             'checklistItems' => fn($q) => $q->orderBy('order')->orderBy('id'),
         ]);
 
-        // 🗓️ Génération des jours du voyage
         $days = [];
         if ($trip->start_date && $trip->end_date) {
-            $period = new \DatePeriod(
+            $period = new DatePeriod(
                 new \DateTime($trip->start_date),
-                new \DateInterval('P1D'),
+                new DateInterval('P1D'),
                 (new \DateTime($trip->end_date))->modify('+1 day')
             );
 
@@ -282,30 +281,28 @@ class TripController extends Controller
             }
         }
 
-        // 🎯 Activités globales
         $activities = $trip->steps->flatMap(fn($step) =>
         $step->activities->map(fn($a) => [
-            'id'            => $a->id,
-            'step_id'       => $a->step_id,
-            'title'         => $a->title,
-            'description'   => $a->description,
-            'location'      => $a->location,
-            'start_at'      => optional($a->start_at)->toDateTimeString(),
-            'end_at'        => optional($a->end_at)->toDateTimeString(),
+            'id' => $a->id,
+            'step_id' => $a->step_id,
+            'title' => $a->title,
+            'description' => $a->description,
+            'location' => $a->location,
+            'start_at' => optional($a->start_at)->toDateTimeString(),
+            'end_at' => optional($a->end_at)->toDateTimeString(),
             'external_link' => $a->external_link,
-            'cost'          => $a->cost,
-            'currency'      => $a->currency,
-            'category'      => $a->category,
-            'latitude'      => $a->latitude,
-            'longitude'     => $a->longitude,
-            'date'          => optional($a->start_at)->toDateString(),
+            'cost' => $a->cost,
+            'currency' => $a->currency,
+            'category' => $a->category,
+            'latitude' => $a->latitude,
+            'longitude' => $a->longitude,
+            'date' => optional($a->start_at)->toDateString(),
             'step_location' => $step->location,
-            'step_title'    => $step->title,
+            'step_title' => $step->title,
         ])
         )->values();
 
-        // ✅ États checklist utilisateur connecté
-        $tripUser = \App\Models\TripUser::where('trip_id', $trip->id)
+        $tripUser = TripUser::where('trip_id', $trip->id)
             ->where('user_id', auth()->id())
             ->first();
 
@@ -314,29 +311,26 @@ class TripController extends Controller
                 ->pluck('is_checked', 'checklist_item_id')
             : collect();
 
-        // ✅ Réponse Inertia complète
         return Inertia::render('Trips/Show', [
             'trip' => [
-                'id'             => $trip->id,
-                'title'          => $trip->title,
-                'description'    => $trip->description,
-                'image'          => $trip->image,
-                'is_public'      => $trip->is_public,
-                'favs'           => $trip->favs,
-                'start_date'     => $trip->start_date,
-                'end_date'       => $trip->end_date,
-                'total_nights'   => $trip->total_nights,
-                'days_count'     => $trip->days_count,
-                'steps_count'    => $trip->steps_count,
-                'steps'          => $trip->steps,
+                'id' => $trip->id,
+                'title' => $trip->title,
+                'description' => $trip->description,
+                'image' => $trip->image,
+                'is_public' => $trip->is_public,
+                'favs' => $trip->favs,
+                'start_date' => $trip->start_date,
+                'end_date' => $trip->end_date,
+                'steps_count' => $trip->steps_count,
+                'steps' => $trip->steps,
                 'checklist_items'=> $trip->checklistItems,
-                'days'           => $days,
+                'days' => $days,
             ],
             'steps'      => $trip->steps,
             'activities' => $activities,
             'favs'       => $trip->favs,
             'likers'     => $likers,
-            'states'     => $states, // ✅ états checklist utilisateur
+            'states'     => $states,
         ]);
     }
 
@@ -368,7 +362,6 @@ class TripController extends Controller
         return redirect()->route('trips.index')->with('success', __('trip.deleted'));
     }
 
-    /** Étape 3 : Détails du voyage */
     public function details(Request $request): InertiaResponse
     {
         $this->authorize('create', Trip::class);
@@ -395,31 +388,23 @@ class TripController extends Controller
         $newTrip = null;
 
         DB::transaction(function () use ($trip, $user, &$newTrip) {
-            // 🆕 1️⃣ Dupliquer le voyage
             $newTrip = $trip->replicate();
             $newTrip->user_id = $user->id;
             $newTrip->title = $trip->title . ' (copie)';
-            $newTrip->created_at = now();
-            $newTrip->updated_at = now();
             $newTrip->save();
 
-            // 👤 2️⃣ Créer la liaison trip_user
             TripUser::create([
                 'trip_id' => $newTrip->id,
                 'user_id' => $user->id,
                 'role'    => 'owner',
             ]);
 
-            // 📋 3️⃣ Dupliquer la checklist
-            $checklistMap = [];
             foreach ($trip->checklistItems as $item) {
                 $newItem = $item->replicate();
                 $newItem->trip_id = $newTrip->id;
                 $newItem->save();
-                $checklistMap[$item->id] = $newItem->id;
             }
 
-            // 🚩 4️⃣ Dupliquer les étapes
             $stepMap = [];
             foreach ($trip->steps as $step) {
                 $newStep = $step->replicate();
@@ -428,17 +413,6 @@ class TripController extends Controller
                 $stepMap[$step->id] = $newStep->id;
             }
 
-            // 🏠 5️⃣ Dupliquer les hébergements
-            foreach ($trip->accommodations as $accommodation) {
-                $newAccommodation = $accommodation->replicate();
-                $newAccommodation->trip_id = $newTrip->id;
-                if ($accommodation->step_id && isset($stepMap[$accommodation->step_id])) {
-                    $newAccommodation->step_id = $stepMap[$accommodation->step_id];
-                }
-                $newAccommodation->save();
-            }
-
-            // 🎯 6️⃣ Dupliquer les activités
             $activities = Activity::whereIn('step_id', $trip->steps->pluck('id'))->get();
             foreach ($activities as $activity) {
                 $newActivity = $activity->replicate();
@@ -448,22 +422,19 @@ class TripController extends Controller
                 $newActivity->save();
             }
 
-            // 🗒️ 7️⃣ Dupliquer les notes d’étape
             $stepNotes = StepNote::whereIn('step_id', $trip->steps->pluck('id'))->get();
             foreach ($stepNotes as $note) {
                 $newNote = $note->replicate();
                 if (isset($stepMap[$note->step_id])) {
                     $newNote->step_id = $stepMap[$note->step_id];
                 }
-                $newNote->user_id = $user->id; // les notes appartiennent au nouveau propriétaire
+                $newNote->user_id = $user->id;
                 $newNote->save();
             }
         });
 
-        // ✅ Redirection vers le nouveau voyage
         return redirect()
             ->route('trips.show', $newTrip)
-            ->with('success', 'Voyage dupliqué avec succès (étapes, activités, logements, notes et checklist inclus).');
+            ->with('success', 'Voyage dupliqué avec succès.');
     }
-
 }
