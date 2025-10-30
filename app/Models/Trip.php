@@ -51,6 +51,7 @@ class Trip extends Model
     {
         return $this->belongsToMany(User::class, 'trip_users')
             ->withPivot([
+                'id',
                 'start_location',
                 'latitude',
                 'longitude',

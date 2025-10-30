@@ -2,14 +2,16 @@
 import { ref, computed } from 'vue'
 import { Head } from '@inertiajs/vue3'
 
+// Composants
 import TripSteps from '@/Components/Step/TripSteps.vue'
 import TripShowView from '@/Components/Trip/TripShowView.vue'
-import ChecklistPanel from '@/Components/Checklist/ChecklistPanel.vue' // ✅ ton composant checklist utilisateur
+import TripChecklist from '@/Components/Trip/TripChecklist.vue'
 import FavoriteButton from '@/Components/FavoriteButton.vue'
 
 const props = defineProps({
     trip: Object,
     tripUser: Object,
+    states: { type: Object, default: () => ({}) },
 })
 
 // Onglet actif
@@ -43,21 +45,25 @@ const daysCount = computed(() => {
     <div class="min-h-screen bg-gray-50 text-gray-800">
         <!-- HEADER -->
         <section class="border-b border-gray-200 bg-white shadow-sm">
-            <div class="max-w-screen-2xl mx-auto px-4 md:px-6 py-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-6">
+            <div
+                class="max-w-screen-2xl mx-auto px-4 md:px-6 py-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-6"
+            >
                 <div class="flex-1">
-                    <h1 class="text-3xl sm:text-4xl font-bold text-pink-600 flex items-center gap-2">
+                    <h1
+                        class="text-3xl sm:text-4xl font-bold text-pink-600 flex items-center gap-2"
+                    >
                         <span>{{ trip.title }}</span>
                         <span v-if="trip.destination_country_code" class="text-2xl leading-none">
-              {{ getFlagEmoji(trip.destination_country_code) }}
-            </span>
+                            {{ getFlagEmoji(trip.destination_country_code) }}
+                        </span>
                     </h1>
 
                     <p class="text-sm text-gray-500 italic">
                         Inspiré d’un voyage public
                     </p>
 
-                    <div class="mt-2 text-sm text-gray-600">
-                        <p>
+                    <div class="mt-2 text-sm text-gray-600 space-y-1">
+                        <p v-if="tripUser.start_location">
                             <span class="font-medium">Départ :</span>
                             {{ tripUser.start_location }}
                         </p>
@@ -65,16 +71,25 @@ const daysCount = computed(() => {
                             <span class="font-medium">Date de départ :</span>
                             {{ new Date(tripUser.departure_date).toLocaleDateString('fr-FR') }}
                         </p>
+                        <p v-if="trip.start_date && trip.end_date">
+                            <span class="font-medium">Période du voyage :</span>
+                            {{ new Date(trip.start_date).toLocaleDateString('fr-FR') }} →
+                            {{ new Date(trip.end_date).toLocaleDateString('fr-FR') }}
+                        </p>
                     </div>
                 </div>
 
-                <!-- Favori + Stats -->
+                <!-- Statistiques -->
                 <div class="flex items-center gap-4">
-                    <div class="flex flex-col items-center justify-center w-16 h-16 bg-gray-50 border border-gray-200 rounded-xl">
+                    <div
+                        class="flex flex-col items-center justify-center w-16 h-16 bg-gray-50 border border-gray-200 rounded-xl"
+                    >
                         <span class="text-xl font-semibold text-gray-900">{{ daysCount ?? '–' }}</span>
                         <span class="text-xs text-gray-500">Jours</span>
                     </div>
-                    <div class="flex flex-col items-center justify-center w-16 h-16 bg-gray-50 border border-gray-200 rounded-xl">
+                    <div
+                        class="flex flex-col items-center justify-center w-16 h-16 bg-gray-50 border border-gray-200 rounded-xl"
+                    >
                         <span class="text-xl font-semibold text-gray-900">{{ trip.steps?.length || 0 }}</span>
                         <span class="text-xs text-gray-500">Étapes</span>
                     </div>
@@ -91,27 +106,44 @@ const daysCount = computed(() => {
         <!-- ONGLET -->
         <section class="bg-white border-b border-gray-200">
             <nav class="max-w-screen-2xl mx-auto px-4 flex gap-6 overflow-x-auto scrollbar-hide">
-                <button @click="currentTab = 'steps'" :class="tabClass('steps')" class="py-3 text-sm flex items-center">🧳 Étapes</button>
-                <button @click="currentTab = 'checklist'" :class="tabClass('checklist')" class="py-3 text-sm flex items-center">✅ Checklist</button>
-                <button @click="currentTab = 'itineraire'" :class="tabClass('itineraire')" class="py-3 text-sm flex items-center">🗺️ Itinéraire</button>
+                <button
+                    @click="currentTab = 'steps'"
+                    :class="tabClass('steps')"
+                    class="py-3 text-sm flex items-center"
+                >🧳 Étapes</button>
+
+                <button
+                    @click="currentTab = 'itineraire'"
+                    :class="tabClass('itineraire')"
+                    class="py-3 text-sm flex items-center"
+                >🗺️ Itinéraire</button>
+
+                <button
+                    @click="currentTab = 'checklist'"
+                    :class="tabClass('checklist')"
+                    class="py-3 text-sm flex items-center"
+                >✅ Checklist</button>
             </nav>
         </section>
 
         <!-- CONTENU -->
         <section class="max-w-screen-2xl mx-auto px-4 py-6">
-            <!-- Étapes -->
             <div v-if="currentTab === 'steps'">
                 <TripSteps :trip="trip" publicView />
             </div>
 
-            <!-- Checklist -->
-            <div v-if="currentTab === 'checklist'">
-                <ChecklistPanel :trip-id="trip.id" />
-            </div>
-
-            <!-- Itinéraire -->
             <div v-if="currentTab === 'itineraire'">
                 <TripShowView :steps="trip.steps" publicView />
+            </div>
+
+            <div v-if="currentTab === 'checklist'">
+                <TripChecklist
+                    :trip="trip"
+                    :items="trip.checklist_items ?? []"
+                    :states="states ?? {}"
+                    title="Ma checklist personnalisée"
+                    width="max-w-3xl"
+                />
             </div>
         </section>
     </div>

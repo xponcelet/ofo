@@ -60,7 +60,7 @@ class TripController extends Controller
             ->paginate($perPage)
             ->withQueryString()
             ->through(function ($trip) use ($user) {
-                $pivot = $trip->users()->where('user_id', $user->id)->first()?->pivot;
+                $pivot = $trip->users->firstWhere('id', $user->id)?->pivot;
 
                 // Étape de destination
                 $destination = $trip->steps->firstWhere('is_destination', true);
@@ -95,6 +95,7 @@ class TripController extends Controller
                     'status' => $status,
                 ];
             });
+
 
         return Inertia::render('Trips/Index', [
             'trips' => $trips,
