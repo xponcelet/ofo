@@ -42,6 +42,11 @@ Route::prefix('voyages')->name('public.trips.')->group(function () {
     Route::get('/',          [PublicTripController::class, 'index'])->name('index');
     Route::get('/aleatoire', [PublicTripController::class, 'random'])->name('random');
     Route::get('/{trip}',    [PublicTripController::class, 'show'])->name('show');
+
+    // ✅ Nouvelle route : "Utiliser un voyage public"
+    Route::post('/{trip}/use', [PublicTripController::class, 'use'])
+        ->middleware(['auth', 'verified'])
+        ->name('use');
 });
 
 // Étapes publiques
@@ -91,6 +96,10 @@ Route::middleware([
     // ✅ Duplication complète d’un voyage
     Route::post('/trips/{trip}/duplicate', [TripController::class, 'duplicate'])
         ->name('trips.duplicate');
+
+    // ✅ Affichage d’un voyage "utilisé" (issu d’un voyage public)
+    Route::get('/my-trips/{tripUser}', [TripUserController::class, 'showUsedTrip'])
+        ->name('trips.used.show');
 
     // CRUD étapes
     Route::resource('trips.steps', StepController::class)->shallow();
@@ -173,8 +182,6 @@ Route::controller(GoogleAuthController::class)->group(function () {
 // ============================
 // Routes Admin (protégées par middleware)
 // ============================
-
-
 Route::middleware(['auth', 'verified', 'is_admin'])
     ->prefix('admin')
     ->name('admin.')

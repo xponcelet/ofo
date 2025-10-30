@@ -8,6 +8,8 @@ use Illuminate\Support\Facades\Auth;
 use Inertia\Inertia;
 use Inertia\Response;
 use Illuminate\Http\RedirectResponse;
+use App\Models\TripUser;
+use Illuminate\Http\Request;
 
 class PublicTripController extends Controller
 {
@@ -90,6 +92,13 @@ class PublicTripController extends Controller
 
         $creator = $trip->users->first();
 
+        $tripUser = Auth::check()
+            ? \App\Models\TripUser::where('user_id', Auth::id())
+                ->where('trip_id', $trip->id)
+                ->where('role', 'used')
+                ->first()
+            : null;
+
         return Inertia::render('Public/Trips/Show', [
             'trip' => [
                 'id'          => $trip->id,
@@ -109,6 +118,10 @@ class PublicTripController extends Controller
                     'id'   => $creator->id,
                     'name' => $creator->name,
                 ] : null,
+            ],
+            'tripUser' => $tripUser,
+            'auth' => [
+                'user' => Auth::user(),
             ],
         ]);
     }
@@ -192,5 +205,42 @@ class PublicTripController extends Controller
                 'name' => $creator->name,
             ] : null,
         ];
+    }
+    public function use(Request $request, Trip $trip)
+    {
+        abort_unless($trip->is_public, 403);
+
+        $validated = $request->validate([
+            'start_location' => ['required', 'string', 'max:255'],
+            'latitude'       => ['nullable', 'numeric'],
+            'longitude'      => ['nullable', 'numeric'],
+            'departure_date' => ['required', 'date'],
+            'end_date'       => ['nullable', 'date', 'after_or_equal:departure_date'],
+        ]);
+
+        // Vérifier si l’utilisateur utilise déjà ce voyage
+        $existing = TripUser::where('user_id', Auth::id())
+            ->where('trip_id', $trip->id)
+            ->where('role', 'used')
+            ->first();
+
+        if ($existing) {
+            return back()->with('info', 'Vous utilisez déjà ce voyage.');
+        }
+
+        TripUser::create([
+            'trip_id'        => $trip->id,
+            'user_id'        => Auth::id(),
+            'role'           => 'used',
+            'start_location' => $validated['start_location'],
+            'latitude'       => $validated['latitude'] ?? null,
+            'longitude'      => $validated['longitude'] ?? null,
+            'departure_date' => $validated['departure_date'],
+            'end_date'       => $validated['end_date'] ?? null,
+        ]);
+
+        return redirect()
+            ->route('public.trips.show', $trip->id)
+            ->with('success', 'Le voyage a été ajouté à votre liste !');
     }
 }

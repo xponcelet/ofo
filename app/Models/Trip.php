@@ -42,6 +42,11 @@ class Trip extends Model
      | RELATIONS
      ----------------------------- */
 
+    /**
+     * Utilisateurs liés au voyage via trip_users
+     *
+     * Rôle possible : owner / used
+     */
     public function users()
     {
         return $this->belongsToMany(User::class, 'trip_users')
@@ -128,7 +133,6 @@ class Trip extends Model
 
     protected static function booted(): void
     {
-        // À la création : préremplir la checklist si config présente
         static::created(function (Trip $trip) {
             $defaults = Config::get('checklist.defaults', []);
             if (empty($defaults)) {
