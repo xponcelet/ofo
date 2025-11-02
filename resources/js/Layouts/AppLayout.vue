@@ -10,27 +10,21 @@ defineProps({ title: String })
 
 const showingNavigationDropdown = ref(false)
 const logout = () => router.post(route('logout'))
-
 const page = usePage()
 const isCurrentUrl = (path) => page.url.startsWith(path)
 </script>
 
 <template>
     <div class="min-h-screen flex flex-col bg-gray-50">
-        <!-- ✅ Header principal -->
         <header class="bg-white shadow-sm border-b border-outline">
             <nav class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
                 <!-- Logo -->
-                <div class="flex items-center gap-2">
-                    <Link :href="route('dashboard')" class="flex items-center gap-2 group">
-                        <ApplicationMark class="h-9 w-auto" />
-                        <span
-                            class="text-primary-dark font-bold text-xl tracking-tight group-hover:text-accent transition-colors"
-                        >
-                            My<span class="text-accent">Roadbook</span>
-                        </span>
-                    </Link>
-                </div>
+                <Link :href="route('dashboard')" class="flex items-center gap-2 group">
+                    <ApplicationMark class="h-9 w-auto" />
+                    <span class="text-primary-dark font-bold text-xl tracking-tight group-hover:text-accent transition-colors">
+                        My<span class="text-accent">Roadbook</span>
+                    </span>
+                </Link>
 
                 <!-- Navigation -->
                 <div class="hidden sm:flex justify-center items-center space-x-8">
@@ -69,7 +63,6 @@ const isCurrentUrl = (path) => page.url.startsWith(path)
                             <DropdownLink :href="route('favorites.index')">Mes favoris</DropdownLink>
                             <DropdownLink :href="route('profile.show')">Profil</DropdownLink>
 
-                            <!-- Lien visible uniquement pour les admins -->
                             <DropdownLink
                                 v-if="$page.props.auth?.user?.role === 'admin'"
                                 :href="route('admin.users.index')"
@@ -88,7 +81,6 @@ const isCurrentUrl = (path) => page.url.startsWith(path)
             </nav>
         </header>
 
-        <!-- ✅ Contenu principal -->
         <main class="flex-grow bg-gray-50 py-8">
             <slot />
         </main>
