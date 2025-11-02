@@ -149,56 +149,66 @@ function categoryStyle(cat) {
                         </h3>
 
                         <!-- Activités -->
-                        <div v-if="activitiesForDay(day).length" class="space-y-4">
-                            <div
-                                v-for="a in activitiesForDay(day)"
-                                :key="a.id"
-                                class="group relative ml-2 pl-4 border-l-2 border-pink-200 hover:border-pink-400 transition"
-                            >
-                                <div class="absolute -left-[11px] top-[10px] w-4 h-4 bg-pink-500 rounded-full border-2 border-white shadow"></div>
-
-                                <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-4 ml-6">
+                        <div v-if="step.activities?.length" class="mt-3">
+                            <ul class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                <li
+                                    v-for="a in [...step.activities].sort((a,b) => new Date(a.start_at) - new Date(b.start_at))"
+                                    :key="a.id"
+                                    class="bg-gray-50 border border-gray-200 rounded-xl p-3 hover:bg-gray-100 transition"
+                                >
                                     <div class="flex justify-between items-start">
-                                        <div class="flex items-center gap-2">
-                                            <span
-                                                class="material-symbols-rounded text-[20px]"
-                                                :class="categoryStyle(a.category).color"
-                                            >
-                                                {{ categoryStyle(a.category).icon }}
-                                            </span>
-                                            <p class="font-medium text-gray-900 flex items-center gap-1">
-                                                {{ a.title }}
+                                        <!-- 🔗 Titre cliquable si localisation -->
+                                        <div class="font-medium text-gray-800 truncate">
+                                            <template v-if="a.latitude && a.longitude">
                                                 <a
-                                                    v-if="a.external_link"
-                                                    :href="a.external_link"
+                                                    :href="`https://www.google.com/maps?q=${a.latitude},${a.longitude}`"
                                                     target="_blank"
                                                     rel="noopener noreferrer"
-                                                    :class="['flex items-center', categoryStyle(a.category).color]"
-                                                    title="Ouvrir le lien externe"
+                                                    class="hover:text-pink-600 transition"
+                                                    title="Ouvrir dans Google Maps"
                                                 >
-                                                    <span class="material-symbols-rounded text-[18px] align-middle ml-1">open_in_new</span>
+                                                    {{ a.title }}
                                                 </a>
-                                            </p>
+                                            </template>
+
+                                            <template v-else-if="a.location">
+                                                <a
+                                                    :href="`https://www.google.com/maps/search/${encodeURIComponent(a.location)}`"
+                                                    target="_blank"
+                                                    rel="noopener noreferrer"
+                                                    class="hover:text-pink-600 transition"
+                                                    title="Ouvrir dans Google Maps"
+                                                >
+                                                    {{ a.title }}
+                                                </a>
+                                            </template>
+
+                                            <template v-else>
+                                                {{ a.title }}
+                                            </template>
                                         </div>
+
+                                        <span v-if="a.start_at" class="text-xs text-gray-500 whitespace-nowrap">
+                    {{ new Date(a.start_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) }}
+                </span>
                                     </div>
 
-                                    <div class="mt-2 flex flex-wrap items-center gap-3">
-                                        <span
-                                            v-if="formatHour(a.start_at)"
-                                            class="text-xs font-medium text-pink-700 bg-pink-50 px-2 py-0.5 rounded-lg"
-                                        >
-                                            🕓 {{ formatHour(a.start_at) }}
-                                        </span>
-                                        <span
-                                            v-if="a.category"
-                                            :class="['text-xs font-medium px-2 py-0.5 rounded-lg', categoryStyle(a.category).bg, categoryStyle(a.category).color]"
-                                        >
-                                            {{ a.category }}
-                                        </span>
-                                    </div>
-                                </div>
-                            </div>
+                                    <p v-if="a.description" class="text-xs text-gray-600 line-clamp-2 mt-1">
+                                        {{ a.description }}
+                                    </p>
+
+                                    <!-- 📍 Adresse affichée sous le titre si présente -->
+                                    <p
+                                        v-if="a.location"
+                                        class="text-[11px] text-gray-500 mt-1 flex items-center gap-1 truncate"
+                                    >
+                                        <span class="material-symbols-rounded text-[14px] text-gray-400">location_on</span>
+                                        {{ a.location }}
+                                    </p>
+                                </li>
+                            </ul>
                         </div>
+
 
                         <!-- Aucun contenu -->
                         <div v-else class="text-sm text-gray-400 italic ml-6">
