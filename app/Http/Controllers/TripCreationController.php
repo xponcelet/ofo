@@ -132,7 +132,7 @@ class TripCreationController extends Controller
         // 🚫 Double sécurité backend
         if ($user && $user->trips()->count() >= $user->tripLimit()) {
             return redirect()
-                ->route('trips.index')
+                ->route('trips.show')
                 ->with('error', __('Vous avez atteint la limite maximale de voyages.'));
         }
 
@@ -217,7 +217,7 @@ class TripCreationController extends Controller
         ]);
 
         return redirect()
-            ->route('trips.show', $trip)
+            ->route('trips.steps.index', $trip)
             ->with('success', __('trip_creation.created'));
     }
 }
