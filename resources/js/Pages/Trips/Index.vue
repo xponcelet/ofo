@@ -2,7 +2,6 @@
 import { Head, Link, usePage } from "@inertiajs/vue3"
 import { ref, computed } from "vue"
 import TripMiniMap from "@/Components/Trip/TripMiniMap.vue"
-import LoginModal from "@/Components/Auth/LoginModal.vue" // à créer
 
 const props = defineProps({
     trips: { type: Object, default: () => ({ data: [] }) },
@@ -76,7 +75,7 @@ function handleCreateTrip() {
             </button>
         </div>
 
-        <!-- 🚫 Non connecté -->
+        <!--  Non connecté -->
         <div v-if="!isAuth" class="text-center py-24 text-gray-600">
             <p class="text-lg mb-2">
                 Connecte-toi ou crée un compte pour commencer à planifier tes voyages.
@@ -200,9 +199,6 @@ function handleCreateTrip() {
                 </p>
             </div>
         </template>
-
-        <!-- Modal inscription -->
-        <LoginModal v-if="showModal" @close="showModal = false" />
     </div>
 </template>
 
