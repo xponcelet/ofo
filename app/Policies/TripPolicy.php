@@ -21,8 +21,15 @@ class TripPolicy
      */
     public function view(User $user, Trip $trip): bool
     {
-        // L'utilisateur peut voir le trip s'il en est propriétaire
-        return $trip->user_id === $user->id;
+        if ($user->isAdmin()) {
+            return true;
+        }
+        if ($trip->user_id === $user->id) {
+            return true;
+        }
+
+        // membre du voyage (via pivot trip_users)
+        return $trip->users()->where('user_id', $user->id)->exists();
     }
 
     /**

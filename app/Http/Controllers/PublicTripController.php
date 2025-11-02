@@ -66,7 +66,15 @@ class PublicTripController extends Controller
      */
     public function show(Trip $trip): Response
     {
-        abort_unless($trip->is_public, 403);
+        if (
+            ! $trip->is_public &&
+            ! (auth()->check() && (
+                    auth()->user()->isAdmin() ||
+                    auth()->id() === $trip->user_id
+                ))
+        ) {
+            abort(403);
+        }
 
         $trip->loadCount(['favoredBy', 'steps']);
         $trip->load([

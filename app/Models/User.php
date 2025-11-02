@@ -36,6 +36,7 @@ class User extends Authenticatable // implements MustVerifyEmail --> Pour l'inst
         'google_id',
         'locale',
         'role',
+        'is_blocked',
     ];
 
     /**
@@ -69,6 +70,7 @@ class User extends Authenticatable // implements MustVerifyEmail --> Pour l'inst
         return [
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
+            'is_blocked' => 'boolean',
         ];
     }
 
