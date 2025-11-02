@@ -68,7 +68,7 @@ onMounted(() => {
         longitude: props.form.longitude ?? null,
         country: props.form.country ?? '',
         country_code: props.form.country_code ?? '',
-        transport_mode: props.form.transport_mode ?? 'car',
+        transport_mode: props.form.transport_mode ?? '',
         nights: props.form.nights ?? 0,
     })
 })
