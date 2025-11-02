@@ -23,9 +23,9 @@ use App\Http\Controllers\Admin\UserController as AdminUserController;
 use App\Http\Controllers\Admin\TripController as AdminTripController;
 
 // ============================
-// Page d’accueil publique
+// Dashboard public principal
 // ============================
-Route::get('/', function () {
+Route::get('/dashboard', function () {
     return Inertia::render('Public/Dashboard', [
         'canLogin'       => Route::has('login'),
         'canRegister'    => Route::has('register'),
@@ -33,7 +33,16 @@ Route::get('/', function () {
         'phpVersion'     => PHP_VERSION,
         'canCreate'      => auth()->check(),
     ]);
-});
+})->name('dashboard');
+
+// Page d’accueil = redirection vers le dashboard public
+Route::redirect('/', '/dashboard');
+
+// Page "Mes voyages" (publique)
+Route::get('/trips', [App\Http\Controllers\TripController::class, 'index'])
+    ->name('trips.index');
+
+
 
 // ============================
 // Routes publiques des voyages
@@ -53,8 +62,6 @@ Route::prefix('voyages')->name('public.trips.')->group(function () {
 Route::get('/voyages/steps/{step}', [PublicTripController::class, 'showStep'])
     ->name('public.steps.show');
 
-// Dashboard public (découverte)
-Route::get('/decouvrir', [PublicTripController::class, 'dashboard'])->name('public.dashboard');
 
 // Langue + traductions
 Route::get('/lang/{locale}', [LanguageController::class, 'switch'])->name('lang.switch');
@@ -69,12 +76,6 @@ Route::middleware([
     'verified',
 ])->group(function () {
 
-    // Dashboard
-    Route::get('/dashboard', function () {
-        return Inertia::render('Dashboard', [
-            'canCreate' => true,
-        ]);
-    })->name('dashboard');
 
     // ============================
     // Création de voyage (3 étapes)
@@ -90,14 +91,15 @@ Route::middleware([
         Route::post('/details',     [TripCreationController::class, 'finalize'])->name('details.store');
     });
 
-    // CRUD voyages
-    Route::resource('trips', TripController::class);
+    // CRUD voyages sauf index (déjà défini)
+    Route::resource('trips', App\Http\Controllers\TripController::class)
+        ->except(['index']);
 
-    // ✅ Duplication complète d’un voyage
+    //  Duplication complète d’un voyage
     Route::post('/trips/{trip}/duplicate', [TripController::class, 'duplicate'])
         ->name('trips.duplicate');
 
-    // ✅ Affichage d’un voyage "utilisé" (issu d’un voyage public)
+    //  Affichage d’un voyage "utilisé" (issu d’un voyage public)
     Route::get('/my-trips/{tripUser}', [TripUserController::class, 'showUsedTrip'])
         ->name('trips.used.show');
 
