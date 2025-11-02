@@ -93,7 +93,7 @@ function submit() {
                 <!-- Actions -->
                 <div class="flex flex-wrap gap-3 justify-end">
                     <Link
-                        :href="route('trips.steps.create', trip.id)"
+                        :href="route('trips.steps.index', trip.id)"
                         class="px-4 py-2 bg-accent text-white font-semibold rounded-lg shadow hover:bg-primary transition"
                     >
                         ➕ Étape

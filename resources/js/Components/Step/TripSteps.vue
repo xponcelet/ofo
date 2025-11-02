@@ -8,6 +8,7 @@ const props = defineProps({
     publicView: { type: Boolean, default: false },
 })
 
+/* ---------------- Utils ---------------- */
 function flagFromCode(code) {
     if (!code) return ''
     try {
@@ -18,10 +19,12 @@ function flagFromCode(code) {
 function plural(n, word) {
     return `${n} ${word}${n > 1 ? 's' : ''}`
 }
+
 function formatDistance(km) {
     if (!km) return null
     return km < 1 ? `${(km * 1000).toFixed(0)} m` : `${km.toFixed(1)} km`
 }
+
 function formatDateRange(start, end) {
     if (!start || !end) return ''
     const s = new Date(start)
@@ -31,21 +34,25 @@ function formatDateRange(start, end) {
     const eTxt = e.toLocaleDateString('fr-FR', opts)
     return sTxt === eTxt ? sTxt : `${sTxt} → ${eTxt}`
 }
+
 function getStepDisplayName(step) {
     return step.title?.trim() || step.location?.trim() || 'Étape sans titre'
 }
 
-// Notes (non affichées en mode public)
+/* ---------------- Notes personnelles ---------------- */
 const editingStepId = ref(null)
 const noteForm = useForm({ content: '' })
+
 function openEditor(step) {
     editingStepId.value = step.id
     noteForm.content = step.note?.content ?? ''
 }
+
 function cancelEdit() {
     editingStepId.value = null
     noteForm.reset()
 }
+
 function saveOrUpdate(step) {
     if (!noteForm.content.trim()) return
     const opts = {
@@ -59,6 +66,7 @@ function saveOrUpdate(step) {
         ? noteForm.put(route('step-notes.update', step.note.id), opts)
         : noteForm.post(route('step-notes.store', step.id), opts)
 }
+
 function deleteNote(step) {
     if (!step.note || !confirm('Supprimer cette note ?')) return
     router.delete(route('step-notes.destroy', step.note.id), {
@@ -70,14 +78,16 @@ function deleteNote(step) {
     })
 }
 
-// Animation / visibilité
+/* ---------------- Apparition animée ---------------- */
 const steps = computed(() => [...props.trip.steps].sort((a, b) => (a.order ?? 0) - (b.order ?? 0)))
 const visibleCards = ref(new Set())
+
 function handleIntersection(entries) {
     entries.forEach(e => {
         if (e.isIntersecting) visibleCards.value.add(e.target.dataset.stepId)
     })
 }
+
 onMounted(() => {
     const obs = new IntersectionObserver(handleIntersection, { threshold: 0.3 })
     document.querySelectorAll('[data-step-id]').forEach(el => obs.observe(el))
@@ -112,6 +122,7 @@ onMounted(() => {
                     <div class="flex-1 bg-white border border-gray-200 rounded-2xl shadow-sm hover:shadow-md transition overflow-hidden">
                         <div class="grid grid-cols-1 md:grid-cols-[2fr_1.2fr] gap-4 p-6 md:p-8">
                             <div class="space-y-3">
+                                <!-- En-tête -->
                                 <div class="flex justify-between items-start flex-wrap gap-3">
                                     <div>
                                         <h3 class="text-xl font-semibold text-gray-900 flex items-center gap-2">
@@ -125,7 +136,7 @@ onMounted(() => {
                                         </p>
                                     </div>
 
-                                    <!-- Actions privées -->
+                                    <!-- Actions -->
                                     <div class="flex gap-2" v-if="!props.publicView">
                                         <button
                                             @click="router.visit(route('steps.show', { step: step.id }))"
@@ -140,25 +151,50 @@ onMounted(() => {
                                     </div>
                                 </div>
 
+                                <!-- Infos -->
                                 <div class="text-sm text-gray-700 flex flex-wrap gap-3 mt-2">
                                     <span v-if="step.nights">🌙 {{ plural(step.nights, 'nuit') }}</span>
-                                    <span v-if="step.activities?.length">
-                                        🎟️ {{ plural(step.activities.length, 'activité') }}
-                                    </span>
+                                    <span v-if="step.activities?.length">🎟️ {{ plural(step.activities.length, 'activité') }}</span>
                                 </div>
 
-                                <!-- ✅ Lien visible uniquement en public -->
-                                <div v-if="props.publicView" class="mt-4">
-                                    <Link
-                                        :href="route('public.steps.show', step.id)"
-                                        class="inline-flex items-center gap-1 text-sm text-pink-600 hover:underline font-medium"
+                                <!-- Activités -->
+                                <div v-if="step.activities?.length" class="mt-3">
+                                    <ul class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                        <li
+                                            v-for="a in [...step.activities].sort((a,b) => new Date(a.start_at) - new Date(b.start_at))"
+                                            :key="a.id"
+                                            class="bg-gray-50 border border-gray-200 rounded-xl p-3 hover:bg-gray-100 transition"
+                                        >
+                                            <div class="flex justify-between items-start">
+                                                <div class="font-medium text-gray-800 truncate">{{ a.title }}</div>
+                                                <span v-if="a.start_at" class="text-xs text-gray-500 whitespace-nowrap">
+                                                    {{ new Date(a.start_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) }}
+                                                </span>
+                                            </div>
+                                            <p v-if="a.description" class="text-xs text-gray-600 line-clamp-2 mt-1">
+                                                {{ a.description }}
+                                            </p>
+                                        </li>
+                                    </ul>
+                                </div>
+
+                                <!-- Si aucune activité -->
+                                <div
+                                    v-else
+                                    class="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center text-gray-500 mt-3"
+                                >
+                                    <span class="material-symbols-rounded align-middle mr-1 text-gray-400">add_circle</span>
+                                    Aucune activité pour cette étape.
+                                    <button
+                                        @click="router.visit(route('steps.show', { step: step.id }))"
+                                        class="text-pink-600 hover:text-pink-700 font-medium ml-1"
                                     >
-                                        <span class="material-symbols-rounded text-sm">arrow_forward</span>
-                                        Voir les activités
-                                    </Link>
+                                        Ajouter une activité
+                                    </button>
                                 </div>
 
-                                <!-- Notes (privé uniquement) -->
+
+                                <!-- Notes -->
                                 <div v-if="!props.publicView" class="mt-5 border border-dashed border-gray-300 rounded-xl p-4 bg-gray-50">
                                     <div class="flex items-start justify-between mb-2">
                                         <p class="font-medium text-gray-800 flex items-center gap-2">
