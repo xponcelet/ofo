@@ -29,4 +29,9 @@ class TripController extends Controller
             'trips' => $trips,
         ]);
     }
+    public function destroy(Trip $trip)
+    {
+        $trip->delete();
+        return back()->with('success', 'Voyage supprimé.');
+    }
 }

@@ -193,5 +193,9 @@ Route::middleware(['auth', 'verified', 'is_admin'])
     ->name('admin.')
     ->group(function () {
         Route::get('/users', [AdminUserController::class, 'index'])->name('users.index');
+        Route::patch('/users/{user}/toggle-block', [AdminUserController::class, 'toggleBlock'])->name('users.toggle-block');
+        Route::delete('/users/{user}', [AdminUserController::class, 'destroy'])->name('users.destroy');
+
         Route::get('/trips', [AdminTripController::class, 'index'])->name('trips.index');
+        Route::delete('/trips/{trip}', [AdminTripController::class, 'destroy'])->name('trips.destroy');
     });
