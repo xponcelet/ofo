@@ -127,9 +127,13 @@ onMounted(() => {
 
                                     <!-- Actions privées -->
                                     <div class="flex gap-2" v-if="!props.publicView">
-                                        <Link :href="route('steps.show', step.id)" class="text-pink-600 hover:text-pink-700 transition" title="Voir les activités">
-                                            <span class="material-symbols-rounded text-[20px]">travel_explore</span>
-                                        </Link>
+                                        <button
+                                            @click="router.visit(route('steps.show', { step: step.id }))"
+                                            class="inline-flex items-center gap-1 text-sm text-pink-600 hover:text-pink-700 font-medium transition"
+                                        >
+                                            <span class="material-symbols-rounded text-[18px]">visibility</span>
+                                            Voir le détail
+                                        </button>
                                         <Link :href="route('steps.edit', step.id)" class="text-gray-500 hover:text-primary transition" title="Modifier l'étape">
                                             <span class="material-symbols-rounded text-[20px]">edit</span>
                                         </Link>
