@@ -118,10 +118,6 @@ function categoryStyle(cat) {
                         <span class="material-symbols-rounded text-sm text-pink-400 align-middle">flag</span>
                         {{ getFlagEmoji(step.country_code) }} {{ step.country }}
                     </li>
-                    <li v-if="step.transport_mode">
-                        <span class="material-symbols-rounded text-sm text-pink-400 align-middle">directions_car</span>
-                        Transport : {{ step.transport_mode }}
-                    </li>
                     <li v-if="step.distance_to_next">
                         <span class="material-symbols-rounded text-sm text-pink-400 align-middle">straighten</span>
                         {{ step.distance_to_next }} km jusqu’à la suivante

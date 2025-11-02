@@ -131,10 +131,6 @@ function handlePoiSelect(poi) {
                         <span class="material-symbols-rounded text-sm text-pink-400 align-middle">location_on</span>
                         {{ step.location || 'Lieu non défini' }}
                     </li>
-                    <li>
-                        <span class="material-symbols-rounded text-sm text-pink-400 align-middle">directions_car</span>
-                        Transport : {{ step.transport_mode || '—' }}
-                    </li>
                     <li v-if="step.distance_to_next">
                         <span class="material-symbols-rounded text-sm text-pink-400 align-middle">straighten</span>
                         {{ step.distance_to_next }} km jusqu’à la suivante
