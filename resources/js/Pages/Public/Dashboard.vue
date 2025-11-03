@@ -3,7 +3,7 @@ import { Head } from '@inertiajs/vue3'
 import DashboardSearch from '@/Components/Public/DashboardSearch.vue'
 import RandomTripCard from '@/Components/Public/RandomTripCard.vue'
 import Features from '@/Components/Features.vue'
-import { t } from '@/composables/useTranslations'
+import { t } from '@/Composables/useTranslations'
 
 const props = defineProps({
     canCreate: { type: Boolean, default: false },
