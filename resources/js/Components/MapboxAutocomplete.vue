@@ -12,6 +12,7 @@ const emit = defineEmits([
     'update:coords',
     'update:country',
     'update:countryCode',
+    'select-place', // ✅ nouvel événement
 ])
 
 const inputElement = ref(null)
@@ -51,7 +52,7 @@ onMounted(async () => {
     geocoder = new MapboxGeocoder({
         accessToken: mapboxgl.accessToken,
         mapboxgl,
-        placeholder: 'Rechercher une destination...', // 🔹 Placeholder corrigé
+        placeholder: 'Rechercher une destination...',
         types: 'country,region,place,locality,address',
         marker: false,
         language: 'fr',
@@ -90,6 +91,16 @@ onMounted(async () => {
 
         emit('update:country', country || '')
         emit('update:countryCode', countryCode || '')
+
+        // ✅ Nouvel événement complet pour faciliter l’intégration (comme dans ActivityModal)
+        emit('select-place', {
+            name: cleanName,
+            address: place_name,
+            latitude: center?.[1] ?? null,
+            longitude: center?.[0] ?? null,
+            country: country || '',
+            country_code: countryCode || '',
+        })
     })
 
     geocoder.on('clear', () => {
@@ -133,14 +144,14 @@ watch(
 <style scoped>
 :deep(.mapboxgl-ctrl-geocoder--input) {
     border-radius: 12px;
-    padding: 8px 12px 8px 36px; /* 👈 espace à gauche ajusté pour la loupe */
+    padding: 8px 12px 8px 36px;
     font-size: 15px;
     background-color: #fff;
     color: #1f1f1f;
     border: 1px solid #ccc;
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
     transition: all 0.2s ease;
-    height: 42px; /* 👈 alignement vertical propre */
+    height: 42px;
     line-height: 1.4;
 }
 
@@ -150,7 +161,6 @@ watch(
     box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
 }
 
-/* ✅ Corrige la position de la loupe */
 :deep(.mapboxgl-ctrl-geocoder--icon) {
     fill: #3b82f6;
     width: 18px;
@@ -160,5 +170,4 @@ watch(
     left: 10px;
     position: absolute;
 }
-
 </style>

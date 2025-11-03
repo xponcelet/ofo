@@ -15,13 +15,9 @@ const props = defineProps({
 
 const page = usePage()
 const routeStepId =
-    page?.props?.ziggy?.routeParameters?.id ??
-    page?.props?.routeParams?.id ??
-    null
+    page?.props?.ziggy?.routeParameters?.id ?? page?.props?.routeParams?.id ?? null
 
-const mapboxInstanceKey = computed(() => {
-    return `step-${props.form?.id ?? routeStepId ?? 'new'}`
-})
+const mapboxInstanceKey = computed(() => `step-${props.form?.id ?? routeStepId ?? 'new'}`)
 
 /* --- Dates --- */
 function formatLocalDate(d) {
@@ -40,25 +36,18 @@ const computedEndDate = computed(() => {
     return formatLocalDate(end)
 })
 
-const startIsPast = computed(() => {
-    return !!props.form.start_date && props.form.start_date < today
-})
-
+const startIsPast = computed(() => !!props.form.start_date && props.form.start_date < today)
 const showSuggestedHint = computed(() => !!props.suggestedStart)
 const suggestedIsUsed = computed(() => props.form.start_date === props.suggestedStart)
 
-/* --- Erreurs par champ (form.errors + page.props.errors) --- */
-const allErrors = computed(() => {
-    const a = (page?.props?.errors) || {}
-    const b = (props.form?.errors) || {}
-    return { ...a, ...b }
-})
+/* --- Erreurs --- */
+const allErrors = computed(() => ({ ...(page?.props?.errors || {}), ...(props.form?.errors || {}) }))
 const fieldError = (name) => {
     const e = allErrors.value?.[name]
     return Array.isArray(e) ? (e[0] ?? '') : (e ?? '')
 }
 
-/* --- Init champs par défaut --- */
+/* --- Init --- */
 onMounted(() => {
     Object.assign(props.form, {
         title: props.form.title ?? '',
@@ -73,7 +62,19 @@ onMounted(() => {
     })
 })
 
-/* --- Mapbox callbacks --- */
+/* --- Sélection du lieu --- */
+function onPlaceSelected(place) {
+    if (!props.form.title || props.form.title.trim() === '') {
+        props.form.title = place.name || place.address || ''
+    }
+    props.form.location = place.address || place.name || ''
+    props.form.latitude = place.latitude ?? null
+    props.form.longitude = place.longitude ?? null
+    props.form.country = place.country || ''
+    props.form.country_code = place.country_code || ''
+}
+
+/* --- Autres callbacks --- */
 function updateCoords({ latitude, longitude }) {
     props.form.latitude = latitude
     props.form.longitude = longitude
@@ -88,40 +89,30 @@ function updateCountryCode(code) {
 
 <template>
     <form @submit.prevent="props.onSubmit" class="space-y-8">
-        <!-- Section infos générales -->
+        <!-- Lieu principal -->
         <div class="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
             <h3 class="text-lg font-semibold text-gray-800 mb-4">
-                {{ atStart ? 'Départ' : 'Informations générales' }}
+                {{ atStart ? 'Point de départ' : 'Lieu principal' }}
             </h3>
 
-            <!-- Titre -->
-            <div class="mb-4">
-                <label class="block text-sm font-medium text-gray-700">Titre (optionnel)</label>
-                <input
-                    v-model="props.form.title"
-                    type="text"
-                    placeholder="Ex: Camp de base"
-                    class="mt-1 block w-full rounded-lg border-gray-300 shadow-sm focus:ring-pink-500 focus:border-pink-500"
-                />
-                <InputError :message="fieldError('title')" />
-            </div>
-
-            <!-- Lieu -->
-            <div id="location-field" class="mb-1">
-                <label class="block text-sm font-medium text-gray-700">Lieu principal *</label>
-                <div :class="['rounded-lg', fieldError('location') ? 'ring-1 ring-red-400 ring-offset-0' : '']">
+            <div id="location-field" class="mb-4">
+                <label class="block text-sm font-medium text-gray-700 mb-1">
+                    Rechercher un lieu *
+                </label>
+                <div :class="['rounded-lg', fieldError('location') ? 'ring-1 ring-red-400' : '']">
                     <MapboxAutocomplete
                         :key="mapboxInstanceKey"
                         v-model="props.form.location"
+                        placeholder="Ex : Paris, Mont-Saint-Michel..."
                         @update:coords="updateCoords"
                         @update:country="updateCountry"
                         @update:countryCode="updateCountryCode"
+                        @select-place="onPlaceSelected"
                     />
                 </div>
                 <InputError :message="fieldError('location')" />
             </div>
 
-            <!-- Carte -->
             <StepMapPreview
                 class="mt-4 rounded-lg border border-gray-200"
                 :latitude="props.form.latitude"
@@ -129,12 +120,38 @@ function updateCountryCode(code) {
             />
         </div>
 
-        <!-- Section logistique -->
+        <!-- Infos générales -->
+        <div class="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
+            <h3 class="text-lg font-semibold text-gray-800 mb-4">Informations générales</h3>
+
+            <div class="mb-4">
+                <label class="block text-sm font-medium text-gray-700">Titre (auto ou personnalisé)</label>
+                <input
+                    v-model="props.form.title"
+                    type="text"
+                    placeholder="Ex : Camp de base, étape 1..."
+                    class="mt-1 block w-full rounded-lg border-gray-300 shadow-sm focus:ring-pink-500 focus:border-pink-500"
+                />
+                <InputError :message="fieldError('title')" />
+            </div>
+
+            <div>
+                <label class="block text-sm font-medium text-gray-700">Description</label>
+                <textarea
+                    v-model="props.form.description"
+                    rows="4"
+                    placeholder="Ajoutez quelques notes ou une description..."
+                    class="mt-1 block w-full rounded-lg border-gray-300 shadow-sm focus:ring-pink-500 focus:border-pink-500"
+                />
+                <InputError :message="fieldError('description')" />
+            </div>
+        </div>
+
+        <!-- Logistique -->
         <div class="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
             <h3 class="text-lg font-semibold text-gray-800 mb-4">Logistique</h3>
 
             <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <!-- Date début -->
                 <div>
                     <label class="block text-sm font-medium text-gray-700">Date de début</label>
                     <input
@@ -142,21 +159,10 @@ function updateCountryCode(code) {
                         :min="today"
                         type="date"
                         class="mt-1 block w-full rounded-lg border-gray-300 shadow-sm focus:ring-pink-500 focus:border-pink-500"
-                        aria-describedby="start-help"
                     />
-                    <div class="mt-1">
-                        <p v-if="startIsPast" id="start-help" class="text-xs text-red-600">
-                            La date ne peut pas être dans le passé.
-                        </p>
-                        <p v-else-if="showSuggestedHint" class="text-xs text-gray-500">
-                            Date proposée : <strong>{{ suggestedStart }}</strong>
-                            <span v-if="suggestedIsUsed">(utilisée)</span>
-                        </p>
-                    </div>
                     <InputError :message="fieldError('start_date')" />
                 </div>
 
-                <!-- Nuits -->
                 <div>
                     <label class="block text-sm font-medium text-gray-700">Nombre de nuits</label>
                     <input
@@ -168,20 +174,17 @@ function updateCountryCode(code) {
                     <InputError :message="fieldError('nights')" />
                 </div>
 
-                <!-- Date fin -->
                 <div>
-                    <label class="block text-sm font-medium text-gray-700">Date de fin (automatique)</label>
+                    <label class="block text-sm font-medium text-gray-700">Date de fin (auto)</label>
                     <input
                         :value="computedEndDate"
-                        :min="props.form.start_date || today"
-                        type="date"
                         readonly
+                        type="date"
                         class="mt-1 block w-full bg-gray-100 rounded-lg border-gray-300 shadow-sm text-gray-600"
                     />
                 </div>
             </div>
 
-            <!-- Transport -->
             <div class="mt-6">
                 <label class="block text-sm font-medium text-gray-700">Moyen de transport</label>
                 <select
@@ -198,18 +201,6 @@ function updateCountryCode(code) {
                 </select>
                 <InputError :message="fieldError('transport_mode')" />
             </div>
-        </div>
-
-        <!-- Description -->
-        <div class="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
-            <h3 class="text-lg font-semibold text-gray-800 mb-4">Description</h3>
-            <textarea
-                v-model="props.form.description"
-                rows="4"
-                placeholder="Ajoutez quelques notes ou une description..."
-                class="mt-1 block w-full rounded-lg border-gray-300 shadow-sm focus:ring-pink-500 focus:border-pink-500"
-            />
-            <InputError :message="fieldError('description')" />
         </div>
 
         <!-- Bouton -->
