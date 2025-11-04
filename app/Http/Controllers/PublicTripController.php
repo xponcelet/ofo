@@ -251,4 +251,34 @@ class PublicTripController extends Controller
             ->route('public.trips.show', $trip->id)
             ->with('success', 'Le voyage a été ajouté à votre liste !');
     }
+
+    public function showActivities(Step $step): Response
+    {
+        // Vérifie que l’étape appartient à un voyage public
+        abort_unless($step->trip && $step->trip->is_public, 403);
+
+        $step->load([
+            'trip:id,title,is_public',
+            'activities' => fn($q) => $q
+                ->where('is_public', true)
+                ->select('id', 'step_id', 'title', 'description', 'external_link', 'start_at', 'end_at'),
+        ]);
+
+        return Inertia::render('Public/Steps/Activities', [
+            'step' => [
+                'id'           => $step->id,
+                'trip_id'      => $step->trip_id,
+                'title'        => $step->title,
+                'description'  => $step->description,
+                'location'     => $step->location,
+                'country'      => $step->country,
+                'country_code' => $step->country_code,
+            ],
+            'activities' => $step->activities,
+            'trip' => [
+                'id'    => $step->trip->id,
+                'title' => $step->trip->title,
+            ],
+        ]);
+    }
 }

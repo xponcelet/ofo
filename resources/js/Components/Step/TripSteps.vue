@@ -192,6 +192,31 @@ onMounted(() => {
                                         Ajouter une activité
                                     </button>
                                 </div>
+                                <!-- Lien vers la page publique des activités -->
+                                <div v-if="props.publicView && step.activities?.length" class="text-right mt-3">
+                                    <Link
+                                        :href="route('public.steps.activities', step.id)"
+                                        class="inline-flex items-center text-sm text-pink-600 hover:underline"
+                                    >
+                                        🎯 Voir toutes les activités
+                                    </Link>
+                                </div>
+
+                                <!-- Si aucune activité, afficher un lien aussi -->
+                                <div
+                                    v-else-if="props.publicView && !step.activities?.length"
+                                    class="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center text-gray-500 mt-3"
+                                >
+                                    <span class="material-symbols-rounded align-middle mr-1 text-gray-400">add_circle</span>
+                                    Aucune activité publique pour cette étape.
+                                    <Link
+                                        :href="route('public.steps.activities', step.id)"
+                                        class="text-pink-600 hover:text-pink-700 font-medium ml-1"
+                                    >
+                                        🎯 Voir les activités
+                                    </Link>
+                                </div>
+
 
 
                                 <!-- Notes -->

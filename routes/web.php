@@ -61,6 +61,9 @@ Route::prefix('voyages')->name('public.trips.')->group(function () {
 // Étapes publiques
 Route::get('/voyages/steps/{step}', [PublicTripController::class, 'showStep'])
     ->name('public.steps.show');
+//  Liste des activités publiques d’une étape
+Route::get('/voyages/steps/{step}/activities', [PublicTripController::class, 'showActivities'])
+    ->name('public.steps.activities');
 
 
 // Langue + traductions
